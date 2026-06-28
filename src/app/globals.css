@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #f8f7f2;
+    --foreground: #1a1a1a;
+    --card: #ffffff;
+    --card-foreground: #1a1a1a;
+    --popover: #ffffff;
+    --popover-foreground: #1a1a1a;
+    --primary: #1a2744;
+    --primary-foreground: #ffffff;
+    --secondary: #f3f2ed;
+    --secondary-foreground: #1a2744;
+    --muted: #f3f2ed;
+    --muted-foreground: #6b7280;
+    --accent: #c9a84c;
+    --accent-foreground: #ffffff;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: #e2e0d9;
+    --input: #e2e0d9;
+    --ring: #c9a84c;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+    line-height: 1.2;
+  }
+
+  code, pre, kbd {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white font-body font-semibold px-6 py-3 rounded-lg
+           hover:bg-primary-600 active:bg-primary-700
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-white font-body font-semibold px-6 py-3 rounded-lg
+           hover:bg-accent-600 active:bg-accent-700
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary text-primary font-body font-semibold px-6 py-3 rounded-lg
+           hover:bg-primary hover:text-white
+           transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .card {
+    @apply bg-card rounded-xl shadow-card border border-border p-6;
+  }
+
+  .section-title {
+    @apply font-heading text-3xl md:text-4xl text-primary font-bold;
+  }
+
+  .section-subtitle {
+    @apply font-body text-lg text-muted-foreground mt-3;
+  }
+
+  .input-field {
+    @apply w-full border border-input rounded-lg px-4 py-3 text-foreground bg-white
+           placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent
+           transition-all duration-200;
+  }
+
+  .legal-citation {
+    @apply font-mono text-sm bg-muted px-2 py-1 rounded text-primary;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, #1a2744 0%, #2a3d6b 100%);
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, #c9a84c 0%, #e7b743 100%);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}

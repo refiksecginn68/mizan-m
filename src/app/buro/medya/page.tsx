@@ -1,0 +1,45 @@
+import { redirect } from "next/navigation";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
+import BuroHeader from "@/components/shared/BuroHeader";
+import MedyaClient from "./MedyaClient";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyClient = any;
+
+export default async function MedyaPage() {
+  const supabase = createClient() as AnyClient;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/giris");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, user_type")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+
+  const serviceSupabase = createServiceClient() as AnyClient;
+
+  const { data: cases } = await serviceSupabase
+    .from("cases")
+    .select("id, title, case_number")
+    .eq("lawyer_id", user.id)
+    .eq("status", "aktif")
+    .order("created_at", { ascending: false });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <BuroHeader lawyerName={profile.full_name} />
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-6">
+          <h1 className="font-heading text-2xl font-bold text-primary">Delil & Medya Analizi</h1>
+          <p className="font-body text-muted-foreground mt-1">
+            Ses, görüntü, video, belge ve ekran görüntülerini AI ile analiz edin
+          </p>
+        </div>
+        <MedyaClient cases={(cases as AnyClient[]) || []} />
+      </main>
+    </div>
+  );
+}
