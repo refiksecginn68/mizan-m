@@ -1,9 +1,3 @@
 {
-  "experimentalServices": {
-    "emsal-api": {
-      "root": "services/emsal-api",
-      "entrypoint": "main:app",
-      "routePrefix": "/api/emsal-service"
-    }
-  }
+  "framework": "nextjs"
 }
