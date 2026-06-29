@@ -69,10 +69,10 @@ export default function VatandasHeader({ fullName, userName, creditBalance, cred
               <span className="font-body text-xs font-bold text-accent">{balance}</span>
             </Link>
             {displayName && (
-              <div className="hidden sm:flex items-center gap-1.5">
+              <Link href="/profil" className="hidden sm:flex items-center gap-1.5 hover:opacity-80 transition-opacity" title="Profilim">
                 <User className="w-3.5 h-3.5 text-white/50" />
                 <span className="font-body text-xs text-white/70">{displayName.split(" ")[0]}</span>
-              </div>
+              </Link>
             )}
             <form action={logoutAction}>
               <button type="submit" className="text-white/50 hover:text-white transition-colors">
