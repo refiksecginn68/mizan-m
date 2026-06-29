@@ -122,8 +122,8 @@ export default async function BuroPage() {
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
       {/* Üst başlık */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="font-heading text-xl font-bold text-[#0f1729]">
               {getGreeting()}, {firstName} 👋
@@ -131,7 +131,7 @@ export default async function BuroPage() {
             <p className="text-sm text-gray-500 mt-0.5">{tarih}</p>
           </div>
           {/* Arama çubuğu */}
-          <div className="flex items-center gap-2 bg-[#f4f5f7] border border-gray-200 rounded-xl px-4 py-2.5 w-72">
+          <div className="flex items-center gap-2 bg-[#f4f5f7] border border-gray-200 rounded-xl px-4 py-2.5 w-full sm:w-72">
             <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <Link href="/buro/emsal" className="flex-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
               Kanun, karar veya içtihat ara...
@@ -140,12 +140,12 @@ export default async function BuroPage() {
         </div>
       </div>
 
-      <div className="flex gap-6 p-6">
+      <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
         {/* Sol + Orta */}
         <div className="flex-1 min-w-0 space-y-6">
 
           {/* 2 Büyük Kart */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Link
               href="/buro/asistan"
               className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a2744] to-[#0f1729] p-6 hover:shadow-xl transition-all duration-300"
@@ -186,7 +186,7 @@ export default async function BuroPage() {
           </div>
 
           {/* Son Mevzuatlar + Emsal Kararlar */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Son Eklenen Mevzuatlar */}
             <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
@@ -252,7 +252,7 @@ export default async function BuroPage() {
               <Newspaper className="w-4 h-4 text-[#c9a84c]" />
               <h2 className="font-heading text-sm font-bold text-[#0f1729]">Güncel Hukuki Haberler</h2>
             </div>
-            <div className="grid grid-cols-2 divide-x divide-gray-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-50">
               {HUKUKI_HABERLER.map((haber) => (
                 <div key={haber.id} className="px-5 py-4 hover:bg-gray-50 transition-colors group cursor-pointer">
                   <div className="flex items-center gap-2 mb-2">
@@ -274,7 +274,7 @@ export default async function BuroPage() {
         </div>
 
         {/* Sağ Kolon */}
-        <div className="w-72 flex-shrink-0 space-y-4">
+        <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
 
           {/* Yaklaşan Duruşmalar */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">

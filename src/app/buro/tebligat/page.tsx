@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import BuroHeader from "@/components/shared/BuroHeader";
 import TebligatClient from "./TebligatClient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,7 +48,6 @@ export default async function TebligatPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BuroHeader lawyerName={profile.full_name} />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
           <h1 className="font-heading text-2xl font-bold text-primary">E-Tebligat Takibi</h1>

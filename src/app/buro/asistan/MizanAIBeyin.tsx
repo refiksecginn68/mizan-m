@@ -64,10 +64,6 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     loadSessions();
   }, []);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   async function loadSessions() {
     setSessionsLoading(true);
     try {

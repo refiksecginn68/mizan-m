@@ -18,6 +18,9 @@ import {
   ChevronRight,
   LogOut,
   Sparkles,
+  Building2,
+  Mail,
+  Film,
 } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 
@@ -37,6 +40,9 @@ const YONETIM_MENU = [
   { href: "/buro/davalar", label: "Dosya Yönetimi", icon: FolderOpen },
   { href: "/buro/muvekkiller", label: "Müvekkiller", icon: Users },
   { href: "/buro/finans", label: "Finansal İşlemler", icon: TrendingUp },
+  { href: "/buro/uyap", label: "UYAP", icon: Building2 },
+  { href: "/buro/tebligat", label: "E-Tebligat", icon: Mail },
+  { href: "/buro/medya", label: "Delil & Medya", icon: Film },
 ];
 
 const ORGANIZASYON_MENU = [
@@ -61,7 +67,7 @@ export default function BuroLeftSidebar({ lawyerName }: Props) {
 
   return (
     <aside
-      className={`flex flex-col bg-[#0f1729] border-r border-white/5 transition-all duration-300 flex-shrink-0 h-screen sticky top-0 ${
+      className={`hidden lg:flex flex-col bg-[#0f1729] border-r border-white/5 transition-all duration-300 flex-shrink-0 h-screen sticky top-0 ${
         collapsed ? "w-16" : "w-56"
       }`}
     >

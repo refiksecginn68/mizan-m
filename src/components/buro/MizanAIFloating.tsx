@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { X, Send, Sparkles, StopCircle } from "lucide-react";
 
 interface Message {
@@ -27,10 +27,6 @@ export default function MizanAIFloating({ lawyerName }: Props) {
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, open]);
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -119,7 +115,7 @@ export default function MizanAIFloating({ lawyerName }: Props) {
                   className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
                     msg.role === "user"
                       ? "bg-[#c9a84c] text-white"
-                      : "bg-white/8 text-white/85"
+                      : "bg-[#1a2d4f] text-white"
                   }`}
                 >
                   {msg.content || (loading && msg.role === "assistant" ? (

@@ -3,10 +3,10 @@
 Türkiye'ye özel çift taraflı hukuk platformu.
 
 ## Stack
-- Next.js 16.2.9 (App Router) — breaking changes var, node_modules/next/dist/docs/ kontrol et
-- React 19
+- Next.js 14.2.35 (App Router)
+- React 18
 - TypeScript 5 (strict mode)
-- Tailwind CSS v4
+- Tailwind CSS v3 (tailwindcss ^3.4.1)
 - Path alias: @/* → src/*
 
 ## Proje Yapısı
@@ -26,7 +26,7 @@ src/types/        → TypeScript tipleri
 - Her component tek sorumluluk
 - API route'ları src/app/api/ altında
 - Server Component default, gerektiğinde "use client"
-- Tailwind v4 syntax kullan (v3 değil)
+- Tailwind v3 syntax kullan
 
 ## Henüz Kurulmadı
 - Veritabanı (Supabase/PostgreSQL planlanıyor)

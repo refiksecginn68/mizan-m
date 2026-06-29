@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import BuroHeader from "@/components/shared/BuroHeader";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -62,8 +61,6 @@ export default async function DavaDetayPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <BuroHeader lawyerName={profile.full_name} />
-
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Back + header */}
         <div className="flex items-center gap-3 mb-6">

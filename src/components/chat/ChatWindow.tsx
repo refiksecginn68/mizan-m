@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Send, Loader2, Scale, StopCircle, ChevronDown } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import type { LegalSource } from "@/types";
@@ -79,10 +79,7 @@ export default function ChatWindow({
     }
   }, []);
 
-  // Yeni mesaj geldiğinde sadece kullanıcı aşağıdaysa kaydır
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages.length, scrollToBottom]);
+  // Otomatik kaydırma kapalı — kullanıcı kendin scroll eder
 
   const stopStreaming = useCallback(() => {
     abortRef.current?.abort();
