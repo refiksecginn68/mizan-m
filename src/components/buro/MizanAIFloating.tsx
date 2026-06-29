@@ -41,10 +41,10 @@ export default function MizanAIFloating({ lawyerName }: Props) {
     setMessages((m) => [...m, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/buro/mizanai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: input.trim(), mode: "avukat" }),
+        body: JSON.stringify({ message: input.trim() }),
         signal: ctrl.signal,
       });
       const reader = res.body?.getReader();
@@ -55,15 +55,13 @@ export default function MizanAIFloating({ lawyerName }: Props) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
-        const lines = buf.split("\n");
+        const lines = buf.split("\n\n");
         buf = lines.pop() ?? "";
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            const data = line.slice(6);
-            if (data === "[DONE]") break;
             try {
-              const json = JSON.parse(data);
-              const delta = json.delta ?? json.text ?? "";
+              const json = JSON.parse(line.slice(6));
+              const delta = json.delta ?? "";
               if (delta) {
                 setMessages((m) =>
                   m.map((msg) =>

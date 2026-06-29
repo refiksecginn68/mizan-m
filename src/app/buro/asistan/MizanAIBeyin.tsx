@@ -23,8 +23,10 @@ interface Session {
 }
 
 interface Action {
-  type: "takvim" | "muvekkil_ara" | "dilekce_baslat";
-  data: Record<string, string>;
+  type: "takvim" | "muvekkil_ara" | "dilekce_baslat" | "takvim_eklendi";
+  data?: Record<string, string>;
+  url?: string;
+  mesaj?: string;
 }
 
 interface Props {
@@ -174,8 +176,8 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
               );
             }
 
-            if (json.done && json.actions && json.actions.length > 0) {
-              setCompletedActions((a) => [...a, ...json.actions!]);
+            if (json.done && json.actions && (json.actions as Action[]).length > 0) {
+              setCompletedActions((a) => [...a, ...(json.actions as Action[])]);
             }
           } catch { /* ignore */ }
         }
@@ -275,13 +277,13 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
             <div className="flex items-center gap-3 flex-1 overflow-x-auto">
               {completedActions.map((a, i) => (
                 <span key={i} className="text-xs text-green-700 font-medium whitespace-nowrap">
-                  {a.type === "takvim" && `✓ Takvime eklendi: ${a.data.baslik}`}
+                  {(a.type === "takvim" || a.type === "takvim_eklendi") && `✓ ${a.mesaj ?? `Takvime eklendi: ${a.data?.baslik ?? ""}`}`}
                   {a.type === "dilekce_baslat" && (
                     <button
-                      onClick={() => router.push(`/buro/dilekce?konu=${encodeURIComponent(a.data.konu)}`)}
+                      onClick={() => router.push(a.url ?? `/buro/dilekce?konu=${encodeURIComponent(a.data?.konu ?? "")}`)}
                       className="underline hover:no-underline"
                     >
-                      Dilekçe başlat: {a.data.konu}
+                      Dilekçe aç →
                     </button>
                   )}
                 </span>
