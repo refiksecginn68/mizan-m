@@ -162,3 +162,22 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ event: data }, { status: 201 });
 }
+
+export async function DELETE(request: NextRequest) {
+  const { user, error } = await getAuthenticatedLawyer();
+  if (!user) return NextResponse.json({ error }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id gerekli" }, { status: 400 });
+
+  const serviceSupabase = createServiceClient() as AnyClient;
+  const { error: dbError } = await serviceSupabase
+    .from("calendar_events")
+    .delete()
+    .eq("id", id)
+    .eq("lawyer_id", user.id);
+
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}
