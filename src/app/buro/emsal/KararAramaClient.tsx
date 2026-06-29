@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
 import {
   Search, Zap, BookOpen, FileUp, Filter,
   Loader2, ChevronLeft, ChevronRight,
   FolderPlus, Eye, X, Check, AlertCircle,
+  Download, MessageSquare, Sparkles, Send, FileText,
 } from "lucide-react";
 
 interface CaseLaw {
@@ -32,6 +32,7 @@ interface Props {
 }
 
 type SearchMode = "akilli" | "kelime" | "anlam" | "dosya";
+type RightTab = "metin" | "ozet" | "sohbet";
 
 const MODES: { id: SearchMode; label: string; icon: React.ElementType; desc: string }[] = [
   { id: "akilli", label: "Akıllı", icon: Zap, desc: "AI destekli arama" },
@@ -80,8 +81,37 @@ function matchScore(item: CaseLaw, query: string): number {
   return 60 + Math.floor(Math.random() * 20);
 }
 
+// Metin satır kaydırma yardımcı fonksiyonu (pdf-lib için)
+async function wrapTextLines(
+  text: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  font: any,
+  fontSize: number,
+  maxWidth: number
+): Promise<string[]> {
+  const paragraphs = text.split("\n");
+  const lines: string[] = [];
+  for (const para of paragraphs) {
+    if (!para.trim()) { lines.push(""); continue; }
+    const words = para.split(" ");
+    let current = "";
+    for (const word of words) {
+      const test = current ? `${current} ${word}` : word;
+      const w = font.widthOfTextAtSize(test, fontSize);
+      if (w > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+  }
+  return lines;
+}
+
 export default function KararAramaClient({ cases }: Props) {
-  const router = useRouter();
+  // Arama state
   const [mode, setMode] = useState<SearchMode>("akilli");
   const [query, setQuery] = useState("");
   const [court, setCourt] = useState("all");
@@ -94,11 +124,305 @@ export default function KararAramaClient({ cases }: Props) {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [source, setSource] = useState("");
-  const [dosyaModalId, setDosyaModalId] = useState<string | null>(null);
-  const [dosyaEklendi, setDosyaEklendi] = useState<string | null>(null);
-  const [fileLoading, setFileLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Sağ panel state
+  const [selectedKarar, setSelectedKarar] = useState<CaseLaw | null>(null);
+  const [contentFull, setContentFull] = useState<string | null>(null);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [ozetText, setOzetText] = useState("");
+  const [ozetLoading, setOzetLoading] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [rightTab, setRightTab] = useState<RightTab>("metin");
+
+  // Dosyaya ekle state
+  const [dosyaModalOpen, setDosyaModalOpen] = useState(false);
+  const [dosyaEklendi, setDosyaEklendi] = useState<string | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+
+  // Eski liste-üzeri modal (liste kartındaki dosyaya ekle için ayrı)
+  const [dosyaModalId, setDosyaModalId] = useState<string | null>(null);
+  const [dosyaEklendiList, setDosyaEklendiList] = useState<string | null>(null);
+  const [fileLoadingList, setFileLoadingList] = useState(false);
+
+  // Karar seç + içerik çek
+  async function selectKarar(item: CaseLaw) {
+    setSelectedKarar(item);
+    setRightTab("metin");
+    setContentFull(null);
+    setOzetText("");
+    setChatMessages([]);
+    const id = getId(item);
+    if (!id) return;
+    setContentLoading(true);
+    try {
+      const res = await fetch(`/api/emsal/document/${encodeURIComponent(id)}`);
+      const data = await res.json() as { content?: string; full_text?: string };
+      setContentFull(data.content ?? data.full_text ?? null);
+    } catch {
+      setContentFull(null);
+    } finally {
+      setContentLoading(false);
+    }
+  }
+
+  // Panel kapat
+  function closePanel() {
+    setSelectedKarar(null);
+    setContentFull(null);
+    setOzetText("");
+    setChatMessages([]);
+    setRightTab("metin");
+    setDosyaModalOpen(false);
+    setDosyaEklendi(null);
+  }
+
+  // PDF indirme
+  async function downloadPDF() {
+    if (!selectedKarar) return;
+    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const fontSize = 10;
+    const margin = 50;
+    const lineHeight = fontSize * 1.5;
+
+    const buildKararText = () => [
+      `Mahkeme: ${selectedKarar.court}`,
+      `Esas No: ${selectedKarar.case_number}`,
+      selectedKarar.decision_number ? `Karar No: ${selectedKarar.decision_number}` : "",
+      selectedKarar.decision_date ? `Tarih: ${selectedKarar.decision_date}` : "",
+      `Konu: ${selectedKarar.subject}`,
+      "",
+      contentFull || selectedKarar.summary || "",
+    ].filter((l) => l !== undefined).join("\n");
+
+    const text = buildKararText();
+    const page0 = pdfDoc.addPage([595, 842]);
+    const maxWidth = page0.getSize().width - margin * 2;
+    const lines = await wrapTextLines(text, font, fontSize, maxWidth);
+
+    let currentPage = page0;
+    let y = currentPage.getSize().height - margin;
+
+    for (const line of lines) {
+      if (y < margin) {
+        currentPage = pdfDoc.addPage([595, 842]);
+        y = currentPage.getSize().height - margin;
+      }
+      if (line) {
+        currentPage.drawText(line, { x: margin, y, size: fontSize, font, color: rgb(0, 0, 0) });
+      }
+      y -= lineHeight;
+    }
+
+    const bytes = await pdfDoc.save();
+    const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `karar-${selectedKarar.case_number?.replace(/\//g, "-") ?? "indirilen"}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // UDF indirme
+  async function downloadUDF() {
+    if (!selectedKarar) return;
+    const content = [
+      `Mahkeme: ${selectedKarar.court}`,
+      `Esas No: ${selectedKarar.case_number}`,
+      `Konu: ${selectedKarar.subject}`,
+      contentFull || selectedKarar.summary || "",
+    ].join("\n\n");
+
+    try {
+      const res = await fetch("/api/buro/uyap/udf-hazirla", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docType: "karar", content }),
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `karar-${selectedKarar.case_number?.replace(/\//g, "-") ?? "indirilen"}.udf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("UDF oluşturulurken hata oluştu.");
+    }
+  }
+
+  // Word indirme
+  async function downloadWord() {
+    if (!selectedKarar) return;
+    const content = [
+      `Mahkeme: ${selectedKarar.court}`,
+      `Esas No: ${selectedKarar.case_number}`,
+      `Konu: ${selectedKarar.subject}`,
+      "",
+      contentFull || selectedKarar.summary || "",
+    ].join("\n\n");
+
+    try {
+      const res = await fetch("/api/buro/dilekce/export-word", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, title: `Karar ${selectedKarar.case_number}` }),
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `karar-${selectedKarar.case_number?.replace(/\//g, "-") ?? "indirilen"}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Word dosyası oluşturulurken hata oluştu.");
+    }
+  }
+
+  // AI Özet
+  async function generateOzet() {
+    if (ozetLoading || !selectedKarar) return;
+    setOzetLoading(true);
+    setOzetText("");
+    const context = `${selectedKarar.court} - ${selectedKarar.case_number}\n${selectedKarar.subject}\n${selectedKarar.summary}\n${contentFull?.slice(0, 3000) ?? ""}`;
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Bu mahkeme kararını hukuki açıdan özetle:\n${context}`,
+          mode: "avukat",
+        }),
+      });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+      let buf = "", full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(line.slice(6)) as { delta?: string; text?: string };
+            const delta = json.delta ?? json.text ?? "";
+            full += delta;
+            setOzetText(full);
+          } catch { /* devam et */ }
+        }
+      }
+    } catch { /* ignore */ }
+    setOzetLoading(false);
+  }
+
+  // Sohbet
+  async function sendChat() {
+    if (!chatInput.trim() || chatLoading || !selectedKarar) return;
+    const userMsg = chatInput.trim();
+    setChatInput("");
+    setChatMessages((prev) => [...prev, { role: "user", content: userMsg }]);
+    setChatLoading(true);
+
+    const context = `Karar Bilgisi: ${selectedKarar.court} - ${selectedKarar.case_number}\n${selectedKarar.subject}\n${contentFull?.slice(0, 2000) ?? selectedKarar.summary}`;
+    const fullMessage = `${context}\n\nSoru: ${userMsg}`;
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: fullMessage, mode: "avukat" }),
+      });
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+      let buf = "", full = "";
+      setChatMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(line.slice(6)) as { delta?: string; text?: string };
+            const delta = json.delta ?? json.text ?? "";
+            full += delta;
+            setChatMessages((prev) => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: "assistant", content: full };
+              return updated;
+            });
+          } catch { /* devam et */ }
+        }
+      }
+    } catch { /* ignore */ }
+    setChatLoading(false);
+  }
+
+  // Panel dosyaya ekle
+  async function dosyaEklePanelFn(caseId: string) {
+    if (!selectedKarar) return;
+    setFileLoading(true);
+    try {
+      await fetch("/api/buro/emsal-dosya", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_id: caseId,
+          karar_id: getId(selectedKarar),
+          court: selectedKarar.court,
+          case_number: selectedKarar.case_number,
+          subject: selectedKarar.subject,
+          summary: selectedKarar.summary,
+          decision_date: selectedKarar.decision_date,
+        }),
+      });
+      setDosyaEklendi(caseId);
+      setTimeout(() => {
+        setDosyaModalOpen(false);
+        setDosyaEklendi(null);
+      }, 1500);
+    } catch { /* ignore */ }
+    setFileLoading(false);
+  }
+
+  // Liste kartı dosyaya ekle
+  async function dosyaEkleList(caseId: string, karar: CaseLaw) {
+    setFileLoadingList(true);
+    try {
+      await fetch("/api/buro/emsal-dosya", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case_id: caseId,
+          karar_id: getId(karar),
+          court: karar.court,
+          case_number: karar.case_number,
+          subject: karar.subject,
+          summary: karar.summary,
+          decision_date: karar.decision_date,
+        }),
+      });
+      setDosyaEklendiList(getId(karar));
+      setTimeout(() => {
+        setDosyaModalId(null);
+        setDosyaEklendiList(null);
+      }, 1500);
+    } catch { /* ignore */ }
+    setFileLoadingList(false);
+  }
 
   async function doSearch(q: string, c: string, p: number, mod: SearchMode) {
     if (!q.trim() && mod !== "dosya") return;
@@ -146,35 +470,158 @@ export default function KararAramaClient({ cases }: Props) {
     }
   }
 
-  async function dosyaEkle(caseId: string, karar: CaseLaw) {
-    setFileLoading(true);
-    try {
-      await fetch("/api/buro/emsal-dosya", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          case_id: caseId,
-          karar_id: getId(karar),
-          court: karar.court,
-          case_number: karar.case_number,
-          subject: karar.subject,
-          summary: karar.summary,
-          decision_date: karar.decision_date,
-        }),
-      });
-      setDosyaEklendi(getId(karar));
-      setTimeout(() => {
-        setDosyaModalId(null);
-        setDosyaEklendi(null);
-      }, 1500);
-    } catch { /* ignore */ }
-    setFileLoading(false);
-  }
+  // ─── Arama sonuçları listesi (hem standalone hem split view'da kullanılır)
+  const SearchResults = (
+    <div className="flex-1 overflow-y-auto p-4">
+      {/* Sonuç bilgisi */}
+      {searched && !loading && (
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Zap className={`w-3.5 h-3.5 ${source === "live" ? "text-green-500" : "text-gray-400"}`} />
+            <span>
+              {source === "live" && "Canlı · "}
+              {source === "cache" && "Önbellek · "}
+              {source === "file" && "Belgeden · "}
+              <strong className="text-gray-800">{total} sonuç</strong>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Yükleniyor skeleton */}
+      {loading && (
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse">
+              <div className="h-4 w-24 bg-gray-100 rounded-full mb-2" />
+              <div className="h-3 w-3/4 bg-gray-100 rounded mb-1" />
+              <div className="h-3 w-full bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sonuç kartları */}
+      {!loading && results.length > 0 && (
+        <div className="space-y-2">
+          {results.map((item) => {
+            const id = getId(item);
+            const score = matchScore(item, query);
+            const dateStr = item.decision_date
+              ? new Date(item.decision_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
+              : "";
+            const isSelected = selectedKarar && getId(selectedKarar) === id;
+
+            return (
+              <div
+                key={id}
+                className={`bg-white rounded-xl border p-4 transition-all ${
+                  isSelected
+                    ? "border-[#c9a84c] shadow-md"
+                    : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
+                }`}
+              >
+                {/* Badges */}
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${getCourtBadge(item.court)}`}>
+                    {item.court}
+                  </span>
+                  {dateStr && <span className="text-[10px] text-gray-400">{dateStr}</span>}
+                  {item.case_number && (
+                    <span className="text-[10px] text-gray-400 font-mono truncate max-w-[100px]">{item.case_number}</span>
+                  )}
+                </div>
+
+                {/* Konu */}
+                <h3 className="font-heading text-xs font-bold text-[#0f1729] mb-1 leading-snug line-clamp-2">
+                  {item.subject}
+                </h3>
+
+                {/* Özet */}
+                <p className="text-[10px] text-gray-500 leading-relaxed line-clamp-2 mb-2">
+                  {item.summary}
+                </p>
+
+                {/* Eşleşme + Butonlar */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1">
+                    <div className="w-12 h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                    <span className={`text-[10px] font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
+                      %{score}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDosyaModalId(id); }}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                    >
+                      <FolderPlus className="w-3 h-3 inline mr-0.5" />
+                      Ekle
+                    </button>
+                    <button
+                      onClick={() => selectKarar(item)}
+                      className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${
+                        isSelected
+                          ? "bg-[#c9a84c] text-white"
+                          : "bg-[#0f1729] text-white hover:bg-[#1a2744]"
+                      }`}
+                    >
+                      <Eye className="w-3 h-3 inline mr-0.5" />
+                      İncele
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Sayfalama */}
+      {!loading && total > 10 && results.length > 0 && (
+        <div className="flex items-center justify-center gap-2 mt-4">
+          <button onClick={() => doSearch(query, court, page - 1, mode)} disabled={page === 1}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
+            <ChevronLeft className="w-3.5 h-3.5" /> Önceki
+          </button>
+          <span className="text-xs text-gray-500">{page} / {Math.ceil(total / 10)}</span>
+          <button onClick={() => doSearch(query, court, page + 1, mode)} disabled={page >= Math.ceil(total / 10)}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
+            Sonraki <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Boş durum */}
+      {!loading && !searched && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#c9a84c]/10 flex items-center justify-center mb-3">
+            <Search className="w-7 h-7 text-[#c9a84c]" />
+          </div>
+          <p className="font-heading text-sm font-bold text-[#0f1729] mb-1">Arama yapın</p>
+          <p className="text-xs text-gray-400">Yargıtay, Danıştay ve 50+ kaynakta arama yapın</p>
+        </div>
+      )}
+
+      {!loading && searched && results.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="w-8 h-8 text-gray-300 mb-2" />
+          <p className="font-heading text-sm font-bold text-[#0f1729] mb-1">Sonuç bulunamadı</p>
+          <p className="text-xs text-gray-400">Farklı anahtar kelimeler deneyin</p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full">
-      {/* Başlık */}
-      <div className="bg-white border-b border-gray-200 px-6 py-5">
+      {/* Başlık + Arama */}
+      <div className="bg-white border-b border-gray-200 px-6 py-5 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="font-heading text-xl font-bold text-[#0f1729]">Milyonlarca İçtihatta Arama</h1>
@@ -253,9 +700,7 @@ export default function KararAramaClient({ cases }: Props) {
                   key={m.id}
                   onClick={() => setMode(m.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    mode === m.id
-                      ? "bg-[#c9a84c] text-white"
-                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                    mode === m.id ? "bg-[#c9a84c] text-white" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
@@ -299,185 +744,380 @@ export default function KararAramaClient({ cases }: Props) {
         </div>
       </div>
 
-      {/* İçerik */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Sonuç bilgisi */}
-        {searched && !loading && (
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Zap className={`w-4 h-4 ${source === "live" ? "text-green-500" : "text-gray-400"}`} />
-              <span>
-                {source === "live" && `Canlı · `}
-                {source === "cache" && `Önbellek · `}
-                {source === "file" && `Belgeden · `}
-                <strong className="text-gray-800">{total} sonuç</strong>
-              </span>
+      {/* Ana içerik alanı */}
+      <div className="flex-1 overflow-hidden flex">
+        {selectedKarar ? (
+          /* ── SPLIT VIEW: Sol liste + Sağ panel ── */
+          <>
+            {/* Sol: Arama sonuçları listesi */}
+            <div className="w-96 flex-shrink-0 border-r border-gray-200 bg-[#f8f9fa] flex flex-col overflow-hidden">
+              {SearchResults}
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-400">
-              <span>Sırala:</span>
-              <span className="font-semibold text-gray-600 border-b border-gray-300 cursor-pointer">Alakalılık</span>
-              <span>·</span>
-              <span className="cursor-pointer hover:text-gray-600">Tüm Yıllar</span>
-            </div>
-          </div>
-        )}
 
-        {/* Yükleniyor skeleton */}
-        {loading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="h-5 w-24 bg-gray-100 rounded-full" />
-                  <div className="h-4 w-16 bg-gray-100 rounded" />
+            {/* Sağ: Karar detay paneli */}
+            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+              {/* Panel başlık */}
+              <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center gap-3 flex-shrink-0">
+                <button onClick={closePanel} className="text-gray-400 hover:text-gray-700 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-heading text-sm font-bold text-[#0f1729] truncate">{selectedKarar.subject}</h2>
+                  <p className="text-xs text-gray-400">
+                    {selectedKarar.court}
+                    {selectedKarar.case_number && ` · ${selectedKarar.case_number}`}
+                    {selectedKarar.decision_date && ` · ${new Date(selectedKarar.decision_date).toLocaleDateString("tr-TR")}`}
+                  </p>
                 </div>
-                <div className="h-4 w-3/4 bg-gray-100 rounded mb-2" />
-                <div className="h-3 w-full bg-gray-100 rounded" />
-                <div className="h-3 w-2/3 bg-gray-100 rounded mt-1" />
+                {/* Butonlar */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={downloadPDF}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> PDF
+                  </button>
+                  <button
+                    onClick={downloadUDF}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                  >
+                    <FileText className="w-3 h-3" /> UDF
+                  </button>
+                  <button
+                    onClick={downloadWord}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                  >
+                    <FileText className="w-3 h-3" /> Word
+                  </button>
+                  <button
+                    onClick={() => setDosyaModalOpen(true)}
+                    className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                  >
+                    <FolderPlus className="w-3 h-3" /> Dosyaya Ekle
+                  </button>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
 
-        {/* Sonuç kartları */}
-        {!loading && results.length > 0 && (
-          <div className="space-y-3">
-            {results.map((item) => {
-              const id = getId(item);
-              const score = matchScore(item, query);
-              const dateStr = item.decision_date
-                ? new Date(item.decision_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
-                : "";
+              {/* Sekme çubuğu */}
+              <div className="border-b border-gray-100 px-5 flex gap-1 flex-shrink-0 bg-white">
+                {(["metin", "ozet", "sohbet"] as RightTab[]).map((tab) => {
+                  const labels: Record<RightTab, string> = { metin: "Karar Metni", ozet: "AI Özet", sohbet: "Sohbet" };
+                  const icons: Record<RightTab, React.ElementType> = { metin: FileText, ozet: Sparkles, sohbet: MessageSquare };
+                  const Icon = icons[tab];
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => {
+                        setRightTab(tab);
+                        if (tab === "ozet" && !ozetText && !ozetLoading) generateOzet();
+                      }}
+                      className={`flex items-center gap-1.5 px-4 py-3 text-xs font-semibold border-b-2 transition-colors ${
+                        rightTab === tab
+                          ? "border-[#c9a84c] text-[#c9a84c]"
+                          : "border-transparent text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      {labels[tab]}
+                    </button>
+                  );
+                })}
+              </div>
 
-              return (
-                <div key={id} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      {/* Badges */}
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getCourtBadge(item.court)}`}>
-                          {item.court}
-                        </span>
-                        {dateStr && (
-                          <span className="text-xs text-gray-400">{dateStr}</span>
-                        )}
-                        {item.case_number && (
-                          <span className="text-xs text-gray-400 font-mono">{item.case_number}</span>
-                        )}
-                        {item.decision_number && (
-                          <span className="text-xs text-gray-400 font-mono">K. {item.decision_number}</span>
-                        )}
-                      </div>
-
-                      {/* Konu */}
-                      <h3 className="font-heading text-sm font-bold text-[#0f1729] mb-1.5 leading-snug">
-                        {item.subject}
-                      </h3>
-
-                      {/* Özet */}
-                      <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
-                        {item.summary}
-                      </p>
+              {/* Panel içerik */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Karar Metni */}
+                {rightTab === "metin" && (
+                  <div className="p-6">
+                    {/* Karar bilgileri */}
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                      {[
+                        { label: "Mahkeme", value: selectedKarar.court },
+                        { label: "Esas No", value: selectedKarar.case_number },
+                        { label: "Karar No", value: selectedKarar.decision_number ?? "-" },
+                        { label: "Tarih", value: selectedKarar.decision_date ? new Date(selectedKarar.decision_date).toLocaleDateString("tr-TR") : "-" },
+                      ].map((field) => (
+                        <div key={field.label} className="bg-[#f8f9fa] rounded-xl p-3">
+                          <p className="text-[10px] text-gray-400 mb-0.5">{field.label}</p>
+                          <p className="text-xs font-semibold text-[#0f1729]">{field.value}</p>
+                        </div>
+                      ))}
                     </div>
 
-                    {/* Sağ taraf */}
-                    <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                      {/* Eşleşme skoru */}
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
-                            style={{ width: `${score}%` }}
-                          />
-                        </div>
-                        <span className={`text-xs font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
-                          %{score}
-                        </span>
-                      </div>
+                    <div className="mb-4">
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Özet</h3>
+                      <p className="text-sm text-gray-700 leading-relaxed">{selectedKarar.summary}</p>
+                    </div>
 
-                      {/* Butonlar */}
-                      <div className="flex items-center gap-2">
+                    <div>
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tam Metin</h3>
+                      {contentLoading ? (
+                        <div className="flex items-center gap-2 py-8 text-gray-400">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span className="text-sm">Karar metni yükleniyor...</span>
+                        </div>
+                      ) : contentFull ? (
+                        <div className="bg-[#f8f9fa] rounded-xl p-4">
+                          <pre className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-sans">{contentFull}</pre>
+                        </div>
+                      ) : (
+                        <div className="bg-[#f8f9fa] rounded-xl p-4 text-center">
+                          <p className="text-sm text-gray-500">Tam metin bu karar için mevcut değil.</p>
+                          {selectedKarar.source_url && (
+                            <a href={selectedKarar.source_url} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-[#c9a84c] hover:underline mt-1 inline-block">
+                              Kaynakta görüntüle →
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Özet */}
+                {rightTab === "ozet" && (
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide">AI Hukuki Özet</h3>
+                      {!ozetLoading && ozetText && (
                         <button
-                          onClick={() => setDosyaModalId(id)}
-                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                          onClick={generateOzet}
+                          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-500 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
                         >
-                          <FolderPlus className="w-3.5 h-3.5" />
-                          Dosyaya Ekle
+                          <Sparkles className="w-3 h-3" /> Yenile
                         </button>
+                      )}
+                    </div>
+                    {ozetLoading && !ozetText && (
+                      <div className="flex items-center gap-2 py-8 text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="text-sm">Özet oluşturuluyor...</span>
+                      </div>
+                    )}
+                    {ozetText && (
+                      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-100">
+                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{ozetText}</p>
+                        {ozetLoading && <span className="inline-block w-1.5 h-4 bg-purple-400 animate-pulse ml-0.5 align-middle" />}
+                      </div>
+                    )}
+                    {!ozetLoading && !ozetText && (
+                      <div className="text-center py-8">
                         <button
-                          onClick={() => {
-                            sessionStorage.setItem(`karar_${id}`, JSON.stringify(item));
-                            router.push(`/buro/emsal/${encodeURIComponent(id)}`);
-                          }}
-                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors"
+                          onClick={generateOzet}
+                          className="flex items-center gap-2 mx-auto bg-gradient-to-r from-[#c9a84c] to-[#e7b743] text-white text-sm font-semibold px-5 py-2.5 rounded-xl"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          Kararı İncele
+                          <Sparkles className="w-4 h-4" /> Özet Oluştur
+                        </button>
+                        <p className="text-xs text-gray-400 mt-2">AI bu kararı hukuki açıdan analiz edecek</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Sohbet */}
+                {rightTab === "sohbet" && (
+                  <div className="flex flex-col h-full">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                      {chatMessages.length === 0 && (
+                        <div className="text-center py-8">
+                          <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">Bu karar hakkında soru sorun</p>
+                          <p className="text-xs text-gray-400 mt-1">AI, karar içeriğine göre yanıtlayacak</p>
+                        </div>
+                      )}
+                      {chatMessages.map((msg, i) => (
+                        <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                            msg.role === "user"
+                              ? "bg-[#0f1729] text-white rounded-br-sm"
+                              : "bg-[#f8f9fa] text-gray-800 rounded-bl-sm border border-gray-100"
+                          }`}>
+                            {msg.content}
+                            {msg.role === "assistant" && chatLoading && i === chatMessages.length - 1 && (
+                              <span className="inline-block w-1 h-4 bg-gray-400 animate-pulse ml-0.5 align-middle" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Chat input */}
+                    <div className="border-t border-gray-100 p-4 flex-shrink-0">
+                      <div className="flex items-center gap-2 bg-[#f8f9fa] border border-gray-200 rounded-xl px-3 py-2">
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendChat()}
+                          placeholder="Bu karar hakkında soru sorun..."
+                          className="flex-1 bg-transparent text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none"
+                        />
+                        <button
+                          onClick={sendChat}
+                          disabled={!chatInput.trim() || chatLoading}
+                          className="w-8 h-8 rounded-lg bg-[#c9a84c] text-white flex items-center justify-center disabled:opacity-40 transition-opacity"
+                        >
+                          {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Alt satır */}
-                  {id && (
-                    <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
-                      <span className="text-[10px] text-gray-300 font-mono truncate flex-1">ID: {id.slice(0, 32)}...</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Sayfalama */}
-        {!loading && total > 10 && results.length > 0 && (
-          <div className="flex items-center justify-center gap-3 mt-6">
-            <button onClick={() => doSearch(query, court, page - 1, mode)} disabled={page === 1}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
-              <ChevronLeft className="w-4 h-4" /> Önceki
-            </button>
-            <span className="text-sm text-gray-500">
-              {page} / {Math.ceil(total / 10)}
-            </span>
-            <button onClick={() => doSearch(query, court, page + 1, mode)} disabled={page >= Math.ceil(total / 10)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
-              Sonraki <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Boş durum */}
-        {!loading && !searched && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#c9a84c]/10 flex items-center justify-center mb-4">
-              <Search className="w-8 h-8 text-[#c9a84c]" />
+                )}
+              </div>
             </div>
-            <p className="font-heading text-base font-bold text-[#0f1729] mb-1">Arama yapın</p>
-            <p className="text-sm text-gray-400">Yargıtay, Danıştay ve 50+ kaynakta arama yapın</p>
-          </div>
-        )}
+          </>
+        ) : (
+          /* ── NORMAL VIEW: Tam genişlik arama sonuçları ── */
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* Sonuç bilgisi */}
+            {searched && !loading && (
+              <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Zap className={`w-4 h-4 ${source === "live" ? "text-green-500" : "text-gray-400"}`} />
+                  <span>
+                    {source === "live" && "Canlı · "}
+                    {source === "cache" && "Önbellek · "}
+                    {source === "file" && "Belgeden · "}
+                    <strong className="text-gray-800">{total} sonuç</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-gray-400">
+                  <span>Sırala:</span>
+                  <span className="font-semibold text-gray-600 border-b border-gray-300 cursor-pointer">Alakalılık</span>
+                </div>
+              </div>
+            )}
 
-        {!loading && searched && results.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <AlertCircle className="w-10 h-10 text-gray-300 mb-3" />
-            <p className="font-heading text-base font-bold text-[#0f1729] mb-1">Sonuç bulunamadı</p>
-            <p className="text-sm text-gray-400">Farklı anahtar kelimeler deneyin</p>
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              {/* Yükleniyor */}
+              {loading && (
+                <div className="space-y-3 pt-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="h-5 w-24 bg-gray-100 rounded-full" />
+                        <div className="h-4 w-16 bg-gray-100 rounded" />
+                      </div>
+                      <div className="h-4 w-3/4 bg-gray-100 rounded mb-2" />
+                      <div className="h-3 w-full bg-gray-100 rounded" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Sonuç kartları (geniş) */}
+              {!loading && results.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  {results.map((item) => {
+                    const id = getId(item);
+                    const score = matchScore(item, query);
+                    const dateStr = item.decision_date
+                      ? new Date(item.decision_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
+                      : "";
+
+                    return (
+                      <div key={id} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all p-5">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getCourtBadge(item.court)}`}>
+                                {item.court}
+                              </span>
+                              {dateStr && <span className="text-xs text-gray-400">{dateStr}</span>}
+                              {item.case_number && <span className="text-xs text-gray-400 font-mono">{item.case_number}</span>}
+                              {item.decision_number && <span className="text-xs text-gray-400 font-mono">K. {item.decision_number}</span>}
+                            </div>
+                            <h3 className="font-heading text-sm font-bold text-[#0f1729] mb-1.5 leading-snug">{item.subject}</h3>
+                            <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{item.summary}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
+                                  style={{ width: `${score}%` }}
+                                />
+                              </div>
+                              <span className={`text-xs font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
+                                %{score}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setDosyaModalId(id)}
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
+                              >
+                                <FolderPlus className="w-3.5 h-3.5" />
+                                Dosyaya Ekle
+                              </button>
+                              <button
+                                onClick={() => selectKarar(item)}
+                                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                                Kararı İncele
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        {id && (
+                          <div className="mt-3 pt-3 border-t border-gray-50 flex items-center gap-2">
+                            <span className="text-[10px] text-gray-300 font-mono truncate flex-1">ID: {id.slice(0, 32)}...</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Sayfalama */}
+              {!loading && total > 10 && results.length > 0 && (
+                <div className="flex items-center justify-center gap-3 mt-6">
+                  <button onClick={() => doSearch(query, court, page - 1, mode)} disabled={page === 1}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
+                    <ChevronLeft className="w-4 h-4" /> Önceki
+                  </button>
+                  <span className="text-sm text-gray-500">{page} / {Math.ceil(total / 10)}</span>
+                  <button onClick={() => doSearch(query, court, page + 1, mode)} disabled={page >= Math.ceil(total / 10)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600 hover:border-[#c9a84c] disabled:opacity-40 transition-colors">
+                    Sonraki <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Boş durum */}
+              {!loading && !searched && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-[#c9a84c]/10 flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8 text-[#c9a84c]" />
+                  </div>
+                  <p className="font-heading text-base font-bold text-[#0f1729] mb-1">Arama yapın</p>
+                  <p className="text-sm text-gray-400">Yargıtay, Danıştay ve 50+ kaynakta arama yapın</p>
+                </div>
+              )}
+
+              {!loading && searched && results.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <AlertCircle className="w-10 h-10 text-gray-300 mb-3" />
+                  <p className="font-heading text-base font-bold text-[#0f1729] mb-1">Sonuç bulunamadı</p>
+                  <p className="text-sm text-gray-400">Farklı anahtar kelimeler deneyin</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dosyaya Ekle Modal */}
-      {dosyaModalId && (
+      {/* Panel - Dosyaya Ekle Modal */}
+      {dosyaModalOpen && selectedKarar && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-heading text-base font-bold text-[#0f1729]">Dosyaya Ekle</h3>
-              <button onClick={() => setDosyaModalId(null)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => { setDosyaModalOpen(false); setDosyaEklendi(null); }} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
-
             {dosyaEklendi ? (
               <div className="flex flex-col items-center py-6 gap-3">
                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
@@ -493,14 +1133,56 @@ export default function KararAramaClient({ cases }: Props) {
                 {cases.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => dosyaEkle(c.id, results.find((r) => getId(r) === dosyaModalId)!)}
+                    onClick={() => dosyaEklePanelFn(c.id)}
                     disabled={fileLoading}
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:border-[#c9a84c] hover:bg-[#c9a84c]/5 transition-all text-left"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-[#0f1729]/8 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-[#0f1729]/50">
-                        {c.case_number?.slice(0, 4) ?? "---"}
-                      </span>
+                    <div className="w-8 h-8 rounded-lg bg-[#0f1729]/5 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-[#0f1729]/50">{c.case_number?.slice(0, 4) ?? "---"}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#0f1729] truncate">{c.title}</p>
+                      {c.case_number && <p className="text-[10px] text-gray-400">{c.case_number}</p>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Liste kartı - Dosyaya Ekle Modal */}
+      {dosyaModalId && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-heading text-base font-bold text-[#0f1729]">Dosyaya Ekle</h3>
+              <button onClick={() => setDosyaModalId(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {dosyaEklendiList ? (
+              <div className="flex flex-col items-center py-6 gap-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check className="w-6 h-6 text-green-600" />
+                </div>
+                <p className="text-sm font-semibold text-green-700">Dosyaya eklendi!</p>
+              </div>
+            ) : cases.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">Aktif dava bulunamadı.</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 mb-3">Hangi dosyaya eklemek istiyorsunuz?</p>
+                {cases.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => dosyaEkleList(c.id, results.find((r) => getId(r) === dosyaModalId)!)}
+                    disabled={fileLoadingList}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:border-[#c9a84c] hover:bg-[#c9a84c]/5 transition-all text-left"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-[#0f1729]/5 flex items-center justify-center flex-shrink-0">
+                      <span className="text-[10px] font-bold text-[#0f1729]/50">{c.case_number?.slice(0, 4) ?? "---"}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-[#0f1729] truncate">{c.title}</p>
