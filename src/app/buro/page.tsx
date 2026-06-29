@@ -16,47 +16,17 @@ import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
 
-// Sabit demo haber verisi (gerçek API bağlanana kadar)
-const HUKUKI_HABERLER = [
-  {
-    id: 1,
-    baslik: "Yargıtay: İşçi Alacaklarında Zamanaşımı Kararı",
-    kaynak: "Yargıtay 9. HD",
-    tarih: "24 Haz 2026",
-    url: "#",
-    kategori: "İş Hukuku",
-  },
-  {
-    id: 2,
-    baslik: "Tüketici Hakem Heyeti Yetkisinde Yeni Düzenleme",
-    kaynak: "Ticaret Bakanlığı",
-    tarih: "23 Haz 2026",
-    url: "#",
-    kategori: "Tüketici",
-  },
-  {
-    id: 3,
-    baslik: "İdare Mahkemelerinde E-Tebligat Zorunluluğu Başladı",
-    kaynak: "Adalet Bakanlığı",
-    tarih: "22 Haz 2026",
-    url: "#",
-    kategori: "Usul Hukuku",
-  },
-  {
-    id: 4,
-    baslik: "Kira Artış Oranı: TÜFE Uygulaması Uzatıldı",
-    kaynak: "TBMM",
-    tarih: "21 Haz 2026",
-    url: "#",
-    kategori: "Borçlar Hukuku",
-  },
-];
+import type { LegalNews } from "@/app/api/haberler/route";
 
 const KATEGORI_RENK: Record<string, string> = {
   "İş Hukuku": "bg-blue-100 text-blue-700",
-  "Tüketici": "bg-green-100 text-green-700",
+  "Tüketici Hukuku": "bg-green-100 text-green-700",
   "Usul Hukuku": "bg-purple-100 text-purple-700",
   "Borçlar Hukuku": "bg-orange-100 text-orange-700",
+  "Ceza Hukuku": "bg-red-100 text-red-700",
+  "İdare Hukuku": "bg-teal-100 text-teal-700",
+  "Medeni Hukuk": "bg-indigo-100 text-indigo-700",
+  "Veri Koruma": "bg-rose-100 text-rose-700",
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -96,7 +66,7 @@ export default async function BuroPage() {
   const serviceSupabase = createServiceClient() as AnyClient;
   const now = new Date();
 
-  const [, upcomingEvents] = await Promise.all([
+  const [, upcomingEventsResult, newsResult] = await Promise.all([
     serviceSupabase
       .from("cases")
       .select("id")
@@ -109,7 +79,29 @@ export default async function BuroPage() {
       .gte("starts_at", now.toISOString())
       .order("starts_at", { ascending: true })
       .limit(5),
+    // Haberler: legal_news tablosu yoksa fallback demo
+    serviceSupabase
+      .from("legal_news")
+      .select("id, title, source, category, published_at, is_featured")
+      .order("published_at", { ascending: false })
+      .limit(4)
+      .then((r: AnyClient) => r)
+      .catch(() => ({ data: null })),
   ]);
+
+  const upcomingEvents = upcomingEventsResult;
+
+  // Dashboard için 4 haber — DB'den veya fallback
+  const FALLBACK_NEWS: LegalNews[] = [
+    { id: "f1", title: "Yargıtay HGK: Kıdem Tazminatında Ücret Kavramı Genişletildi", source: "Yargıtay HGK", category: "İş Hukuku", published_at: new Date(Date.now() - 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
+    { id: "f2", title: "Resmi Gazete: Tüketici Hakem Heyeti Sınırları Güncellendi", source: "Resmi Gazete", category: "Tüketici Hukuku", published_at: new Date(Date.now() - 2 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
+    { id: "f3", title: "AYM: Makul Süreyi Aşan Tutukluluk Hak İhlali", source: "Anayasa Mahkemesi", category: "Ceza Hukuku", published_at: new Date(Date.now() - 3 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
+    { id: "f4", title: "TBMM: Kira Artış Oranı Sınırlaması Uzatıldı", source: "TBMM", category: "Borçlar Hukuku", published_at: new Date(Date.now() - 4 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
+  ];
+
+  const dashboardNews: LegalNews[] = (newsResult?.data && (newsResult.data as AnyClient[]).length > 0)
+    ? newsResult.data as LegalNews[]
+    : FALLBACK_NEWS;
 
   const firstName = profile.full_name.split(" ")[0];
   const tarih = now.toLocaleDateString("tr-TR", {
@@ -248,25 +240,32 @@ export default async function BuroPage() {
 
           {/* Güncel Hukuki Haberler */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-50">
-              <Newspaper className="w-4 h-4 text-[#c9a84c]" />
-              <h2 className="font-heading text-sm font-bold text-[#0f1729]">Güncel Hukuki Haberler</h2>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+              <div className="flex items-center gap-2">
+                <Newspaper className="w-4 h-4 text-[#c9a84c]" />
+                <h2 className="font-heading text-sm font-bold text-[#0f1729]">Güncel Hukuki Haberler</h2>
+              </div>
+              <Link href="/buro/haberler" className="text-xs text-[#c9a84c] hover:underline font-medium">
+                Tümü →
+              </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-50">
-              {HUKUKI_HABERLER.map((haber) => (
-                <div key={haber.id} className="px-5 py-4 hover:bg-gray-50 transition-colors group cursor-pointer">
+              {dashboardNews.map((haber) => (
+                <Link key={haber.id} href="/buro/haberler" className="px-5 py-4 hover:bg-gray-50 transition-colors group">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${KATEGORI_RENK[haber.kategori] ?? "bg-gray-100 text-gray-600"}`}>
-                      {haber.kategori}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${KATEGORI_RENK[haber.category] ?? "bg-gray-100 text-gray-600"}`}>
+                      {haber.category}
                     </span>
-                    <span className="text-[10px] text-gray-400">{haber.tarih}</span>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(haber.published_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+                    </span>
                   </div>
-                  <p className="text-xs font-medium text-gray-800 group-hover:text-[#1a2744] leading-relaxed">{haber.baslik}</p>
+                  <p className="text-xs font-medium text-gray-800 group-hover:text-[#1a2744] leading-relaxed line-clamp-2">{haber.title}</p>
                   <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                     <ExternalLink className="w-2.5 h-2.5" />
-                    {haber.kaynak}
+                    {haber.source}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
