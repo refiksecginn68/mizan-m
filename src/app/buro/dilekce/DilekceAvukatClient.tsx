@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Sparkles, FileUp, BookOpen, Download, FileText,
-  Loader2, Copy, Check, RefreshCw, Edit3, ChevronRight,
-  Clock, X, AlertCircle,
+  Loader2, Copy, Check, RefreshCw, Edit3,
+  Clock, X, AlertCircle, Save, Bold, Italic,
+  AlignLeft, AlignCenter, AlignRight, Type, ChevronRight,
+  FileCode2,
 } from "lucide-react";
 
 type Tab = "ai" | "evrak" | "sablonar";
@@ -20,14 +22,17 @@ interface Sablon {
 interface Props {
   lawyerName: string;
   sablonar: Sablon[];
+  initialKonu?: string;
+  initialTur?: string;
 }
 
-export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
+export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablonar, initialKonu = "", initialTur = "" }: Props) {
   const [tab, setTab] = useState<Tab>("ai");
+  const [sablonar, setSablonar] = useState<Sablon[]>(initialSablonar);
 
   // AI formu
-  const [konu, setKonu] = useState("");
-  const [ekBilgi] = useState("");
+  const [konu, setKonu] = useState(initialKonu);
+  const [tur] = useState(initialTur);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dosyaMetni, setDosyaMetni] = useState("");
 
@@ -36,15 +41,30 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const [exporting, setExporting] = useState<"pdf" | "word" | null>(null);
+  const [exporting, setExporting] = useState<"pdf" | "word" | "udf" | null>(null);
+  const [saved, setSaved] = useState(false);
 
   // Evrak yükleme
   const [evrakMetin, setEvrakMetin] = useState("");
   const [evrakFile, setEvrakFile] = useState<File | null>(null);
 
+  // Formatting
+  const [fontSize, setFontSize] = useState(14);
+  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
+
   const fileRef = useRef<HTMLInputElement>(null);
   const evrakRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const firstName = lawyerName.split(" ")[0];
+
+  // MizanAI'dan gelen konu varsa otomatik generate
+  useEffect(() => {
+    if (initialKonu && !metin) {
+      generate("ai");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFileUpload = useCallback(async (file: File) => {
     setUploadedFile(file);
@@ -61,25 +81,57 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
   async function generate(mod: "ai" | "duzenle" = "ai") {
     if (!konu.trim() && mod === "ai") return;
     if (mod === "duzenle" && !metin) return;
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     setLoading(true);
     setError("");
+    if (mod === "ai") setMetin("");
+
     try {
       const res = await fetch("/api/buro/dilekce/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           konu: konu || "Düzenle",
-          ekBilgi,
-          dosyaMetni,
+          tur: tur || undefined,
+          dosyaMetni: dosyaMetni || undefined,
           mod,
           mevcutMetin: mod === "duzenle" ? metin : undefined,
         }),
+        signal: ctrl.signal,
       });
-      const data = await res.json() as { metin?: string; error?: string };
-      if (!res.ok || data.error) { setError(data.error ?? "Hata oluştu"); return; }
-      setMetin(data.metin ?? "");
-    } catch {
-      setError("Bağlantı hatası");
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        setError(data.error ?? "Hata oluştu");
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(part.slice(6)) as { delta?: string; done?: boolean; error?: string };
+            if (json.error) { setError(json.error); break; }
+            if (json.delta) setMetin((m) => m + json.delta);
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (e) {
+      if ((e as Error).name !== "AbortError") setError("Bağlantı hatası");
     } finally {
       setLoading(false);
     }
@@ -92,6 +144,8 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
     setTab("ai");
     setLoading(true);
     setError("");
+    setMetin("");
+
     try {
       const res = await fetch("/api/buro/dilekce/generate", {
         method: "POST",
@@ -102,9 +156,24 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
           mod: "ai",
         }),
       });
-      const data = await res.json() as { metin?: string; error?: string };
-      if (data.metin) setMetin(data.metin);
-      else setError(data.error ?? "Hata");
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const parts = buf.split("\n\n");
+        buf = parts.pop() ?? "";
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          try {
+            const json = JSON.parse(part.slice(6)) as { delta?: string };
+            if (json.delta) setMetin((m) => m + json.delta);
+          } catch { /* ignore */ }
+        }
+      }
     } catch { setError("Bağlantı hatası"); }
     setLoading(false);
   }
@@ -115,17 +184,36 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function insertFormat(prefix: string, suffix = prefix) {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = metin.slice(start, end);
+    const newText = metin.slice(0, start) + prefix + selected + suffix + metin.slice(end);
+    setMetin(newText);
+    setTimeout(() => {
+      ta.focus();
+      ta.setSelectionRange(start + prefix.length, end + prefix.length);
+    }, 0);
+  }
+
   async function exportPDF() {
     setExporting("pdf");
     try {
-      const res = await fetch("/api/generate/dilekce", {
+      const res = await fetch("/api/buro/dilekce/export-pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "avukat_dilekce_pdf", data: { icerik: metin, baslik: konu } }),
+        body: JSON.stringify({ metin, baslik: konu }),
       });
       if (res.ok) {
-        const data = await res.json() as { pdfUrl?: string };
-        if (data.pdfUrl) window.open(data.pdfUrl, "_blank");
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "dilekce.pdf";
+        a.click();
+        URL.revokeObjectURL(url);
       }
     } catch { /* ignore */ }
     setExporting(null);
@@ -150,6 +238,44 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
       }
     } catch { /* ignore */ }
     setExporting(null);
+  }
+
+  async function exportUDF() {
+    setExporting("udf");
+    try {
+      const res = await fetch("/api/buro/dilekce/export-udf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metin, baslik: konu }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "dilekce.udf";
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch { /* ignore */ }
+    setExporting(null);
+  }
+
+  async function saveAsTemplate() {
+    if (!metin || !konu) return;
+    try {
+      await fetch("/api/buro/sablon/kaydet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: konu, content: metin, document_type: "avukat_dilekce" }),
+      });
+      setSaved(true);
+      setSablonar((prev) => [
+        { id: Date.now().toString(), title: konu, document_type: "avukat_dilekce", content: metin, created_at: new Date().toISOString() },
+        ...prev,
+      ]);
+      setTimeout(() => setSaved(false), 2500);
+    } catch { /* ignore */ }
   }
 
   function loadSablon(s: Sablon) {
@@ -197,15 +323,13 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
               <div className="m-4 rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] p-5">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-full">AI Destekli</span>
-                  <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-full">Profesyonel</span>
+                  {tur && <span className="text-[10px] font-bold text-white/70 bg-white/10 px-2 py-0.5 rounded-full">{tur}</span>}
                 </div>
                 <div className="flex items-center gap-2.5 mb-2">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
                     <Sparkles className="w-4 h-4 text-white" />
                   </div>
-                  <div>
-                    <p className="font-heading text-base font-bold text-white">MizanAI ile Dilekçe Oluştur</p>
-                  </div>
+                  <p className="font-heading text-base font-bold text-white">MizanAI ile Dilekçe Oluştur</p>
                 </div>
                 <p className="text-xs text-white/60 leading-relaxed">
                   Olay özetini yazın, emsal kararlarla desteklenmiş profesyonel dilekçe hazırlansın.
@@ -253,7 +377,7 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
                       <>
                         <FileUp className="w-6 h-6 text-gray-300 mx-auto mb-1" />
                         <p className="text-xs text-gray-400">Dosya Seç veya Sürükle</p>
-                        <p className="text-[10px] text-gray-300 mt-0.5">UDF, PDF, DOC formatı (DOCX)</p>
+                        <p className="text-[10px] text-gray-300 mt-0.5">UDF, PDF, DOCX, TXT</p>
                       </>
                     )}
                   </div>
@@ -276,6 +400,15 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
                     : <><Sparkles className="w-4 h-4" /> Dilekçe Oluşturmaya Başla</>
                   }
                 </button>
+
+                {loading && (
+                  <button
+                    onClick={() => abortRef.current?.abort()}
+                    className="w-full text-xs text-gray-400 hover:text-red-400 transition-colors py-1"
+                  >
+                    Durdur
+                  </button>
+                )}
               </div>
             </div>
 
@@ -291,51 +424,113 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
                     <p className="text-sm text-gray-400">Dilekçeyi oluşturduktan sonra burada düzenleyebilirsiniz</p>
                   </div>
                 </div>
-              ) : loading ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2 className="w-10 h-10 text-[#7c3aed] animate-spin mx-auto mb-3" />
-                    <p className="font-heading text-base font-bold text-[#0f1729]">Dilekçe hazırlanıyor...</p>
-                    <p className="text-sm text-gray-400 mt-1">AI hukuki içeriği oluşturuyor</p>
-                  </div>
-                </div>
               ) : (
                 <>
                   {/* Editör toolbar */}
-                  <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
+                  <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-1.5 flex-shrink-0 flex-wrap">
+                    {/* Formatting */}
+                    <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
+                      <button onClick={() => insertFormat("**")} title="Kalın"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => insertFormat("_")} title="İtalik"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Font size */}
+                    <div className="flex items-center gap-1 border-r border-gray-200 pr-2 mr-0.5">
+                      <Type className="w-3.5 h-3.5 text-gray-400" />
+                      <select
+                        value={fontSize}
+                        onChange={(e) => setFontSize(Number(e.target.value))}
+                        className="text-xs text-gray-600 border-none focus:outline-none bg-transparent"
+                      >
+                        {[10, 11, 12, 13, 14, 16, 18].map((s) => (
+                          <option key={s} value={s}>{s}pt</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Alignment */}
+                    <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
+                      <button onClick={() => setTextAlign("left")}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "left" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                        <AlignLeft className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setTextAlign("center")}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "center" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                        <AlignCenter className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => setTextAlign("right")}
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "right" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                        <AlignRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Action buttons */}
                     <button onClick={copyText}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
-                      {copied ? <><Check className="w-3.5 h-3.5 text-green-500" /> Kopyalandı</> : <><Copy className="w-3.5 h-3.5" /> Kopyala</>}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-gray-300 transition-colors">
+                      {copied ? <><Check className="w-3 h-3 text-green-500" /> Kopyalandı</> : <><Copy className="w-3 h-3" /> Kopyala</>}
                     </button>
                     <button onClick={() => generate("duzenle")} disabled={loading}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors">
-                      <RefreshCw className="w-3.5 h-3.5" /> Yeniden Üret
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors">
+                      <RefreshCw className="w-3 h-3" /> Yeniden Üret
                     </button>
+                    <button onClick={saveAsTemplate} disabled={!metin || saved}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-green-400 hover:text-green-600 transition-colors">
+                      {saved ? <><Check className="w-3 h-3 text-green-500" /> Kaydedildi</> : <><Save className="w-3 h-3" /> Şablon Kaydet</>}
+                    </button>
+
                     <div className="flex-1" />
-                    <button onClick={exportPDF} disabled={!!exporting}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#0f1729] hover:text-[#0f1729] transition-colors">
-                      {exporting === "pdf" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                      PDF İndir
+
+                    {/* Export buttons */}
+                    <button onClick={exportPDF} disabled={!!exporting || loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-red-400 hover:text-red-600 transition-colors">
+                      {exporting === "pdf" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                      PDF
                     </button>
-                    <button onClick={exportWord} disabled={!!exporting}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors">
-                      {exporting === "word" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-                      Word İndir
+                    <button onClick={exportWord} disabled={!!exporting || loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors">
+                      {exporting === "word" ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                      Word
+                    </button>
+                    <button onClick={exportUDF} disabled={!!exporting || loading}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors">
+                      {exporting === "udf" ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileCode2 className="w-3 h-3" />}
+                      UDF (UYAP)
                     </button>
                   </div>
 
                   {/* Belge editörü */}
                   <div className="flex-1 overflow-y-auto p-8">
                     <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                      {/* Kağıt başlık */}
                       <div className="h-1.5 bg-gradient-to-r from-[#1a2744] to-[#7c3aed]" />
                       <div className="p-10">
-                        <textarea
-                          value={metin}
-                          onChange={(e) => setMetin(e.target.value)}
-                          className="w-full min-h-[600px] text-sm text-gray-800 leading-relaxed focus:outline-none resize-none font-mono"
-                          style={{ fontFamily: "'Times New Roman', serif", fontSize: "14px", lineHeight: "1.8" }}
-                        />
+                        {loading && metin === "" ? (
+                          <div className="flex items-center justify-center py-20">
+                            <div className="text-center">
+                              <Loader2 className="w-10 h-10 text-[#7c3aed] animate-spin mx-auto mb-3" />
+                              <p className="font-heading text-base font-bold text-[#0f1729]">Dilekçe hazırlanıyor...</p>
+                              <p className="text-sm text-gray-400 mt-1">AI hukuki içeriği oluşturuyor</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <textarea
+                            ref={textareaRef}
+                            value={metin}
+                            onChange={(e) => setMetin(e.target.value)}
+                            className="w-full min-h-[600px] text-gray-800 leading-relaxed focus:outline-none resize-none"
+                            style={{
+                              fontFamily: "'Times New Roman', serif",
+                              fontSize: `${fontSize}px`,
+                              lineHeight: "1.8",
+                              textAlign,
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
                   </div>
@@ -407,7 +602,7 @@ export default function DilekceAvukatClient({ lawyerName, sablonar }: Props) {
                 <div className="text-center py-20">
                   <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                   <p className="font-heading text-base font-bold text-[#0f1729] mb-1">Henüz şablon yok</p>
-                  <p className="text-sm text-gray-400">Oluşturduğunuz dilekçeler burada listelenir</p>
+                  <p className="text-sm text-gray-400">Oluşturduğunuz dilekçeleri &quot;Şablon Kaydet&quot; ile buraya ekleyin</p>
                   <button onClick={() => setTab("ai")} className="mt-4 text-sm text-[#7c3aed] hover:underline font-semibold">
                     İlk dilekçeyi oluştur →
                   </button>

@@ -13,6 +13,7 @@ export async function POST(request: Request) {
 
   const body = await request.json() as {
     konu: string;
+    tur?: string;
     ekBilgi?: string;
     dosyaMetni?: string;
     mod: "ai" | "duzenle";
@@ -23,7 +24,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Dilekçe konusu gereklidir" }, { status: 400 });
   }
 
-  // Avukat profili
   const serviceSupabase = createServiceClient() as Any;
   const { data: profile } = await serviceSupabase
     .from("profiles")
@@ -32,6 +32,7 @@ export async function POST(request: Request) {
     .single();
 
   const avukatAd = profile?.full_name ?? "Avukat";
+  const turBilgi = body.tur ? `\nDilekçe türü: ${body.tur}` : "";
 
   const systemPrompt = `Sen Türk hukuku alanında uzman, 20 yıllık deneyimli bir avukatsın.
 Meslektaşın olan Av. ${avukatAd} için profesyonel hukuki belgeler hazırlıyorsun.
@@ -41,29 +42,62 @@ KURALLAR:
 - Doğru mahkeme hitabı ve standart dilekçe formatı
 - İlgili kanun maddeleri ve içtihat atıfları
 - Profesyonel, resmi Türkçe
-- Dilekçenin tüm zorunlu bölümleri: başlık, yetkili makam, taraflar, konu, açıklama, hukuki dayanak, sonuç ve talep, saygılarımla + imza yeri
+- Zorunlu bölümler: başlık, yetkili makam, taraflar, konu, açıklama, hukuki dayanak, sonuç ve talep, saygılarımla + imza yeri
 - Sadece dilekçe metnini üret, ek açıklama ekleme`;
 
   const userMessage = body.mod === "duzenle" && body.mevcutMetin
     ? `Aşağıdaki dilekçeyi şu yönde düzenle/iyileştir:\n\nYeni konu/talimat: ${body.konu}\n\nMevcut dilekçe:\n${body.mevcutMetin}`
-    : `Konu: ${body.konu}${body.ekBilgi ? `\n\nEk bilgi:\n${body.ekBilgi}` : ""}${body.dosyaMetni ? `\n\nYüklenen belgeden çıkarılan bilgi:\n${body.dosyaMetni.slice(0, 3000)}` : ""}\n\nBu konuda profesyonel bir dilekçe hazırla.`;
+    : `Konu: ${body.konu}${turBilgi}${body.ekBilgi ? `\n\nEk bilgi:\n${body.ekBilgi}` : ""}${body.dosyaMetni ? `\n\nYüklenen belgeden çıkarılan bilgi:\n${body.dosyaMetni.slice(0, 3000)}` : ""}\n\nBu konuda profesyonel bir dilekçe hazırla.`;
 
-  const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4000,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userMessage }],
+  const encoder = new TextEncoder();
+  let fullText = "";
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        const response = anthropic.messages.stream({
+          model: "claude-sonnet-4-6",
+          max_tokens: 4000,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+        });
+
+        for await (const event of response) {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            const delta = event.delta.text;
+            fullText += delta;
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`)
+            );
+          }
+        }
+
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+        controller.close();
+
+        // DB kayıt (fire and forget)
+        serviceSupabase.from("generated_documents").insert({
+          user_id: user.id,
+          title: body.konu.slice(0, 100),
+          document_type: "avukat_dilekce",
+          content: fullText,
+        }).then(() => {}).catch(() => {});
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Hata";
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
+        controller.close();
+      }
+    },
   });
 
-  const metin = response.content[0].type === "text" ? response.content[0].text : "";
-
-  // DB kayıt
-  await serviceSupabase.from("generated_documents").insert({
-    user_id: user.id,
-    title: body.konu.slice(0, 100),
-    document_type: "avukat_dilekce",
-    content: metin,
-  }).then(() => {}).catch(() => {});
-
-  return Response.json({ metin });
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }

@@ -5,7 +5,11 @@ import DilekceAvukatClient from "./DilekceAvukatClient";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
 
-export default async function DilecePage() {
+interface PageProps {
+  searchParams: { konu?: string; tur?: string };
+}
+
+export default async function DilecePage({ searchParams }: PageProps) {
   const supabase = createClient() as AnyClient;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
@@ -20,7 +24,6 @@ export default async function DilecePage() {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
-  // Şablonlarım — daha önce üretilmiş avukat dilekçeleri
   const { data: sablonar } = await serviceSupabase
     .from("generated_documents")
     .select("id, title, document_type, content, created_at")
@@ -34,6 +37,8 @@ export default async function DilecePage() {
       <DilekceAvukatClient
         lawyerName={profile.full_name}
         sablonar={(sablonar as AnyClient[]) || []}
+        initialKonu={searchParams.konu ?? ""}
+        initialTur={searchParams.tur ?? ""}
       />
     </div>
   );
