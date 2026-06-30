@@ -79,12 +79,6 @@ export async function POST(
       .from("case-documents")
       .upload(storagePath, buf, { contentType: file.type });
 
-    let fileUrl: string | null = null;
-    if (!uploadErr) {
-      const { data: urlData } = svc.storage.from("case-documents").getPublicUrl(storagePath);
-      fileUrl = urlData?.publicUrl ?? null;
-    }
-
     // case_documents tablosuna kaydet (şema: name, storage_path, file_type, file_size)
     await svc.from("case_documents").insert({
       case_id: req.case_id ?? null,
