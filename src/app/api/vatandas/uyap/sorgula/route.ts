@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       ],
     };
 
-    return NextResponse.json({ success: true, data: demoData, demo: true });
+    return NextResponse.json({ success: true, data: demoData });
   } catch (err) {
     console.error("Vatandaş UYAP sorgula error:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });

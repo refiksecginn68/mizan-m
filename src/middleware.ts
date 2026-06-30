@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const AVUKAT_ROUTES = ["/buro"];
-const VATANDAS_ROUTES = ["/panel", "/asistan", "/belgelerim", "/uretilen-belgeler", "/emsal", "/kredi"];
+const VATANDAS_ROUTES = ["/panel", "/asistan", "/belgelerim", "/uretilen-belgeler", "/emsal", "/kredi", "/uyap"];
 const AUTH_ROUTES = ["/giris", "/kayit"];
 
 export async function middleware(request: NextRequest) {

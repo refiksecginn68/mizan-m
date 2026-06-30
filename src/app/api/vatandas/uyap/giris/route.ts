@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       .from("uyap_vatandas_files")
       .upsert(upsertData, { onConflict: "user_id,esas_no" });
 
-    return NextResponse.json({ success: true, files, demo: true });
+    return NextResponse.json({ success: true, files });
   } catch (err) {
     console.error("Vatandaş UYAP giris error:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
