@@ -264,7 +264,7 @@ KURALLAR:
       title: docTitle,
       document_type: body.type,
       content: dilekceText,
-      file_path: pdfUrl,
+      pdf_path: pdfUrl,
     });
 
     return Response.json({ text: dilekceText, pdfUrl });

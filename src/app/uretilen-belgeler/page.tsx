@@ -9,7 +9,7 @@ interface GeneratedDocument {
   title: string;
   document_type: string;
   created_at: string;
-  file_path: string | null;
+  pdf_path: string | null;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -42,7 +42,7 @@ export default async function UretilenBelgelerPage() {
 
   const { data: documents } = await anyClient
     .from("generated_documents")
-    .select("id, title, document_type, created_at, file_path")
+    .select("id, title, document_type, created_at, pdf_path")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50) as { data: GeneratedDocument[] | null };
@@ -98,7 +98,7 @@ export default async function UretilenBelgelerPage() {
                   </div>
                 </div>
                 <div className="flex-shrink-0">
-                  {doc.file_path ? (
+                  {doc.pdf_path ? (
                     <a
                       href={`/api/documents/download/${doc.id}`}
                       className="flex items-center gap-1 text-xs text-accent hover:text-accent/80 font-body font-medium transition-colors"

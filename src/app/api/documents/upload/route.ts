@@ -60,16 +60,15 @@ export async function POST(request: Request) {
       console.error("Storage error:", storageError.message);
     }
 
-    // DB kaydı
+    // DB kaydı (tablo şeması: name, storage_path, file_type, file_size)
     const { data: doc, error: dbError } = await serviceClient
       .from("documents")
       .insert({
         user_id: user.id,
-        file_name: file.name,
-        file_path: storageError ? null : storagePath,
+        name: file.name,
+        storage_path: storageError ? null : storagePath,
         file_type: file.type,
         file_size: file.size,
-        analysis_status: "pending",
       })
       .select("id")
       .single();

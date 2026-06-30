@@ -18,7 +18,7 @@ export default async function VatandasUYAPPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, user_type, credits")
+    .select("full_name, user_type, credit_balance")
     .eq("id", user.id)
     .single();
 
@@ -28,7 +28,7 @@ export default async function VatandasUYAPPage() {
     <div className="min-h-screen bg-background">
       <VatandasHeader
         userName={profile?.full_name}
-        credits={profile?.credits ?? 0}
+        credits={profile?.credit_balance ?? 0}
       />
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
@@ -37,7 +37,7 @@ export default async function VatandasUYAPPage() {
             TC kimlik numaranız ile mahkeme dosyanızı sorgulayın, AI asistanımızla istişare edin.
           </p>
         </div>
-        <UYAPVatandasClient credits={profile?.credits ?? 0} />
+        <UYAPVatandasClient credits={profile?.credit_balance ?? 0} />
       </main>
     </div>
   );

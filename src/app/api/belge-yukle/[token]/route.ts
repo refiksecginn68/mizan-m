@@ -85,19 +85,15 @@ export async function POST(
       fileUrl = urlData?.publicUrl ?? null;
     }
 
-    // case_documents tablosuna kaydet
+    // case_documents tablosuna kaydet (şema: name, storage_path, file_type, file_size)
     await svc.from("case_documents").insert({
       case_id: req.case_id ?? null,
       lawyer_id: req.lawyer_id,
-      file_name: file.name,
+      name: file.name,
       file_type: file.type,
-      file_path: fileUrl ?? storagePath,
-      notes: note ? `Müvekkil yükledi: ${note}` : "Müvekkil belge talebi üzerinden yüklendi",
-      metadata: {
-        uploaded_via: "belge_talep",
-        request_token: params.token,
-        client_id: req.client_id,
-      },
+      file_size: file.size,
+      storage_path: uploadErr ? null : storagePath,
+      ai_summary: note ? `Müvekkil notu: ${note}` : null,
     });
 
     uploaded.push(file.name);

@@ -20,7 +20,7 @@ export async function GET(
   const serviceClient = createServiceClient() as any;
   const { data: doc } = await serviceClient
     .from("generated_documents")
-    .select("id, user_id, title, file_path, content, document_type")
+    .select("id, user_id, title, pdf_path, content, document_type")
     .eq("id", params.id)
     .single();
 
@@ -38,9 +38,9 @@ export async function GET(
     });
   }
 
-  // Dosya storage'da varsa yönlendir
-  if (doc.file_path) {
-    redirect(doc.file_path);
+  // PDF storage'da varsa yönlendir
+  if (doc.pdf_path) {
+    redirect(doc.pdf_path);
   }
 
   // Storage yoksa içeriği metin dosyası olarak döndür

@@ -26,16 +26,9 @@ export async function POST(request: Request) {
     .insert({
       case_id: body.case_id,
       lawyer_id: user.id,
-      file_name: `Emsal: ${body.court} - ${body.case_number}`,
+      name: `Emsal: ${body.court} - ${body.case_number}`,
       file_type: "emsal_karar",
-      notes: body.subject + "\n\n" + body.summary,
-      metadata: {
-        karar_id: body.karar_id,
-        court: body.court,
-        case_number: body.case_number,
-        decision_date: body.decision_date,
-        subject: body.subject,
-      },
+      ai_summary: `${body.subject}\n\n${body.summary}\n\nKarar ID: ${body.karar_id} | Tarih: ${body.decision_date ?? "-"}`,
     });
 
   if (error) {

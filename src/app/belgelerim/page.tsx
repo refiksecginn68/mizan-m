@@ -7,11 +7,10 @@ import Link from "next/link";
 
 interface Document {
   id: string;
-  file_name: string;
+  name: string;
   file_type: string;
   file_size: number;
   created_at: string;
-  analysis_status: string | null;
 }
 
 export default async function BelgelerimPage() {
@@ -32,7 +31,7 @@ export default async function BelgelerimPage() {
 
   const { data: documents } = await anyClient
     .from("documents")
-    .select("id, file_name, file_type, file_size, created_at, analysis_status")
+    .select("id, name, file_type, file_size, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(50) as { data: Document[] | null };
@@ -84,7 +83,7 @@ export default async function BelgelerimPage() {
                     <FileText className="w-5 h-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-body text-sm font-medium text-primary truncate">{doc.file_name}</p>
+                    <p className="font-body text-sm font-medium text-primary truncate">{doc.name}</p>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="font-body text-xs text-muted-foreground">
                         {(doc.file_size / 1024).toFixed(0)} KB
@@ -93,15 +92,6 @@ export default async function BelgelerimPage() {
                         <Calendar className="w-3 h-3" />
                         {new Date(doc.created_at).toLocaleDateString("tr-TR")}
                       </span>
-                      {doc.analysis_status && (
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-body ${
-                          doc.analysis_status === "completed"
-                            ? "bg-success/10 text-success"
-                            : "bg-accent/10 text-accent"
-                        }`}>
-                          {doc.analysis_status === "completed" ? "Analiz edildi" : "Bekliyor"}
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
