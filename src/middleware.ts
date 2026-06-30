@@ -82,7 +82,8 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (profile?.user_type !== "avukat") {
+    // Profil null ise sayfanın kendi auth kontrolüne bırak (sonsuz döngü önlenir)
+    if (profile && profile.user_type !== "avukat") {
       const url = request.nextUrl.clone();
       url.pathname = "/panel";
       return NextResponse.redirect(url);

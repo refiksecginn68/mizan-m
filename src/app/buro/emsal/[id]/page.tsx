@@ -16,7 +16,7 @@ export default async function KararIncelemePage({ params }: { params: { id: stri
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   const kararId = decodeURIComponent(params.id);
 

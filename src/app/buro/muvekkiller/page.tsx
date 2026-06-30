@@ -16,7 +16,7 @@ export default async function MuvekkkillerPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   const serviceSupabase = createServiceClient() as AnyClient;
 

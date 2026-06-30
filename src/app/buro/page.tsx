@@ -61,7 +61,7 @@ export default async function BuroPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   const serviceSupabase = createServiceClient() as AnyClient;
   const now = new Date();

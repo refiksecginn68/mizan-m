@@ -19,7 +19,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">

@@ -17,7 +17,7 @@ export default async function HaberlerPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">

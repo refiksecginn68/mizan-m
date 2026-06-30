@@ -16,7 +16,7 @@ export default async function BuroAsistanPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/giris");
 
   return (
     <div className="h-screen bg-[#f4f5f7] flex flex-col overflow-hidden">
