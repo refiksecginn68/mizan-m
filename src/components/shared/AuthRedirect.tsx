@@ -1,26 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// Giriş yapmış kullanıcıyı ana sayfadan dashboard'a yönlendirir (PWA için gerekli)
+// Giriş yapmış kullanıcıyı ana sayfadan dashboard'a yönlendirir (PWA için)
+// getUser() kullanır — server-side doğrulama ile geçersiz/süresi dolmuş
+// token'ları otomatik filtreler (getSession() aksine).
 export default function AuthRedirect() {
-  const router = useRouter();
-
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
+    // getUser() Supabase sunucusuyla doğrulama yapar —
+    // localStorage'daki bozuk/expired token'lar null döndürür.
+    supabase.auth.getUser().then(async ({ data: { user }, error }) => {
+      if (error || !user) return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: profile } = await (supabase as any)
         .from("profiles")
         .select("user_type")
-        .eq("id", session.user.id)
+        .eq("id", user.id)
         .single();
-      router.replace(profile?.user_type === "avukat" ? "/buro" : "/panel");
+      if (!profile) return;
+      const dest = profile.user_type === "avukat" ? "/buro" : "/panel";
+      window.location.href = dest;
     });
-  }, [router]);
+  }, []);
 
   return null;
 }

@@ -34,20 +34,27 @@ function GirisForm() {
     setLoading(true);
     setServerError(null);
 
-    try {
-      const formData = new FormData();
-      formData.set("email", form.email);
-      formData.set("password", form.password);
-      if (redirect) formData.set("redirect", redirect);
+    const formData = new FormData();
+    formData.set("email", form.email);
+    formData.set("password", form.password);
+    if (redirect) formData.set("redirect", redirect);
 
-      // Server Action: cookie'yi sunucu tarafında set eder, sonra redirect atar
+    try {
       const result = await loginAction(formData);
-      if (result?.error) {
+
+      if ("error" in result) {
         setServerError(result.error);
+        setLoading(false);
+        return;
       }
+
+      // Başarılı giriş: tam sayfa navigasyon (cookie'lerin doğru okunması için)
+      // router.push yerine window.location.href — session cookie'nin sunucuya
+      // doğru gitmesini garantiler, Next.js client-side cache'i atlar.
+      window.location.href = result.destination;
+      // loading spinner giriş sayfasından ayrılana kadar görünür kalsın
     } catch {
       setServerError("Bağlantı hatası. Lütfen tekrar deneyin.");
-    } finally {
       setLoading(false);
     }
   }

@@ -16,7 +16,9 @@ function translateLoginError(msg: string): string {
   return "Giriş başarısız. Lütfen tekrar deneyin.";
 }
 
-export async function loginAction(formData: FormData): Promise<{ error: string } | never> {
+export async function loginAction(
+  formData: FormData
+): Promise<{ error: string } | { destination: string }> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const redirectTo = formData.get("redirect") as string | null;
@@ -32,6 +34,7 @@ export async function loginAction(formData: FormData): Promise<{ error: string }
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !data.user) {
+    console.error("[loginAction] auth error:", error?.message);
     return { error: translateLoginError(error?.message ?? "") };
   }
 
@@ -42,8 +45,8 @@ export async function loginAction(formData: FormData): Promise<{ error: string }
     .single();
 
   const userType: string = profile?.user_type ?? "vatandas";
+  console.log("[loginAction] user:", data.user.email, "type:", userType);
 
-  // redirect param güvenlik kontrolü: yalnızca kullanıcı tipine uygun rota kabul et
   let destination: string;
   if (redirectTo && userType === "avukat" && redirectTo.startsWith("/buro")) {
     destination = redirectTo;
@@ -53,5 +56,8 @@ export async function loginAction(formData: FormData): Promise<{ error: string }
     destination = userType === "avukat" ? "/buro" : "/panel";
   }
 
-  redirect(destination);
+  // redirect() yerine destination döndür — client window.location.href kullanacak.
+  // redirect() Next.js'de NEXT_REDIRECT exception fırlatır ve try/catch tarafından
+  // yakalanabilir, bu da navigasyonun çalışmamasına neden olur.
+  return { destination };
 }
