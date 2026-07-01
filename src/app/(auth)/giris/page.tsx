@@ -2,13 +2,15 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 function GirisForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
+  const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,21 +36,28 @@ function GirisForm() {
     setServerError(null);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, password: form.password }),
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
       });
 
-      const json = await res.json();
-
-      if (!res.ok) {
-        setServerError(json.error ?? "Giriş başarısız.");
+      if (error || !data.user) {
+        setServerError(translateError(error?.message ?? ""));
         return;
       }
 
-      const destination = redirect ?? (json.userType === "avukat" ? "/buro" : "/panel");
-      window.location.href = destination;
+      // Profil tipine göre yönlendir
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: profile } = await (supabase as any)
+        .from("profiles")
+        .select("user_type")
+        .eq("id", data.user.id)
+        .single();
+
+      const destination = redirect ?? (profile?.user_type === "avukat" ? "/buro" : "/panel");
+      router.push(destination);
+      router.refresh();
     } catch {
       setServerError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -194,4 +203,12 @@ export default function GirisPage() {
       <GirisForm />
     </Suspense>
   );
+}
+
+function translateError(msg: string): string {
+  if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) return "E-posta veya şifre hatalı.";
+  if (msg.includes("Email not confirmed")) return "E-postanızı doğrulamanız gerekiyor.";
+  if (msg.includes("rate limit")) return "Çok fazla deneme. Lütfen biraz bekleyin.";
+  if (!msg) return "Giriş başarısız. Lütfen tekrar deneyin.";
+  return "Giriş başarısız. Lütfen tekrar deneyin.";
 }

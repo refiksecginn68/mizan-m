@@ -60,7 +60,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // Giriş yapmış kullanıcı auth sayfasına gitmeye çalışıyor
-  if (user && AUTH_ROUTES.includes(pathname)) {
+  // ?hata=yetki parametresi varsa redirect etme — sayfa zaten hata gösterecek
+  if (user && AUTH_ROUTES.includes(pathname) && !request.nextUrl.searchParams.get("hata")) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile } = await (supabase as any)
       .from("profiles")
