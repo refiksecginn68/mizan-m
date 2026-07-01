@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { X, Send, Sparkles, StopCircle } from "lucide-react";
+import Image from "next/image";
+import { X, Send, StopCircle } from "lucide-react";
 
 interface Message {
   id: string;
@@ -82,10 +83,10 @@ export default function MizanAIFloating({ lawyerName }: Props) {
       {/* Floating button */}
       <button
         onClick={() => setOpen(true)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#e7b743] shadow-2xl flex items-center justify-center hover:scale-110 transition-transform ${open ? "hidden" : ""}`}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#e7b743] shadow-2xl flex items-center justify-center hover:scale-110 transition-transform overflow-hidden ${open ? "hidden" : ""}`}
         title="MizanAI"
       >
-        <Sparkles className="w-6 h-6 text-white" />
+        <Image src="/logo.png" alt="MizanAI" width={40} height={40} className="w-10 h-10 object-cover rounded-full" />
       </button>
 
       {/* Chat panel */}
@@ -93,8 +94,8 @@ export default function MizanAIFloating({ lawyerName }: Props) {
         <div className="fixed bottom-6 right-6 z-50 w-80 h-[480px] bg-[#0f1729] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/10 bg-gradient-to-r from-[#c9a84c]/20 to-transparent flex-shrink-0">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#c9a84c] to-[#e7b743] flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
+            <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+              <Image src="/logo.png" alt="MizanAI" width={28} height={28} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-white">MizanAI</p>
@@ -136,7 +137,7 @@ export default function MizanAIFloating({ lawyerName }: Props) {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
               placeholder="Soru sorun..."
-              className="flex-1 bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#c9a84c]/50"
+              className="flex-1 bg-white border border-white/20 rounded-xl px-3 py-2 text-xs text-[#1a2744] placeholder:text-[#6b7280] focus:outline-none focus:border-[#c9a84c]/70"
             />
             {loading ? (
               <button

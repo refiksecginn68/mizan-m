@@ -70,9 +70,10 @@ export default function Footer() {
             </h3>
             <ul className="space-y-2">
               {[
-                { href: "/gizlilik", label: "Gizlilik Politikası" },
+                { href: "/gizlilik-politikasi", label: "Gizlilik Politikası" },
                 { href: "/kullanim-sartlari", label: "Kullanım Şartları" },
-                { href: "/kvkk", label: "KVKK" },
+                { href: "/mesafeli-satis-sozlesmesi", label: "Mesafeli Satış" },
+                { href: "/cerez-politikasi", label: "Çerez Politikası" },
               ].map((item) => (
                 <li key={item.href}>
                   <Link

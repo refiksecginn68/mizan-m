@@ -3,6 +3,7 @@ import { Playfair_Display, Source_Serif_4, JetBrains_Mono } from "next/font/goog
 import "./globals.css";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import PWAInstallPrompt from "@/components/pwa/PWAInstallPrompt";
+import CookieBanner from "@/components/shared/CookieBanner";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -94,6 +95,7 @@ export default function RootLayout({
         {children}
         <ServiceWorkerRegister />
         <PWAInstallPrompt />
+        <CookieBanner />
       </body>
     </html>
   );

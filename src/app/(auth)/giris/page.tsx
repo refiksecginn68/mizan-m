@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { loginAction } from "@/lib/actions/auth";
 
 function GirisForm() {
   const searchParams = useSearchParams();
@@ -35,28 +35,16 @@ function GirisForm() {
     setServerError(null);
 
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: form.email,
-        password: form.password,
-      });
+      const formData = new FormData();
+      formData.set("email", form.email);
+      formData.set("password", form.password);
+      if (redirect) formData.set("redirect", redirect);
 
-      if (error || !data.user) {
-        setServerError(translateError(error?.message ?? ""));
-        return;
+      // Server Action: cookie'yi sunucu tarafında set eder, sonra redirect atar
+      const result = await loginAction(formData);
+      if (result?.error) {
+        setServerError(result.error);
       }
-
-      // Profil tipine göre yönlendir
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: profile } = await (supabase as any)
-        .from("profiles")
-        .select("user_type")
-        .eq("id", data.user.id)
-        .single();
-
-      const destination = redirect ?? (profile?.user_type === "avukat" ? "/buro" : "/panel");
-      // Hard navigation: router.push + router.refresh race condition'dan kaçın
-      window.location.href = destination;
     } catch {
       setServerError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -204,10 +192,3 @@ export default function GirisPage() {
   );
 }
 
-function translateError(msg: string): string {
-  if (msg.includes("Invalid login credentials") || msg.includes("invalid_credentials")) return "E-posta veya şifre hatalı.";
-  if (msg.includes("Email not confirmed")) return "E-postanızı doğrulamanız gerekiyor.";
-  if (msg.includes("rate limit")) return "Çok fazla deneme. Lütfen biraz bekleyin.";
-  if (!msg) return "Giriş başarısız. Lütfen tekrar deneyin.";
-  return "Giriş başarısız. Lütfen tekrar deneyin.";
-}

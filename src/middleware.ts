@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 const AVUKAT_ROUTES = ["/buro"];
 const VATANDAS_ROUTES = ["/panel", "/asistan", "/belgelerim", "/uretilen-belgeler", "/emsal", "/kredi", "/uyap"];
 
+// In-memory rate limiter: IP → { count, resetAt }
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 dakika
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
@@ -11,6 +16,25 @@ export async function middleware(request: NextRequest) {
   // Statik dosyalar için atla
   if (pathname.startsWith("/_next/") || pathname.includes(".")) {
     return supabaseResponse;
+  }
+
+  // Login rate limiting
+  if (pathname === "/api/auth/login" && request.method === "POST") {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const now = Date.now();
+    const record = loginAttempts.get(ip);
+    if (record && now < record.resetAt) {
+      if (record.count >= RATE_LIMIT_MAX) {
+        const waitMin = Math.ceil((record.resetAt - now) / 60000);
+        return NextResponse.json(
+          { error: `Çok fazla başarısız giriş denemesi. ${waitMin} dakika sonra tekrar deneyin.` },
+          { status: 429 }
+        );
+      }
+      record.count += 1;
+    } else {
+      loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    }
   }
 
   const supabase = createServerClient(
@@ -52,8 +76,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Avukat rotasına vatandaş → /panel
-  if (user && AVUKAT_ROUTES.some((r) => pathname.startsWith(r))) {
+  // Rol tabanlı yönlendirme
+  if (user && (AVUKAT_ROUTES.some((r) => pathname.startsWith(r)) || VATANDAS_ROUTES.some((r) => pathname.startsWith(r)))) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile } = await (supabase as any)
       .from("profiles")
@@ -61,10 +85,19 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (profile && profile.user_type === "vatandas") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/panel";
-      return NextResponse.redirect(url);
+    if (profile) {
+      // Vatandaş avukat rotasına gitmeye çalışıyor
+      if (profile.user_type === "vatandas" && AVUKAT_ROUTES.some((r) => pathname.startsWith(r))) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/panel";
+        return NextResponse.redirect(url);
+      }
+      // Avukat vatandaş rotasına gitmeye çalışıyor
+      if (profile.user_type === "avukat" && VATANDAS_ROUTES.some((r) => pathname.startsWith(r))) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/buro";
+        return NextResponse.redirect(url);
+      }
     }
   }
 

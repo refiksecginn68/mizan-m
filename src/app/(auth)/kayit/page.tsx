@@ -25,6 +25,7 @@ function KayitForm() {
     phone: "",
     bar_number: "",
     terms: false,
+    kvkk: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -45,6 +46,7 @@ function KayitForm() {
     if (userType === "avukat" && !form.bar_number.trim())
       errs.bar_number = "Baro sicil numarası zorunludur";
     if (!form.terms) errs.terms = "Kullanım şartlarını kabul etmelisiniz";
+    if (!form.kvkk) errs.kvkk = "KVKK aydınlatma metnini onaylamanız gereklidir";
     return errs;
   }
 
@@ -297,22 +299,39 @@ function KayitForm() {
           </div>
         )}
 
+        {/* KVKK */}
+        <div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-accent flex-shrink-0"
+              checked={form.kvkk}
+              onChange={(e) => setForm({ ...form, kvkk: e.target.checked })}
+            />
+            <span className="font-body text-sm text-foreground">
+              <Link href="/gizlilik-politikasi" className="text-accent hover:underline">
+                KVKK Aydınlatma Metnini
+              </Link>{" "}
+              okudum, kişisel verilerimin işlenmesine onay veriyorum.
+            </span>
+          </label>
+          {errors.kvkk && (
+            <p className="font-body text-xs text-danger mt-1">{errors.kvkk}</p>
+          )}
+        </div>
+
         {/* Terms */}
         <div>
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
-              className="mt-0.5 w-4 h-4 accent-accent"
+              className="mt-0.5 w-4 h-4 accent-accent flex-shrink-0"
               checked={form.terms}
               onChange={(e) => setForm({ ...form, terms: e.target.checked })}
             />
             <span className="font-body text-sm text-foreground">
               <Link href="/kullanim-sartlari" className="text-accent hover:underline">
                 Kullanım Şartları
-              </Link>{" "}
-              ve{" "}
-              <Link href="/gizlilik" className="text-accent hover:underline">
-                Gizlilik Politikası
               </Link>
               &apos;nı okudum, kabul ediyorum.
             </span>
