@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X, Scale } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import Logo from "@/components/shared/Logo";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -12,14 +13,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg gradient-gold flex items-center justify-center">
-              <Scale className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-heading text-xl font-bold text-white tracking-wide">
-              Mizanım
-            </span>
-          </Link>
+          <Logo href="/" size={32} textClass="font-heading text-xl font-bold text-white tracking-wide" />
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">

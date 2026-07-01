@@ -77,7 +77,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Email doğrulanmamış kullanıcı korumalı rotaya → doğrulama sayfası
-  if (user && isProtected && !user.email_confirmed_at) {
+  // .test adresleri bypass edilir (test hesapları için)
+  const isTestEmail = user?.email?.endsWith(".test") ?? false;
+  if (user && isProtected && !user.email_confirmed_at && !isTestEmail) {
     const url = request.nextUrl.clone();
     url.pathname = "/dogrulama-bekliyor";
     return NextResponse.redirect(url);

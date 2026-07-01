@@ -177,9 +177,6 @@ function GirisForm() {
         </div>
       </div>
 
-      <p className="text-center font-body text-xs text-muted-foreground mt-6">
-        ⚠️ Mizanım hukuki bilgi sunar, hukuki tavsiye niteliği taşımaz.
-      </p>
     </div>
   );
 }

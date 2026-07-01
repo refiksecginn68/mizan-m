@@ -23,6 +23,11 @@ export async function GET(request: Request) {
         const destination = profile?.user_type === "avukat" ? "/buro" : "/panel";
         return NextResponse.redirect(`${origin}${destination}`);
       }
+    } else {
+      // Token geçersiz veya süresi dolmuş
+      const errorUrl = new URL(`${origin}/auth/hata`);
+      errorUrl.searchParams.set("reason", error.message.includes("expired") ? "expired" : "invalid");
+      return NextResponse.redirect(errorUrl);
     }
   }
 

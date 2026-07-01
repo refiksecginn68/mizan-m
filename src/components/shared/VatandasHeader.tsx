@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, CreditCard, User, LogOut, MessageSquare, FileText, Search, BookOpen, Building2 } from "lucide-react";
+import { CreditCard, User, LogOut, MessageSquare, FileText, Search, BookOpen, Building2 } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
+import Logo from "@/components/shared/Logo";
 
 interface VatandasHeaderProps {
   fullName?: string;
@@ -30,12 +31,7 @@ export default function VatandasHeader({ fullName, userName, creditBalance, cred
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/panel" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-lg gradient-gold flex items-center justify-center">
-              <Scale className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="font-heading text-base font-bold text-white">Mizanım</span>
-          </Link>
+          <Logo href="/panel" size={28} />
 
           {/* Nav */}
           <nav className="hidden md:flex items-center gap-1">

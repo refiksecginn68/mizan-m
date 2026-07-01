@@ -32,9 +32,6 @@ export default async function AuthLayout({
           </div>
           <span className="font-heading text-xl font-bold text-white">Mizanım</span>
         </Link>
-        <p className="font-body text-xs text-white/40 hidden sm:block">
-          ⚠️ Hukuki bilgi sunar, tavsiye niteliği taşımaz
-        </p>
       </header>
 
       {/* Content */}

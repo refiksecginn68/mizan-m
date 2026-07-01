@@ -51,6 +51,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Resend varsa özel markalı email gönder (Supabase'in default emailini geçersiz kılar)
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
+    if (RESEND_API_KEY && APP_URL) {
+      try {
+        await fetch(`${APP_URL}/api/auth/send-verification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+      } catch { /* email gönderilemese de kayıt başarılı sayılır */ }
+    }
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Bir hata oluştu. Lütfen tekrar deneyin." }, { status: 500 });

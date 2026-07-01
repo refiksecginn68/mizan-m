@@ -10,7 +10,7 @@ interface UploadZoneProps {
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
 
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/octet-stream"];
 const MAX_SIZE_MB = 10;
 
 export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
@@ -23,7 +23,8 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
   const router = useRouter();
 
   const validateFile = useCallback((f: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(f.type)) return "Sadece PDF, JPG, PNG veya WebP dosyası yükleyebilirsiniz.";
+    const isUDF = f.name.toLowerCase().endsWith(".udf");
+    if (!isUDF && !ACCEPTED_TYPES.includes(f.type)) return "Sadece PDF, JPG, PNG, WebP veya UDF dosyası yükleyebilirsiniz.";
     if (f.size > MAX_SIZE_MB * 1024 * 1024) return `Dosya boyutu en fazla ${MAX_SIZE_MB} MB olmalıdır.`;
     return null;
   }, []);
@@ -94,7 +95,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".pdf,.jpg,.jpeg,.png,.webp"
+          accept=".pdf,.jpg,.jpeg,.png,.webp,.udf"
           className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
         />
@@ -122,7 +123,7 @@ export default function UploadZone({ onUploadComplete }: UploadZoneProps) {
               Dosyayı buraya sürükleyin veya tıklayın
             </p>
             <p className="font-body text-xs text-muted-foreground">
-              PDF, JPG, PNG — maks. {MAX_SIZE_MB} MB
+              PDF, JPG, PNG, UDF — maks. {MAX_SIZE_MB} MB
             </p>
           </>
         )}

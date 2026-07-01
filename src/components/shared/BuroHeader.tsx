@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, Users, FolderOpen, Calendar, TrendingUp, MessageSquare, LogOut, User, Building2, Mail, Film, BookOpen } from "lucide-react";
+import { Users, FolderOpen, Calendar, TrendingUp, MessageSquare, LogOut, User, Building2, Mail, Film, BookOpen } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
+import Logo from "@/components/shared/Logo";
 
 interface BuroHeaderProps {
   lawyerName: string;
@@ -29,15 +30,7 @@ export default function BuroHeader({ lawyerName }: BuroHeaderProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         {/* Top bar */}
         <div className="flex items-center justify-between h-14 border-b border-white/10">
-          <Link href="/buro" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-lg gradient-gold flex items-center justify-center">
-              <Scale className="w-3.5 h-3.5 text-white" />
-            </div>
-            <div>
-              <span className="font-heading text-base font-bold text-white">Mizanım</span>
-              <span className="font-body text-xs text-white/40 ml-1.5">Büro Yönetimi</span>
-            </div>
-          </Link>
+          <Logo href="/buro" size={28} subtitle="Büro Yönetimi" />
 
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">

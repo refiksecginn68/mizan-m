@@ -48,11 +48,6 @@ export default async function EmsalPage() {
 
         <EmsalSearch initialResults={caseLaws ?? []} />
 
-        <div className="mt-8 bg-muted rounded-xl p-4 border border-border">
-          <p className="font-body text-xs text-muted-foreground text-center">
-            ⚠️ Emsal kararlar bilgilendirme amaçlıdır. Hukuki karar için avukatınıza danışın.
-          </p>
-        </div>
       </main>
     </div>
   );
