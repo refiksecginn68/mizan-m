@@ -20,16 +20,21 @@ export default function SifremiUnuttumPage() {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error: sbError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+    // Önce markalı Resend emailini dene, yoksa Supabase native kullan
+    const res = await fetch("/api/auth/send-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim() }),
     });
 
-    if (sbError) {
-      setError("İşlem sırasında bir hata oluştu. Lütfen tekrar deneyin.");
-    } else {
-      setSuccess(true);
+    if (!res.ok) {
+      // Fallback: Supabase native
+      const supabase = createClient();
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
     }
+    setSuccess(true);
     setLoading(false);
   }
 

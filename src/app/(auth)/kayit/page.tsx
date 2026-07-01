@@ -83,8 +83,8 @@ function KayitForm() {
 
       setSuccess(true);
       setTimeout(() => {
-        window.location.href = userType === "avukat" ? "/buro" : "/panel";
-      }, 2000);
+        window.location.href = "/dogrulama-bekliyor";
+      }, 1500);
     } catch {
       setServerError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -162,13 +162,11 @@ function KayitForm() {
         <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
           <CheckCircle className="w-8 h-8 text-success" />
         </div>
-        <h2 className="font-heading text-2xl font-bold text-primary mb-2">Hoşgeldiniz!</h2>
+        <h2 className="font-heading text-2xl font-bold text-primary mb-2">Hesabınız Oluşturuldu!</h2>
         <p className="font-body text-muted-foreground mb-2">
-          Hesabınız oluşturuldu. Yönlendiriliyorsunuz...
+          E-posta doğrulama bağlantısı gönderildi...
         </p>
-        {userType === "vatandas" && (
-          <p className="font-body text-sm text-success font-semibold">🎉 20 kredi hesabınıza eklendi!</p>
-        )}
+        <p className="font-body text-sm text-muted-foreground">Lütfen e-postanızı kontrol edin.</p>
       </div>
     );
   }

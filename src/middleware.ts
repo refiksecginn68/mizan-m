@@ -76,6 +76,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Email doğrulanmamış kullanıcı korumalı rotaya → doğrulama sayfası
+  if (user && isProtected && !user.email_confirmed_at) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dogrulama-bekliyor";
+    return NextResponse.redirect(url);
+  }
+
   // Rol tabanlı yönlendirme
   if (user && (AVUKAT_ROUTES.some((r) => pathname.startsWith(r)) || VATANDAS_ROUTES.some((r) => pathname.startsWith(r)))) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
