@@ -24,7 +24,7 @@ export default function Header() {
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">
             <Link
-              href="/fiyatlandirma"
+              href="/#fiyatlandirma"
               className="font-body text-sm text-white/80 hover:text-accent transition-colors"
             >
               Fiyatlandırma
@@ -75,7 +75,7 @@ export default function Header() {
         <div className="md:hidden bg-primary border-t border-white/10 animate-fade-in">
           <div className="px-4 py-4 space-y-3">
             <Link
-              href="/fiyatlandirma"
+              href="/#fiyatlandirma"
               className="block font-body text-white/80 hover:text-accent py-2 transition-colors"
               onClick={() => setMenuOpen(false)}
             >

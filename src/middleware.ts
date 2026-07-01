@@ -3,17 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const AVUKAT_ROUTES = ["/buro"];
 const VATANDAS_ROUTES = ["/panel", "/asistan", "/belgelerim", "/uretilen-belgeler", "/emsal", "/kredi", "/uyap"];
-const AUTH_ROUTES = ["/giris", "/kayit"];
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
 
-  // Statik dosyalar için middleware'i doğrudan atla
-  if (
-    pathname.startsWith("/_next/") ||
-    pathname.includes(".")
-  ) {
+  // Statik dosyalar için atla
+  if (pathname.startsWith("/_next/") || pathname.includes(".")) {
     return supabaseResponse;
   }
 
@@ -26,9 +22,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
@@ -43,15 +37,14 @@ export async function middleware(request: NextRequest) {
     const { data } = await supabase.auth.getUser();
     user = data.user;
   } catch {
-    // Supabase bağlantı hatası — auth olmadan devam et
     return supabaseResponse;
   }
 
-  // Giriş yapmamış kullanıcı korumalı rotaya erişmeye çalışıyor
   const isProtected =
     AVUKAT_ROUTES.some((r) => pathname.startsWith(r)) ||
     VATANDAS_ROUTES.some((r) => pathname.startsWith(r));
 
+  // Giriş yapmamış kullanıcı korumalı rotaya → /giris
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/giris";
@@ -59,22 +52,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Giriş yapmış kullanıcı auth sayfasına gitmeye çalışıyor
-  // ?hata=yetki parametresi varsa redirect etme — sayfa zaten hata gösterecek
-  if (user && AUTH_ROUTES.includes(pathname) && !request.nextUrl.searchParams.get("hata")) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (supabase as any)
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single();
-
-    const url = request.nextUrl.clone();
-    url.pathname = profile?.user_type === "avukat" ? "/buro" : "/panel";
-    return NextResponse.redirect(url);
-  }
-
-  // Avukat rotasına vatandaş girmeye çalışıyor
+  // Avukat rotasına vatandaş → /panel
   if (user && AVUKAT_ROUTES.some((r) => pathname.startsWith(r))) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile } = await (supabase as any)
@@ -83,8 +61,7 @@ export async function middleware(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    // Profil null ise sayfanın kendi auth kontrolüne bırak (sonsuz döngü önlenir)
-    if (profile && profile.user_type !== "avukat") {
+    if (profile && profile.user_type === "vatandas") {
       const url = request.nextUrl.clone();
       url.pathname = "/panel";
       return NextResponse.redirect(url);

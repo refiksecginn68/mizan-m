@@ -21,7 +21,8 @@ export default async function PanelPage() {
     .eq("id", user.id)
     .single() as { data: { full_name: string; user_type: string; credit_balance: number } | null };
 
-  if (!profile || profile.user_type !== "vatandas") redirect("/giris?hata=yetki");
+  if (!profile) redirect("/panel/yukleniyor");
+  if (profile.user_type !== "vatandas") redirect("/buro");
 
   const serviceSupabase = createServiceClient() as Any;
 

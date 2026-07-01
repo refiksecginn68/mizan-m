@@ -61,7 +61,11 @@ export default async function BuroPage() {
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.user_type !== "avukat") redirect("/giris?hata=yetki");
+  if (!profile) {
+    // Profil henüz oluşmadıysa (trigger gecikmesi) — yenile
+    redirect("/buro/yukleniyor");
+  }
+  if (profile.user_type !== "avukat") redirect("/panel");
 
   const serviceSupabase = createServiceClient() as AnyClient;
   const now = new Date();
