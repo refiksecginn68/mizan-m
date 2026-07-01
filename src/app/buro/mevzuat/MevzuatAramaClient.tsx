@@ -3,8 +3,9 @@
 import { useState } from "react";
 import {
   Search, Download, X, Sparkles, Loader2,
-  ExternalLink, BookOpen, Filter, AlertCircle, Zap,
+  ExternalLink, BookOpen, Filter, AlertCircle, Zap, Calendar,
 } from "lucide-react";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface Mevzuat {
   id: string;
@@ -25,6 +26,7 @@ const TUR_OPTIONS = [
   { value: "yonetmelik", label: "Yönetmelik" },
   { value: "khk", label: "KHK" },
   { value: "teblig", label: "Tebliğ" },
+  { value: "cbkararname", label: "CB Kararnamesi" },
 ];
 
 // Metin satır kaydırma (pdf-lib için)
@@ -59,6 +61,8 @@ async function wrapTextLines(
 export default function MevzuatAramaClient() {
   const [query, setQuery] = useState("");
   const [tur, setTur] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [results, setResults] = useState<Mevzuat[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -75,6 +79,8 @@ export default function MevzuatAramaClient() {
     setSearched(true);
     try {
       const params = new URLSearchParams({ q, tur: t });
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
       const res = await fetch(`/api/mevzuat/search?${params}`);
       const data = (await res.json()) as { results: Mevzuat[]; total: number };
       setResults(data.results ?? []);
@@ -199,6 +205,7 @@ export default function MevzuatAramaClient() {
         body: JSON.stringify({
           message: `Bu mevzuatı hukuki açıdan özetle ve temel düzenlemeleri açıkla:\n${context}`,
           mode: "avukat",
+          ozet_type: "mevzuat",
         }),
       });
       const reader = res.body?.getReader();
@@ -282,9 +289,9 @@ export default function MevzuatAramaClient() {
             </button>
           </div>
 
-          {/* Tür filtresi */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-3.5 h-3.5 text-gray-400" />
+          {/* Filtreler */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             {TUR_OPTIONS.map((t) => (
               <button
                 key={t.value}
@@ -301,6 +308,14 @@ export default function MevzuatAramaClient() {
                 {t.label}
               </button>
             ))}
+            <div className="flex items-center gap-1.5 ml-2">
+              <Calendar className="w-3.5 h-3.5 text-gray-400" />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
+              <span className="text-gray-400 text-xs">—</span>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
+            </div>
           </div>
         </div>
       </div>
@@ -576,9 +591,7 @@ export default function MevzuatAramaClient() {
 
                   {ozetText && (
                     <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-100">
-                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
-                        {ozetText}
-                      </p>
+                      <MarkdownRenderer content={ozetText} />
                       {ozetLoading && (
                         <span className="inline-block w-1.5 h-4 bg-purple-400 animate-pulse ml-0.5 align-middle" />
                       )}

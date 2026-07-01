@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { getSystemPrompt } from "@/lib/ai/prompts";
+import { getSystemPrompt, SYSTEM_PROMPT_MEVZUAT_OZET } from "@/lib/ai/prompts";
 import { classifyQuery, CREDIT_COSTS } from "@/lib/ai/classify";
 import { fetchRAGContext, buildContextString } from "@/lib/ai/rag";
 import type { UserType } from "@/types/database";
@@ -26,11 +26,15 @@ export async function POST(request: Request) {
     const body = await request.json() as {
       message: string;
       sessionId?: string;
-      userType: UserType;
+      userType?: UserType;
+      mode?: string;
+      ozet_type?: "mevzuat" | "karar";
       caseContext?: string;
     };
 
-    const { message, sessionId, userType, caseContext } = body;
+    const { message, sessionId, caseContext } = body;
+    // mode, userType, ozet_type aliasları
+    const userType: UserType = (body.userType ?? (body.mode === "avukat" ? "avukat" : "vatandas")) as UserType;
 
     if (!message?.trim()) {
       return new Response(JSON.stringify({ error: "Mesaj boş olamaz" }), {
@@ -82,7 +86,9 @@ export async function POST(request: Request) {
     // RAG context
     const ragContext = await fetchRAGContext(message, queryType);
     const contextStr = buildContextString(ragContext);
-    const systemPrompt = getSystemPrompt(userType, caseContext);
+    const systemPrompt = body.ozet_type === "mevzuat"
+      ? SYSTEM_PROMPT_MEVZUAT_OZET
+      : getSystemPrompt(userType, caseContext);
 
     const encoder = new TextEncoder();
     let fullResponse = "";

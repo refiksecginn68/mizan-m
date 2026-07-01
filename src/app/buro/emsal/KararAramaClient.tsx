@@ -5,8 +5,9 @@ import {
   Search, Zap, BookOpen, FileUp, Filter,
   Loader2, ChevronLeft, ChevronRight,
   FolderPlus, Eye, X, Check, AlertCircle,
-  Download, MessageSquare, Sparkles, Send, FileText,
+  Download, MessageSquare, Sparkles, Send, FileText, Calendar,
 } from "lucide-react";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface CaseLaw {
   id?: string;
@@ -50,6 +51,40 @@ const COURT_OPTIONS = [
   { value: "bam_ceza", label: "BAM Ceza" },
   { value: "aym", label: "AYM" },
 ];
+
+const DAIRE_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  yargitay: [
+    { value: "", label: "Tüm Daireler" },
+    ...Array.from({ length: 23 }, (_, i) => ({ value: `${i + 1}hd`, label: `${i + 1}. Hukuk Dairesi` })),
+    { value: "ceza_gk", label: "Ceza Genel Kurulu" },
+    { value: "hukuk_gk", label: "Hukuk Genel Kurulu" },
+    { value: "1cd", label: "1. Ceza Dairesi" },
+    { value: "2cd", label: "2. Ceza Dairesi" },
+    { value: "3cd", label: "3. Ceza Dairesi" },
+    { value: "4cd", label: "4. Ceza Dairesi" },
+    { value: "5cd", label: "5. Ceza Dairesi" },
+  ],
+  danistay: [
+    { value: "", label: "Tüm Daireler" },
+    ...Array.from({ length: 17 }, (_, i) => ({ value: `${i + 1}d`, label: `${i + 1}. Daire` })),
+    { value: "idgk", label: "İdari Dava Daireleri Kurulu" },
+    { value: "vdgk", label: "Vergi Dava Daireleri Kurulu" },
+  ],
+  bam_hukuk: [
+    { value: "", label: "Tüm Daireler" },
+    { value: "1", label: "1. Hukuk Dairesi" },
+    { value: "2", label: "2. Hukuk Dairesi" },
+    { value: "3", label: "3. Hukuk Dairesi" },
+    { value: "4", label: "4. Hukuk Dairesi" },
+    { value: "5", label: "5. Hukuk Dairesi" },
+  ],
+  bam_ceza: [
+    { value: "", label: "Tüm Daireler" },
+    { value: "1", label: "1. Ceza Dairesi" },
+    { value: "2", label: "2. Ceza Dairesi" },
+    { value: "3", label: "3. Ceza Dairesi" },
+  ],
+};
 
 const COURT_BADGE: Record<string, string> = {
   Yargıtay: "bg-[#1a2744]/10 text-[#1a2744]",
@@ -115,8 +150,11 @@ export default function KararAramaClient({ cases }: Props) {
   const [mode, setMode] = useState<SearchMode>("akilli");
   const [query, setQuery] = useState("");
   const [court, setCourt] = useState("all");
+  const [daire, setDaire] = useState("");
   const [esasNo, setEsasNo] = useState("");
   const [kararNo, setKararNo] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [results, setResults] = useState<CaseLaw[]>([]);
   const [total, setTotal] = useState(0);
@@ -437,6 +475,9 @@ export default function KararAramaClient({ cases }: Props) {
       });
       if (esasNo) params.set("esas", esasNo);
       if (kararNo) params.set("karar", kararNo);
+      if (daire) params.set("daire", daire);
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
       const res = await fetch(`/api/emsal/search?${params}`);
       const data = await res.json() as { results: CaseLaw[]; total: number; source: string };
       setResults(data.results ?? []);
@@ -726,20 +767,36 @@ export default function KararAramaClient({ cases }: Props) {
             Filtrele
           </button>
           {showFilters && (
-            <>
-              <select value={court} onChange={(e) => setCourt(e.target.value)}
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={court} onChange={(e) => { setCourt(e.target.value); setDaire(""); }}
                 className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
                 {COURT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
+              {DAIRE_OPTIONS[court] && (
+                <select value={daire} onChange={(e) => setDaire(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
+                  {DAIRE_OPTIONS[court].map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              )}
               <input value={esasNo} onChange={(e) => setEsasNo(e.target.value)}
                 placeholder="Esas No  Örn: 2010/17762"
                 className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-44" />
               <input value={kararNo} onChange={(e) => setKararNo(e.target.value)}
                 placeholder="Karar No  Örn: 2010/30253"
                 className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-44" />
-            </>
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
+                <span className="text-gray-400 text-xs">—</span>
+                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -897,7 +954,7 @@ export default function KararAramaClient({ cases }: Props) {
                     )}
                     {ozetText && (
                       <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-5 border border-purple-100">
-                        <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{ozetText}</p>
+                        <MarkdownRenderer content={ozetText} />
                         {ozetLoading && <span className="inline-block w-1.5 h-4 bg-purple-400 animate-pulse ml-0.5 align-middle" />}
                       </div>
                     )}
