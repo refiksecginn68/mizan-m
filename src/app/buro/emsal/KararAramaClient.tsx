@@ -181,6 +181,12 @@ export default function KararAramaClient({ cases }: Props) {
   const [dosyaEklendi, setDosyaEklendi] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
 
+  const [toastMsg, setToastMsg] = useState<{ text: string; type: "error" | "success" } | null>(null);
+  function showToast(text: string, type: "error" | "success" = "error") {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg(null), 4000);
+  }
+
   // Eski liste-üzeri modal (liste kartındaki dosyaya ekle için ayrı)
   const [dosyaModalId, setDosyaModalId] = useState<string | null>(null);
   const [dosyaEklendiList, setDosyaEklendiList] = useState<string | null>(null);
@@ -291,7 +297,7 @@ export default function KararAramaClient({ cases }: Props) {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert("UDF oluşturulurken hata oluştu.");
+      showToast("UDF oluşturulurken hata oluştu.");
     }
   }
 
@@ -320,7 +326,7 @@ export default function KararAramaClient({ cases }: Props) {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert("Word dosyası oluşturulurken hata oluştu.");
+      showToast("Word dosyası oluşturulurken hata oluştu.");
     }
   }
 
@@ -661,6 +667,11 @@ export default function KararAramaClient({ cases }: Props) {
 
   return (
     <div className="flex flex-col h-full">
+      {toastMsg && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toastMsg.type === "error" ? "bg-red-600 text-white" : "bg-green-600 text-white"}`}>
+          {toastMsg.text}
+        </div>
+      )}
       {/* Başlık + Arama */}
       <div className="bg-white border-b border-gray-200 px-6 py-5 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">

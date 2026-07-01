@@ -221,6 +221,11 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
   const [credSaved, setCredSaved] = useState(false);
   const [hasCredentials, setHasCredentials] = useState(false);
   const [maskedTc, setMaskedTc] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ text: string; type: "error" | "success" } | null>(null);
+  function showToast(text: string, type: "error" | "success" = "error") {
+    setToastMsg({ text, type });
+    setTimeout(() => setToastMsg(null), 4000);
+  }
 
   useEffect(() => {
     fetch("/api/buro/uyap/credentials")
@@ -293,7 +298,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
       });
       if (!res.ok) {
         const json = await res.json();
-        alert(json.error || "UDF hazırlanamadı");
+        showToast(json.error || "UDF hazırlanamadı");
         return;
       }
       const blob = await res.blob();
@@ -305,7 +310,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
       a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
     } catch {
-      alert("İndirme sırasında hata oluştu");
+      showToast("İndirme sırasında hata oluştu");
     } finally {
       setUdfLoading(false);
     }
@@ -313,7 +318,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
 
   const handleSaveCredentials = async () => {
     if (!tcKimlik || tcKimlik.length !== 11) {
-      alert("Geçerli TC kimlik no girin (11 hane)");
+      showToast("Geçerli TC kimlik no girin (11 hane)");
       return;
     }
     setCredLoading(true);
@@ -331,10 +336,10 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
         setUyapSifre("");
         setTimeout(() => setCredSaved(false), 3000);
       } else {
-        alert(json.error || "Kayıt başarısız");
+        showToast(json.error || "Kayıt başarısız");
       }
     } catch {
-      alert("Bağlantı hatası");
+      showToast("Bağlantı hatası");
     } finally {
       setCredLoading(false);
     }
@@ -348,6 +353,11 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
 
   return (
     <div>
+      {toastMsg && (
+        <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${toastMsg.type === "error" ? "bg-red-600 text-white" : "bg-green-600 text-white"}`}>
+          {toastMsg.text}
+        </div>
+      )}
       {/* UYAP bağlantı durumu */}
       <div className={`flex items-start gap-3 rounded-lg p-4 mb-6 border ${
         hasCredentials ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
