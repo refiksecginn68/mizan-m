@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Eye, EyeOff, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/client";
 function GirisForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
-  const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -56,8 +55,8 @@ function GirisForm() {
         .single();
 
       const destination = redirect ?? (profile?.user_type === "avukat" ? "/buro" : "/panel");
-      router.push(destination);
-      router.refresh();
+      // Hard navigation: router.push + router.refresh race condition'dan kaçın
+      window.location.href = destination;
     } catch {
       setServerError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
