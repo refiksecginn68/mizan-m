@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
+import AuthRedirect from "@/components/shared/AuthRedirect";
 import {
   Scale,
   Search,
@@ -138,6 +139,7 @@ const pricingPlans = [
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
+      <AuthRedirect />
       <Header />
 
       {/* Hero */}
