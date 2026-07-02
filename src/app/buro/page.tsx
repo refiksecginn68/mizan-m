@@ -55,7 +55,9 @@ export default async function BuroPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
 
-  const { data: profile } = await supabase
+  const serviceSupabase = createServiceClient() as AnyClient;
+
+  const { data: profile } = await serviceSupabase
     .from("profiles")
     .select("full_name, user_type")
     .eq("id", user.id)
@@ -67,7 +69,6 @@ export default async function BuroPage() {
   }
   if (profile.user_type !== "avukat") redirect("/panel");
 
-  const serviceSupabase = createServiceClient() as AnyClient;
   const now = new Date();
 
   const [, upcomingEventsResult, newsResult] = await Promise.all([

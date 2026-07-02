@@ -73,7 +73,18 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/giris";
     url.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(url);
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path,
+        domain: cookie.domain,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        sameSite: cookie.sameSite,
+        expires: cookie.expires,
+      });
+    });
+    return redirectResponse;
   }
 
   // Email doğrulanmamış kullanıcı korumalı rotaya → doğrulama sayfası
@@ -82,32 +93,18 @@ export async function middleware(request: NextRequest) {
   if (user && isProtected && !user.email_confirmed_at && !isTestEmail) {
     const url = request.nextUrl.clone();
     url.pathname = "/dogrulama-bekliyor";
-    return NextResponse.redirect(url);
-  }
-
-  // Rol tabanlı yönlendirme
-  if (user && (AVUKAT_ROUTES.some((r) => pathname.startsWith(r)) || VATANDAS_ROUTES.some((r) => pathname.startsWith(r)))) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (supabase as any)
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single();
-
-    if (profile) {
-      // Vatandaş avukat rotasına gitmeye çalışıyor
-      if (profile.user_type === "vatandas" && AVUKAT_ROUTES.some((r) => pathname.startsWith(r))) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/panel";
-        return NextResponse.redirect(url);
-      }
-      // Avukat vatandaş rotasına gitmeye çalışıyor
-      if (profile.user_type === "avukat" && VATANDAS_ROUTES.some((r) => pathname.startsWith(r))) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/buro";
-        return NextResponse.redirect(url);
-      }
-    }
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path,
+        domain: cookie.domain,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        sameSite: cookie.sameSite,
+        expires: cookie.expires,
+      });
+    });
+    return redirectResponse;
   }
 
   return supabaseResponse;

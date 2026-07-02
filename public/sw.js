@@ -1,4 +1,4 @@
-const CACHE_NAME = "mizanim-v1";
+const CACHE_NAME = "mizanim-v2";
 const OFFLINE_URL = "/offline";
 
 // Kurulumda önbelleğe alınacak kritik statik varlıklar

@@ -1,27 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Any = any;
-
 export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Zaten giriş yapmış kullanıcıyı dashboard'a yönlendir
-  const supabase = createClient() as Any;
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("user_type")
-      .eq("id", user.id)
-      .single();
-    redirect(profile?.user_type === "avukat" ? "/buro" : "/panel");
-  }
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Auth Header */}

@@ -15,7 +15,9 @@ export default async function PanelPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
 
-  const { data: profile } = await supabase
+  const serviceSupabase = createServiceClient() as Any;
+
+  const { data: profile } = await serviceSupabase
     .from("profiles")
     .select("full_name, user_type, credit_balance")
     .eq("id", user.id)
@@ -23,8 +25,6 @@ export default async function PanelPage() {
 
   if (!profile) redirect("/panel/yukleniyor");
   if (profile.user_type !== "vatandas") redirect("/buro");
-
-  const serviceSupabase = createServiceClient() as Any;
 
   // Son 3 sohbet
   const { data: recentSessions } = await serviceSupabase
