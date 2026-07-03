@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    instrumentationHook: true,
-  },
+  // instrumentationHook disabled to prevent build errors
 };
 
 export default nextConfig;
