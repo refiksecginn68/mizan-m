@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Search, ExternalLink, Sparkles, ChevronLeft, ChevronRight, Loader2, Tag } from "lucide-react";
+import { Search, ExternalLink, Sparkles, ChevronLeft, ChevronRight, Loader2, Tag, X, ArrowUpRight } from "lucide-react";
 import type { LegalNews } from "@/app/api/haberler/route";
 
 const KATEGORILER = [
@@ -50,6 +50,7 @@ export default function HaberlerClient() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(1);
+  const [selectedNews, setSelectedNews] = useState<LegalNews | null>(null);
   const limit = 12;
 
   // Debounce arama
@@ -134,7 +135,7 @@ export default function HaberlerClient() {
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {featured.map((item) => (
-                  <NewsCard key={item.id} item={item} featured />
+                  <NewsCard key={item.id} item={item} featured onOpen={setSelectedNews} />
                 ))}
               </div>
             </div>
@@ -144,7 +145,7 @@ export default function HaberlerClient() {
           {regular.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {regular.map((item) => (
-                <NewsCard key={item.id} item={item} />
+                <NewsCard key={item.id} item={item} onOpen={setSelectedNews} />
               ))}
             </div>
           )}
@@ -173,17 +174,82 @@ export default function HaberlerClient() {
           )}
         </>
       )}
+      {/* Haber detay modalı */}
+      {selectedNews && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-start justify-between p-5 border-b border-gray-100 flex-shrink-0">
+              <div className="flex-1 pr-4">
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${KATEGORI_RENK[selectedNews.category] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                  {selectedNews.category}
+                </span>
+                <h2 className="font-heading text-lg font-bold text-[#0f1729] mt-2 leading-snug">
+                  {selectedNews.title}
+                </h2>
+                <p className="text-xs text-gray-400 mt-1">{selectedNews.source} · {formatDate(selectedNews.published_at)}</p>
+              </div>
+              <button
+                onClick={() => setSelectedNews(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-5">
+              {selectedNews.summary ? (
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{selectedNews.summary}</p>
+              ) : (
+                <p className="text-sm text-gray-400">Bu haber için özet bulunmuyor.</p>
+              )}
+              {selectedNews.tags && selectedNews.tags.length > 0 && (
+                <div className="flex items-center gap-1.5 mt-4 flex-wrap">
+                  <Tag className="w-3.5 h-3.5 text-gray-400" />
+                  {selectedNews.tags.map((tag) => (
+                    <span key={tag} className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t border-gray-100 flex justify-between items-center flex-shrink-0">
+              <button onClick={() => setSelectedNews(null)} className="text-sm text-gray-400 hover:text-gray-600">
+                Kapat
+              </button>
+              {selectedNews.source_url && (
+                <a
+                  href={selectedNews.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[#0f1729] hover:text-[#c9a84c] transition-colors"
+                >
+                  Kaynağa Git <ArrowUpRight className="w-4 h-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function NewsCard({ item, featured = false }: { item: LegalNews; featured?: boolean }) {
+function NewsCard({ item, featured = false, onOpen }: { item: LegalNews; featured?: boolean; onOpen: (item: LegalNews) => void }) {
   const catStyle = KATEGORI_RENK[item.category] ?? "bg-gray-100 text-gray-600 border-gray-200";
 
+  function handleClick() {
+    if (item.source_url) {
+      window.open(item.source_url, "_blank", "noopener,noreferrer");
+    } else {
+      onOpen(item);
+    }
+  }
+
   return (
-    <div className={`bg-white rounded-2xl border transition-all hover:shadow-md hover:-translate-y-0.5 group flex flex-col ${
-      featured ? "border-[#c9a84c]/30 ring-1 ring-[#c9a84c]/20" : "border-gray-100"
-    }`}>
+    <div
+      onClick={handleClick}
+      className={`bg-white rounded-2xl border transition-all hover:shadow-md hover:-translate-y-0.5 group flex flex-col cursor-pointer ${
+        featured ? "border-[#c9a84c]/30 ring-1 ring-[#c9a84c]/20" : "border-gray-100"
+      }`}
+    >
       {featured && (
         <div className="h-1 bg-gradient-to-r from-[#c9a84c] to-[#e7b743] rounded-t-2xl" />
       )}

@@ -6,6 +6,7 @@ import {
   Sparkles, Send, Plus, Trash2, StopCircle,
   Loader2, Calendar, Users, FileText,
   CheckCircle, Clock, ChevronRight, MessageSquare,
+  PanelLeftClose, PanelLeftOpen, AlertCircle,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -58,6 +59,8 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
   const [loading, setLoading] = useState(false);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [completedActions, setCompletedActions] = useState<Action[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -108,6 +111,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     const msg = (text ?? input).trim();
     if (!msg || loading) return;
     setInput("");
+    setStreamError(null);
 
     const userMsgId = Date.now().toString();
     setMessages((m) => [...m, { id: userMsgId, role: "user", content: msg }]);
@@ -119,7 +123,6 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     setMessages((m) => [...m, { id: assistantId, role: "assistant", content: "" }]);
 
     try {
-      // Sohbet geçmişini hazırla (son 10 mesaj)
       const historyForAPI = messages.slice(-10).map((m) => ({
         role: m.role,
         content: cleanResponse(m.content),
@@ -136,11 +139,22 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
         signal: ctrl.signal,
       });
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+        setStreamError(errData.error ?? "Sunucu hatası");
+        setMessages((m) => m.filter((m2) => m2.id !== assistantId));
+        return;
+      }
+
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      if (!reader) return;
+      if (!reader) {
+        setStreamError("Yanıt akışı alınamadı");
+        return;
+      }
 
       let buf = "";
+      let gotResponse = false;
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -158,15 +172,22 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
               done?: boolean;
               actions?: Action[];
               error?: string;
+              status?: string;
             };
+
+            if (json.error) {
+              setStreamError(json.error);
+              setMessages((m) => m.filter((m2) => m2.id !== assistantId));
+              return;
+            }
 
             if (json.sessionId && !activeSessionId) {
               setActiveSessionId(json.sessionId);
-              // Yeni session'ı listeye ekle
               loadSessions();
             }
 
             if (json.delta) {
+              gotResponse = true;
               setMessages((m) =>
                 m.map((msg2) =>
                   msg2.id === assistantId
@@ -174,6 +195,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                     : msg2
                 )
               );
+              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
             }
 
             if (json.done && json.actions && (json.actions as Action[]).length > 0) {
@@ -182,9 +204,18 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
           } catch { /* ignore */ }
         }
       }
-    } catch { /* aborted */ }
 
-    setLoading(false);
+      if (!gotResponse) {
+        setMessages((m) => m.filter((m2) => m2.id !== assistantId));
+      }
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        setStreamError("Bağlantı hatası. Lütfen tekrar deneyin.");
+      }
+      setMessages((m) => m.filter((m2) => m2.id !== assistantId));
+    } finally {
+      setLoading(false);
+    }
   }, [input, loading, messages, activeSessionId]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -203,29 +234,45 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     <div className="flex h-full overflow-hidden">
 
       {/* Sol — Sohbet Geçmişi */}
-      <aside className="w-64 flex-shrink-0 bg-[#0f1729] flex flex-col h-full">
+      <aside className={`flex-shrink-0 bg-[#0f1729] flex flex-col h-full transition-all duration-200 ${sidebarOpen ? "w-64" : "w-12"}`}>
         {/* Header */}
-        <div className="px-4 py-4 border-b border-white/5 flex-shrink-0">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#c9a84c] to-[#e7b743] flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5 text-white" />
+        <div className="px-3 py-3 border-b border-white/5 flex-shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <div className={`flex items-center gap-2.5 ${!sidebarOpen ? "hidden" : ""}`}>
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#c9a84c] to-[#e7b743] flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-heading font-bold text-white">MizanAI</p>
+                <p className="text-[10px] text-white/30">Hukuki Asistan</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-heading font-bold text-white">MizanAI</p>
-              <p className="text-[10px] text-white/30">Hukuki Asistan</p>
-            </div>
+            {!sidebarOpen && (
+              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#c9a84c] to-[#e7b743] flex items-center justify-center mx-auto">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+            )}
+            <button
+              onClick={() => setSidebarOpen((o) => !o)}
+              className="text-white/30 hover:text-white/70 transition-colors flex-shrink-0 ml-auto"
+              title={sidebarOpen ? "Geçmişi Gizle" : "Geçmişi Göster"}
+            >
+              {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+            </button>
           </div>
-          <button
-            onClick={newChat}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-white/80 text-xs font-semibold transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Yeni Sohbet
-          </button>
+          {sidebarOpen && (
+            <button
+              onClick={newChat}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-white/80 text-xs font-semibold transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Yeni Sohbet
+            </button>
+          )}
         </div>
 
         {/* Sessions */}
-        <div className="flex-1 overflow-y-auto py-2 px-2">
+        <div className={`flex-1 overflow-y-auto py-2 px-2 ${!sidebarOpen ? "hidden" : ""}`}>
           {sessionsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
@@ -262,13 +309,24 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
         </div>
 
         {/* Kullanıcı */}
-        <div className="p-3 border-t border-white/5 flex-shrink-0">
-          <p className="text-xs text-white/30 truncate">Av. {lawyerName}</p>
-        </div>
+        {sidebarOpen && (
+          <div className="p-3 border-t border-white/5 flex-shrink-0">
+            <p className="text-xs text-white/30 truncate">Av. {lawyerName}</p>
+          </div>
+        )}
       </aside>
 
       {/* Sağ — Ana Sohbet */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#f4f5f7]">
+
+        {/* Hata bildirimi */}
+        {streamError && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-red-50 border-b border-red-100 flex-shrink-0">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <p className="text-xs text-red-700 flex-1">{streamError}</p>
+            <button onClick={() => setStreamError(null)} className="text-red-400 hover:text-red-600 text-xs flex-shrink-0">✕</button>
+          </div>
+        )}
 
         {/* Tamamlanan aksiyonlar */}
         {completedActions.length > 0 && (

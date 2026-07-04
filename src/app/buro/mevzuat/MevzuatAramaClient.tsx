@@ -27,6 +27,7 @@ const TUR_OPTIONS = [
   { value: "khk", label: "KHK" },
   { value: "teblig", label: "Tebliğ" },
   { value: "cbkararname", label: "CB Kararnamesi" },
+  { value: "yonerge", label: "Yönerge" },
 ];
 
 // Metin satır kaydırma (pdf-lib için)
@@ -61,6 +62,8 @@ async function wrapTextLines(
 export default function MevzuatAramaClient() {
   const [query, setQuery] = useState("");
   const [tur, setTur] = useState("all");
+  const [yururluk, setYururluk] = useState<"" | "yururlukte" | "mulga">("");
+  const [maddeNo, setMaddeNo] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [results, setResults] = useState<Mevzuat[]>([]);
@@ -81,6 +84,8 @@ export default function MevzuatAramaClient() {
       const params = new URLSearchParams({ q, tur: t });
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
+      if (yururluk) params.set("yururluk", yururluk);
+      if (maddeNo) params.set("madde", maddeNo);
       const res = await fetch(`/api/mevzuat/search?${params}`);
       const data = (await res.json()) as { results: Mevzuat[]; total: number };
       setResults(data.results ?? []);
@@ -316,6 +321,31 @@ export default function MevzuatAramaClient() {
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
                 className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
             </div>
+
+            {/* Yürürlük durumu */}
+            <div className="flex items-center gap-1.5 ml-2">
+              {(["", "yururlukte", "mulga"] as const).map((val) => (
+                <button
+                  key={val || "tumu"}
+                  onClick={() => setYururluk(val)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    yururluk === val
+                      ? "bg-[#0f1729] text-white"
+                      : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                  }`}
+                >
+                  {val === "" ? "Tüm Durum" : val === "yururlukte" ? "Yürürlükte" : "Mülga"}
+                </button>
+              ))}
+            </div>
+
+            {/* Madde no */}
+            <input
+              value={maddeNo}
+              onChange={(e) => setMaddeNo(e.target.value)}
+              placeholder="Madde No  Örn: 5"
+              className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-32 ml-2"
+            />
           </div>
         </div>
       </div>

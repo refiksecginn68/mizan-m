@@ -32,12 +32,16 @@ export interface Database {
           bar_city: string | null;
           credit_balance: number;
           is_active: boolean;
+          onboarding_completed: boolean;
+          specializations: string[];
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at" | "updated_at" | "credit_balance" | "is_active"> & {
+        Insert: Omit<Database["public"]["Tables"]["profiles"]["Row"], "created_at" | "updated_at" | "credit_balance" | "is_active" | "onboarding_completed" | "specializations"> & {
           credit_balance?: number;
           is_active?: boolean;
+          onboarding_completed?: boolean;
+          specializations?: string[];
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
       };

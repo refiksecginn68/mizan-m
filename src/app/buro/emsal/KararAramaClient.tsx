@@ -105,6 +105,16 @@ function getId(item: CaseLaw) {
   return item.documentId || item.id || "";
 }
 
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query || !text) return text;
+  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="bg-yellow-200 text-yellow-900 rounded px-0.5">{part}</mark>
+      : part
+  );
+}
+
 function matchScore(item: CaseLaw, query: string): number {
   if (item.score) return Math.round(item.score * 100);
   if (!query) return 0;
@@ -156,6 +166,9 @@ export default function KararAramaClient({ cases }: Props) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<"alakalilik" | "guncel" | "eski">("alakalilik");
+  const [belgeTuru, setBelgeTuru] = useState("");
+  const [ozetDurumu, setOzetDurumu] = useState<"" | "ozetli" | "ozetsiz">("");
   const [results, setResults] = useState<CaseLaw[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -478,12 +491,15 @@ export default function KararAramaClient({ cases }: Props) {
         court: c,
         page: String(p),
         mode: mod,
+        sort: sortBy,
       });
       if (esasNo) params.set("esas", esasNo);
       if (kararNo) params.set("karar", kararNo);
       if (daire) params.set("daire", daire);
       if (startDate) params.set("startDate", startDate);
       if (endDate) params.set("endDate", endDate);
+      if (belgeTuru) params.set("belge_turu", belgeTuru);
+      if (ozetDurumu) params.set("ozet", ozetDurumu);
       const res = await fetch(`/api/emsal/search?${params}`);
       const data = await res.json() as { results: CaseLaw[]; total: number; source: string };
       setResults(data.results ?? []);
@@ -581,12 +597,12 @@ export default function KararAramaClient({ cases }: Props) {
 
                 {/* Konu */}
                 <h3 className="font-heading text-xs font-bold text-[#0f1729] mb-1 leading-snug line-clamp-2">
-                  {item.subject}
+                  {highlightText(item.subject, query)}
                 </h3>
 
                 {/* Özet */}
                 <p className="text-[10px] text-gray-500 leading-relaxed line-clamp-2 mb-2">
-                  {item.summary}
+                  {highlightText(item.summary, query)}
                 </p>
 
                 {/* Eşleşme + Butonlar */}
@@ -767,45 +783,102 @@ export default function KararAramaClient({ cases }: Props) {
         </div>
 
         {/* Filtreler */}
-        <div className="flex items-center gap-3 mt-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
-              showFilters ? "border-[#c9a84c] text-[#c9a84c] bg-[#c9a84c]/5" : "border-gray-200 text-gray-500 hover:border-gray-300"
-            }`}
-          >
-            <Filter className="w-3.5 h-3.5" />
-            Filtrele
-          </button>
+        <div className="mt-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+                showFilters ? "border-[#c9a84c] text-[#c9a84c] bg-[#c9a84c]/5" : "border-gray-200 text-gray-500 hover:border-gray-300"
+              }`}
+            >
+              <Filter className="w-3.5 h-3.5" />
+              Filtrele
+            </button>
+            {/* Sıralama — her zaman görünür */}
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
+              <option value="alakalilik">↑ Alakalılık</option>
+              <option value="guncel">↓ En Güncel</option>
+              <option value="eski">↑ En Eski</option>
+            </select>
+            {/* Aktif filtre sayısı */}
+            {(court !== "all" || daire || esasNo || kararNo || startDate || endDate || belgeTuru || ozetDurumu) && (
+              <button
+                onClick={() => {
+                  setCourt("all"); setDaire(""); setEsasNo(""); setKararNo("");
+                  setStartDate(""); setEndDate(""); setBelgeTuru(""); setOzetDurumu("");
+                }}
+                className="text-xs font-semibold text-red-500 hover:text-red-700 px-2 py-1.5 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+              >
+                ✕ Filtreleri Temizle
+              </button>
+            )}
+          </div>
+
           {showFilters && (
-            <div className="flex flex-wrap items-center gap-2">
-              <select value={court} onChange={(e) => { setCourt(e.target.value); setDaire(""); }}
-                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
-                {COURT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              {DAIRE_OPTIONS[court] && (
-                <select value={daire} onChange={(e) => setDaire(e.target.value)}
+            <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-200">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Mahkeme */}
+                <select value={court} onChange={(e) => { setCourt(e.target.value); setDaire(""); }}
                   className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
-                  {DAIRE_OPTIONS[court].map((d) => (
-                    <option key={d.value} value={d.value}>{d.label}</option>
+                  {COURT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
-              )}
-              <input value={esasNo} onChange={(e) => setEsasNo(e.target.value)}
-                placeholder="Esas No  Örn: 2010/17762"
-                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-44" />
-              <input value={kararNo} onChange={(e) => setKararNo(e.target.value)}
-                placeholder="Karar No  Örn: 2010/30253"
-                className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-44" />
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
-                <span className="text-gray-400 text-xs">—</span>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
+
+                {/* Daire - seçilen mahkemeye göre dinamik */}
+                {DAIRE_OPTIONS[court] && (
+                  <select value={daire} onChange={(e) => setDaire(e.target.value)}
+                    className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
+                    {DAIRE_OPTIONS[court].map((d) => (
+                      <option key={d.value} value={d.value}>{d.label}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Belge Türü */}
+                <select value={belgeTuru} onChange={(e) => setBelgeTuru(e.target.value)}
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
+                  <option value="">Tüm Belge Türleri</option>
+                  <option value="mahkeme_karari">Mahkeme Kararı</option>
+                  <option value="bilirkisi_raporu">Bilirkişi Raporu</option>
+                  <option value="dava_dilekce">Dava Dilekçesi</option>
+                  <option value="dilekce">Dilekçe</option>
+                  <option value="durusma_tutanagi">Duruşma Tutanağı</option>
+                  <option value="hukuki_yazisma">Hukuki Yazışma</option>
+                  <option value="kyok">KYOK</option>
+                  <option value="savcilik_karari">Savcılık Kararı</option>
+                  <option value="sozlesme">Sözleşme</option>
+                  <option value="tedbir_karari">Tedbir Kararı</option>
+                  <option value="tensip_tutanagi">Tensip Tutanağı</option>
+                  <option value="iddianame">İddianame</option>
+                </select>
+
+                {/* Özet durumu */}
+                <select value={ozetDurumu} onChange={(e) => setOzetDurumu(e.target.value as typeof ozetDurumu)}
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
+                  <option value="">Tümü</option>
+                  <option value="ozetli">Özetli</option>
+                  <option value="ozetsiz">Özetsiz</option>
+                </select>
+
+                {/* Esas / Karar No */}
+                <input value={esasNo} onChange={(e) => setEsasNo(e.target.value)}
+                  placeholder="Esas No  2010/17762"
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-40" />
+                <input value={kararNo} onChange={(e) => setKararNo(e.target.value)}
+                  placeholder="Karar No  2010/30253"
+                  className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-40" />
+
+                {/* Tarih aralığı */}
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-34" />
+                  <span className="text-gray-400 text-xs">—</span>
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+                    className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-34" />
+                </div>
               </div>
             </div>
           )}

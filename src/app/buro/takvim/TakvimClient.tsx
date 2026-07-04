@@ -484,7 +484,20 @@ export default function TakvimClient({ initialEvents, cases, clients, googleConn
                   </label>
                   <input type="datetime-local" className="input-field w-full"
                     value={formData.starts_at}
-                    onChange={(e) => setFormData((p) => ({ ...p, starts_at: e.target.value }))} required />
+                    onChange={(e) => {
+                      const newStart = e.target.value;
+                      setFormData((p) => {
+                        // Bitiş otomatik +1 saat (kullanıcı henüz düzenlemediyse)
+                        let newEnd = p.ends_at;
+                        if (newStart) {
+                          const d = new Date(newStart);
+                          d.setHours(d.getHours() + 1);
+                          const pad = (n: number) => String(n).padStart(2, "0");
+                          newEnd = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                        }
+                        return { ...p, starts_at: newStart, ends_at: newEnd };
+                      });
+                    }} required />
                 </div>
                 <div>
                   <label className="font-body text-sm font-medium text-foreground mb-1.5 block">Bitiş</label>

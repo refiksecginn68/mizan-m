@@ -193,8 +193,9 @@ async function executeTool(
         title: baslik,
         event_type: tur ?? "diger",
         starts_at: startsAt,
+        ends_at: (() => { const d = new Date(startsAt); d.setHours(d.getHours() + 1); return d.toISOString(); })(),
         location: yer ?? null,
-        notes: notlar ?? null,
+        description: notlar ?? null,
       });
       if (error) return `Hata: ${error.message}`;
       return `✅ Takvime eklendi: "${baslik}" — ${tarih} ${saat ?? "09:00"}${yer ? ` @ ${yer}` : ""}`;
@@ -348,7 +349,6 @@ export async function POST(request: Request) {
                 const fullResponse = block.text;
                 if (activeSessionId) {
                   await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: fullResponse }).then(() => {}).catch(() => {});
-                  await svc.from("sessions").update({ updated_at: new Date().toISOString() }).eq("id", activeSessionId).then(() => {}).catch(() => {});
                 }
               }
             }
@@ -375,7 +375,6 @@ export async function POST(request: Request) {
 
           if (activeSessionId) {
             await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: fullResponse }).then(() => {}).catch(() => {});
-            await svc.from("sessions").update({ updated_at: new Date().toISOString() }).eq("id", activeSessionId).then(() => {}).catch(() => {});
           }
 
           // dilekce_baslat aksiyonunu UI'ya bildir

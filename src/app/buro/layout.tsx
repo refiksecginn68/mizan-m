@@ -1,4 +1,4 @@
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import BuroLeftSidebar from "@/components/buro/BuroLeftSidebar";
 import MizanAIFloating from "@/components/buro/MizanAIFloating";
@@ -14,10 +14,9 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
 
-  const serviceSupabase = createServiceClient() as AnyClient;
-  const { data: profile } = await serviceSupabase
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, user_type")
+    .select("full_name, user_type, onboarding_completed, specializations, bar_city")
     .eq("id", user.id)
     .single();
 
@@ -33,7 +32,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
       </main>
       <MizanAIFloating lawyerName={profile.full_name} />
       <BuroMobileNav />
-      <OnboardingModal />
+      {!profile.onboarding_completed && <OnboardingModal />}
     </div>
   );
 }

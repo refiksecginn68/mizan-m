@@ -57,17 +57,14 @@ export default async function BuroPage() {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
-  const { data: profile } = await serviceSupabase
+  // Profile: session-based client (layout ile aynı yöntem — service role bypass sorununu önler)
+  const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, user_type")
     .eq("id", user.id)
     .single();
 
-  if (!profile) {
-    // Profil henüz oluşmadıysa (trigger gecikmesi) — yenile
-    redirect("/buro/yukleniyor");
-  }
-  if (profile.user_type !== "avukat") redirect("/panel");
+  if (!profile || profile.user_type !== "avukat") redirect("/panel");
 
   const now = new Date();
 
