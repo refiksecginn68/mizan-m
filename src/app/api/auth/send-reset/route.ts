@@ -38,7 +38,8 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>",
+        // Fallback, Resend'de doğrulanan punycode domain ile birebir eşleşmeli
+        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>",
         to: [email],
         subject: "Mizanım — Şifre Sıfırlama",
         html: resetEmailHtml(actionLink),
