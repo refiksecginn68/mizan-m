@@ -138,6 +138,11 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
 
   function applyCommon(query: Any): Any {
     if (f.court !== "all" && SOURCE_MAP[f.court]) query = query.eq("source", SOURCE_MAP[f.court]);
+    if (f.daire) {
+      // "3" veya "3hd" → mahkeme adında "3." geçen kayıtlar
+      const num = f.daire.match(/^\d+/)?.[0];
+      if (num) query = query.ilike("court", `%${num}.%`);
+    }
     if (f.esas) query = query.ilike("case_number", `%${f.esas}%`);
     if (f.karar) query = query.ilike("decision_number", `%${f.karar}%`);
     if (f.startDate) query = query.gte("decision_date", f.startDate);
@@ -196,15 +201,13 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
           .or(`subject.ilike.%${f.q}%,summary.ilike.%${f.q}%,full_text.ilike.%${f.q}%`)
       ).limit(40);
       const ilikeRows = ((ilikeData ?? []) as EmsalResult[]).filter((r) => r.id && !seen.has(r.id!));
+      for (const row of ilikeRows) { seen.add(row.id!); results.push(row); }
       if (f.mode === "kelime") {
-        // Kelime modu: birebir geçen sonuçlar öncelikli
-        for (const row of ilikeRows) { seen.add(row.id!); }
-        results = [...ilikeRows, ...results.filter((r) => {
-          const text = `${r.subject} ${r.summary}`.toLowerCase();
-          return !text.includes(f.q.toLowerCase());
-        })];
-      } else {
-        for (const row of ilikeRows) { seen.add(row.id!); results.push(row); }
+        // Kelime modu: birebir geçen sonuçlar öncelikli (FTS'in bulduğu ama
+        // birebir geçmeyen sonuçlar sona düşer; hiçbir satır elenmez)
+        const ql = f.q.toLowerCase();
+        const hasExact = (r: EmsalResult) => `${r.subject ?? ""} ${r.summary ?? ""}`.toLowerCase().includes(ql);
+        results = [...results.filter(hasExact), ...results.filter((r) => !hasExact(r))];
       }
     } else {
       // Sorgu yok, sadece filtre (esas no / tarih / mahkeme) ile listele
@@ -262,7 +265,8 @@ export async function GET(request: Request) {
       .eq("query_hash", cacheKey)
       .single();
 
-    if (cached) {
+    // Boş önbellek kayıtları kullanılmaz — DB fallback şansı kalmalı
+    if (cached && (cached.total ?? 0) > 0) {
       const ageMs = Date.now() - new Date(cached.created_at as string).getTime();
       if (ageMs < 24 * 60 * 60 * 1000) {
         return Response.json({ results: cached.results, total: cached.total, source: "cache" });
@@ -292,8 +296,8 @@ export async function GET(request: Request) {
       // Son-filtre sonuç sayısını değiştirdiyse toplamı düzelt
       const total = filtered.length < (data.results ?? []).length ? filtered.length : data.total;
 
-      // Önbelleğe yaz (fire-and-forget)
-      supabase.from("emsal_cache").upsert({
+      // Önbelleğe yaz (fire-and-forget) — boş sonuç önbelleğe alınmaz
+      if (filtered.length > 0) supabase.from("emsal_cache").upsert({
         query_hash: cacheKey,
         query_text: f.q,
         results: filtered,

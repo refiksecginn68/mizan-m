@@ -11,29 +11,26 @@ export async function POST(request: Request) {
 
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
     if (!RESEND_API_KEY) {
-      // Resend key yoksa Supabase native email kullan
-      const supabase = createServiceClient() as Any;
-      await supabase.auth.admin.generateLink({
-        type: "signup",
-        email,
-        options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback` },
-      });
-      return NextResponse.json({ success: true, method: "supabase" });
+      return NextResponse.json({ error: "E-posta servisi yapılandırılmamış." }, { status: 500 });
     }
 
-    // Supabase'den doğrulama linki al
+    // Supabase'den doğrulama tokenı al (magiclink: mevcut kullanıcı için şifresiz
+    // üretilir; tıklanınca e-posta doğrulanmış sayılır)
     const supabase = createServiceClient() as Any;
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "signup",
+      type: "magiclink",
       email,
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback` },
     });
 
-    if (linkError || !linkData?.properties?.action_link) {
+    const hashedToken = linkData?.properties?.hashed_token as string | undefined;
+    if (linkError || !hashedToken) {
       return NextResponse.json({ error: "Bağlantı oluşturulamadı." }, { status: 500 });
     }
 
-    const actionLink = linkData.properties.action_link as string;
+    // Supabase'in action_link'i tokenları URL hash'inde (#access_token) döndürür ve
+    // sunucu tarafı callback bunu göremez. Bunun yerine token_hash ile kendi
+    // callback'imize yönlendirip sunucuda verifyOtp yapıyoruz.
+    const actionLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?token_hash=${hashedToken}&type=email`;
 
     // Resend ile Mizanım markalı email gönder
     const emailRes = await fetch("https://api.resend.com/emails", {
@@ -43,7 +40,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Mizanım <noreply@mizanim.com>",
+        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>",
         to: [email],
         subject: "Mizanım — E-posta Adresinizi Doğrulayın",
         html: verificationEmailHtml(actionLink),
@@ -54,7 +51,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "E-posta gönderilemedi." }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, method: "resend" });
+    const emailData = await emailRes.json().catch(() => null) as { id?: string } | null;
+    return NextResponse.json({ success: true, method: "resend", emailId: emailData?.id ?? null });
   } catch {
     return NextResponse.json({ error: "Bir hata oluştu." }, { status: 500 });
   }

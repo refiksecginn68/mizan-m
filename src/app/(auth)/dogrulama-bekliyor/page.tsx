@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Mail, CheckCircle, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
 
 export default function DogrulamaBekliyorPage() {
   const [resent, setResent] = useState(false);
@@ -18,16 +17,21 @@ export default function DogrulamaBekliyorPage() {
     }
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const { error: sbError } = await supabase.auth.resend({
-      type: "signup",
-      email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (sbError) {
+    // Supabase'in yerleşik SMTP'si yerine Resend'li kendi endpoint'imiz
+    // (yerleşik SMTP saatte 2 e-posta ile sınırlı)
+    try {
+      const res = await fetch("/api/auth/send-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      if (!res.ok) {
+        setError("E-posta gönderilemedi. Lütfen tekrar deneyin.");
+      } else {
+        setResent(true);
+      }
+    } catch {
       setError("E-posta gönderilemedi. Lütfen tekrar deneyin.");
-    } else {
-      setResent(true);
     }
     setLoading(false);
   }

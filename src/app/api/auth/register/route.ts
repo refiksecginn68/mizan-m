@@ -1,6 +1,8 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { createServiceClient } from "@/lib/supabase/server";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Any = any;
 
 export async function POST(request: Request) {
   try {
@@ -11,36 +13,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Zorunlu alanlar eksik." }, { status: 400 });
     }
 
-    const cookieStore = cookies();
-
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          },
-        },
-      }
-    );
-
-    const { error } = await supabase.auth.signUp({
+    // signUp yerine admin.createUser: Supabase'in yerleşik SMTP'sine e-posta
+    // göndertmez (saatte 2 e-posta limiti kayıt akışını kilitliyordu).
+    // Doğrulama e-postası aşağıda Resend üzerinden gönderilir.
+    const supabase = createServiceClient() as Any;
+    const { error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: {
-          full_name,
-          user_type,
-          phone: phone ?? null,
-          bar_number: bar_number ?? null,
-        },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      email_confirm: false,
+      user_metadata: {
+        full_name,
+        user_type,
+        phone: phone ?? null,
+        bar_number: bar_number ?? null,
       },
     });
 
@@ -51,28 +36,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Resend varsa özel markalı email gönder (Supabase'in default emailini geçersiz kılar)
-    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    // Resend ile markalı doğrulama e-postası gönder
+    let emailSent = false;
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL;
-    if (RESEND_API_KEY && APP_URL) {
+    if (process.env.RESEND_API_KEY && APP_URL) {
       try {
-        await fetch(`${APP_URL}/api/auth/send-verification`, {
+        const res = await fetch(`${APP_URL}/api/auth/send-verification`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
+        emailSent = res.ok;
       } catch { /* email gönderilemese de kayıt başarılı sayılır */ }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, emailSent });
   } catch {
     return NextResponse.json({ error: "Bir hata oluştu. Lütfen tekrar deneyin." }, { status: 500 });
   }
 }
 
 function translateError(msg: string): string {
-  if (msg.includes("User already registered")) return "Bu e-posta adresi zaten kayıtlı.";
+  if (msg.includes("already been registered") || msg.includes("already registered"))
+    return "Bu e-posta adresi zaten kayıtlı.";
   if (msg.includes("Password should be at least")) return "Şifre en az 6 karakter olmalıdır.";
+  if (msg.includes("invalid")) return "Geçerli bir e-posta adresi girin.";
   if (msg.includes("rate limit")) return "Çok fazla deneme. Lütfen biraz bekleyin.";
   return "Kayıt başarısız. Lütfen tekrar deneyin.";
 }

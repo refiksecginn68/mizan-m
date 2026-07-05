@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import JSZip from "jszip";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -54,40 +55,54 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date();
-    const dateStr = now.toLocaleDateString("tr-TR");
-    const timeStr = now.toLocaleTimeString("tr-TR");
     const docTypeLabel = DOC_TYPE_LABELS[docType] || docType;
 
-    // UDF formatı XML tabanlıdır
-    const udfXml = `<?xml version="1.0" encoding="UTF-8"?>
-<UDFDocument version="1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <Header>
-    <DocType>${docTypeLabel}</DocType>
-    <CreatedAt>${now.toISOString()}</CreatedAt>
-    <CreatedDate>${dateStr}</CreatedDate>
-    <CreatedTime>${timeStr}</CreatedTime>
-    <Author>${profile.full_name}</Author>
-    <System>Mizanım Hukuk Platformu</System>
-    <SystemVersion>1.0</SystemVersion>
-    ${caseTitle ? `<CaseTitle>${escapeXml(caseTitle)}</CaseTitle>` : ""}
-    ${esasNo ? `<EsasNo>${escapeXml(esasNo)}</EsasNo>` : ""}
-  </Header>
-  <Content><![CDATA[${content}]]></Content>
-  <Footer>
-    <System>Mizanım</System>
-    <Website>mizanim.com</Website>
-    <Disclaimer>Bu belge Mizanım (mizanim.com) tarafından üretilmiştir. Hukuki tavsiye niteliği taşımaz.</Disclaimer>
-    <GeneratedAt>${now.toISOString()}</GeneratedAt>
-  </Footer>
-</UDFDocument>`;
+    // Belge metni: başlıkta dava bilgisi varsa ekle
+    const fullText = [
+      caseTitle ? `${caseTitle}${esasNo ? ` (Esas No: ${esasNo})` : ""}` : "",
+      content,
+    ].filter(Boolean).join("\n\n");
+
+    // Gerçek UYAP UDF formatı: ZIP arşivi içinde format_id="1.8" şemalı content.xml.
+    // Metnin tamamı <content> CDATA'sında durur; <elements> altındaki paragraflar
+    // bu metne startOffset/length ile referans verir.
+    const normalized = fullText.replace(/\r\n/g, "\n");
+    const lines = normalized.split("\n");
+    let offset = 0;
+    const paragraphs: string[] = [];
+    for (const line of lines) {
+      const len = line.length + 1; // satır + '\n'
+      paragraphs.push(
+        `<paragraph Alignment="0" LeftIndent="0.0" RightIndent="0.0"><content startOffset="${offset}" length="${len}" /></paragraph>`
+      );
+      offset += len;
+    }
+    const cdataText = lines.map((l) => l + "\n").join("");
+
+    const contentXml = `<?xml version="1.0" encoding="UTF-8" ?>
+<template format_id="1.8">
+<content><![CDATA[${cdataText.replace(/\]\]>/g, "]]]]><![CDATA[>")}]]></content>
+<properties><pageFormat mediaSizeName="1" leftMargin="70.875" rightMargin="70.875" topMargin="70.875" bottomMargin="70.875" paperOrientation="1" headerFOffset="20.0" footerFOffset="20.0" /></properties>
+<elements resolver="hvl-default">
+${paragraphs.join("\n")}
+</elements>
+<styles>
+<style name="default" description="Geçerli" family="Dialog" size="12" bold="false" italic="false" foreground="-13421773" FONT_ATTRIBUTE_KEY="Dialog" />
+<style name="hvl-default" family="Times New Roman" size="12" description="Gövde" />
+</styles>
+</template>`;
+
+    const zip = new JSZip();
+    zip.file("content.xml", contentXml);
+    const udfBuffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 
     const safeDocType = docType.replace(/[^a-z0-9]/gi, "_");
     const filename = `mizanim_${safeDocType}_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}.udf`;
 
-    return new NextResponse(udfXml, {
+    return new NextResponse(new Uint8Array(udfBuffer), {
       status: 200,
       headers: {
-        "Content-Type": "application/xml; charset=utf-8",
+        "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${filename}"`,
         // HTTP header degerleri Latin-1 olmali — Turkce karakter kullanma
         "X-UDF-DocType": encodeURIComponent(docTypeLabel),
@@ -98,13 +113,4 @@ export async function POST(req: NextRequest) {
     console.error("UDF hazirla error:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
-}
-
-function escapeXml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }

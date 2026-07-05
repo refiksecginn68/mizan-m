@@ -15,10 +15,10 @@ export async function POST(request: Request) {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "recovery",
       email,
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password` },
     });
 
-    if (linkError || !linkData?.properties?.action_link) {
+    const hashedToken = linkData?.properties?.hashed_token as string | undefined;
+    if (linkError || !hashedToken) {
       // Hata döndürmüyoruz — email enumeration'ı önlemek için
       return NextResponse.json({ success: true });
     }
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, method: "supabase" });
     }
 
-    const actionLink = linkData.properties.action_link as string;
+    // token_hash ile kendi callback'imize yönlendir — sunucuda verifyOtp yapılır,
+    // oturum çerezi set edilip /auth/reset-password'a geçilir
+    const actionLink = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?token_hash=${hashedToken}&type=recovery`;
 
     await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Mizanım <noreply@mizanim.com>",
+        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>",
         to: [email],
         subject: "Mizanım — Şifre Sıfırlama",
         html: resetEmailHtml(actionLink),
