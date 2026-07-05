@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     status?: string;
     description?: string;
     provider?: string;
+    due_date?: string;
   };
 
   try {
@@ -104,6 +105,8 @@ export async function POST(request: NextRequest) {
       status: body.status || "success",
       provider: body.provider || "manuel",
       description: body.description?.trim() || null,
+      // Taksit vade tarihi — takvim hatırlatmalarında kullanılır
+      metadata: body.due_date ? { due_date: body.due_date } : null,
     })
     .select()
     .single();

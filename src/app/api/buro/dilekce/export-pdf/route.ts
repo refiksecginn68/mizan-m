@@ -1,5 +1,8 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, rgb } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
 import { createClient } from "@/lib/supabase/server";
+import { readFile } from "fs/promises";
+import path from "path";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -34,9 +37,12 @@ export async function POST(request: Request) {
 
   const { metin, baslik } = await request.json() as { metin: string; baslik: string };
 
+  // Türkçe karakter desteği: DejaVu Sans (StandardFonts WinAnsi ğ/ş/ı encode edemez)
   const pdfDoc = await PDFDocument.create();
-  const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  pdfDoc.registerFontkit(fontkit);
+  const fontBytes = await readFile(path.join(process.cwd(), "public", "fonts", "DejaVuSans.ttf"));
+  const font = await pdfDoc.embedFont(fontBytes, { subset: true });
+  const boldFont = font;
 
   const maxChars = Math.floor((PAGE_W - MARGIN * 2) / (FONT_SIZE * 0.55));
   const contentLines = metin.split("\n");

@@ -33,6 +33,9 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   durusma: "bg-red-100 text-red-700",
   toplanti: "bg-blue-100 text-blue-700",
   sure: "bg-orange-100 text-orange-700",
+  tebligat: "bg-purple-100 text-purple-700",
+  odeme: "bg-green-100 text-green-700",
+  not: "bg-yellow-100 text-yellow-700",
   diger: "bg-gray-100 text-gray-600",
 };
 
@@ -40,6 +43,9 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   durusma: "Duruşma",
   toplanti: "Toplantı",
   sure: "Süre",
+  tebligat: "Tebligat",
+  odeme: "Ödeme",
+  not: "Not",
   diger: "Diğer",
 };
 
@@ -68,7 +74,7 @@ export default async function BuroPage() {
 
   const now = new Date();
 
-  const [, upcomingEventsResult, newsResult] = await Promise.all([
+  const [, upcomingEventsResult, newsResult, pendingPaymentsResult] = await Promise.all([
     serviceSupabase
       .from("cases")
       .select("id")
@@ -80,7 +86,7 @@ export default async function BuroPage() {
       .eq("lawyer_id", user.id)
       .gte("starts_at", now.toISOString())
       .order("starts_at", { ascending: true })
-      .limit(5),
+      .limit(8),
     // Haberler: legal_news tablosu yoksa fallback demo
     serviceSupabase
       .from("legal_news")
@@ -89,9 +95,50 @@ export default async function BuroPage() {
       .limit(4)
       .then((r: AnyClient) => r)
       .catch(() => ({ data: null })),
+    // Bekleyen ödemeler/taksitler — takvim hatırlatması olarak gösterilir
+    serviceSupabase
+      .from("payments")
+      .select("id, description, amount, metadata, created_at")
+      .eq("user_id", user.id)
+      .eq("status", "pending")
+      .limit(10),
   ]);
 
-  const upcomingEvents = upcomingEventsResult;
+  // Takviminiz: duruşmalar + ödeme/taksit hatırlatmaları + notlar, tarihe göre sıralı
+  interface TakvimItem {
+    id: string;
+    title: string;
+    type: string;
+    date: Date;
+    location?: string | null;
+  }
+
+  const takvimItems: TakvimItem[] = [];
+
+  for (const ev of ((upcomingEventsResult?.data ?? []) as AnyClient[])) {
+    takvimItems.push({
+      id: `ev-${ev.id}`,
+      title: ev.title,
+      type: ev.event_type ?? "diger",
+      date: new Date(ev.starts_at),
+      location: ev.location,
+    });
+  }
+
+  for (const p of ((pendingPaymentsResult?.data ?? []) as AnyClient[])) {
+    const due = p.metadata?.due_date ? new Date(p.metadata.due_date) : null;
+    // Vadesi geçmişse de göster (hatırlatma), vadesizse listeye alma
+    if (!due) continue;
+    takvimItems.push({
+      id: `pay-${p.id}`,
+      title: `${p.description ?? "Ödeme"} — ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.amount)}`,
+      type: "odeme",
+      date: due,
+    });
+  }
+
+  takvimItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+  const takvim = takvimItems.slice(0, 8);
 
   // Dashboard için 4 haber — DB'den veya fallback
   const FALLBACK_NEWS: LegalNews[] = [
@@ -277,16 +324,16 @@ export default async function BuroPage() {
         {/* Sağ Kolon */}
         <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
 
-          {/* Yaklaşan Duruşmalar */}
+          {/* Takviminiz — duruşmalar, ödeme/taksit hatırlatmaları, notlar */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
-              <h2 className="font-heading text-sm font-bold text-[#0f1729]">Yaklaşan Duruşmalar</h2>
+              <h2 className="font-heading text-sm font-bold text-[#0f1729]">Takviminiz</h2>
               <Link href="/buro/takvim" className="text-xs text-[#c9a84c] hover:underline font-medium">
                 Takvim
               </Link>
             </div>
             <div className="p-2">
-              {!upcomingEvents.data || (upcomingEvents.data as AnyClient[]).length === 0 ? (
+              {takvim.length === 0 ? (
                 <div className="text-center py-6">
                   <p className="text-xs text-gray-400">Yaklaşan etkinlik yok</p>
                   <Link href="/buro/takvim" className="text-xs text-[#c9a84c] hover:underline mt-1 block">
@@ -294,12 +341,12 @@ export default async function BuroPage() {
                   </Link>
                 </div>
               ) : (
-                (upcomingEvents.data as AnyClient[]).map((ev) => {
-                  const typeColor = EVENT_TYPE_COLORS[ev.event_type] || EVENT_TYPE_COLORS.diger;
-                  const typeLabel = EVENT_TYPE_LABELS[ev.event_type] || "Diğer";
-                  const evDate = new Date(ev.starts_at);
+                takvim.map((item) => {
+                  const typeColor = EVENT_TYPE_COLORS[item.type] || EVENT_TYPE_COLORS.diger;
+                  const typeLabel = EVENT_TYPE_LABELS[item.type] || "Diğer";
+                  const evDate = item.date;
                   return (
-                    <div key={ev.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div key={item.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
                       <div className="flex-shrink-0 text-center bg-[#0f1729] rounded-xl w-10 py-1.5">
                         <p className="text-[10px] font-bold text-[#c9a84c]">
                           {evDate.toLocaleDateString("tr-TR", { month: "short" }).toUpperCase()}
@@ -309,14 +356,16 @@ export default async function BuroPage() {
                         </p>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{ev.title}</p>
+                        <p className="text-xs font-semibold text-gray-800 truncate">{item.title}</p>
                         <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
                           <Clock className="w-2.5 h-2.5" />
-                          {evDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                          {ev.location && (
+                          {item.type === "odeme"
+                            ? evDate.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })
+                            : evDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                          {item.location && (
                             <>
                               <MapPin className="w-2.5 h-2.5 ml-1" />
-                              <span className="truncate">{ev.location}</span>
+                              <span className="truncate">{item.location}</span>
                             </>
                           )}
                         </p>

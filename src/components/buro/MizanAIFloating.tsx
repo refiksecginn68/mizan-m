@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import { X, Send, StopCircle } from "lucide-react";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -28,6 +29,21 @@ export default function MizanAIFloating({ lawyerName }: Props) {
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Scroll-anchor: kullanıcı en alttaysa takip et, yukarı kaydırdıysa dokunma
+  const pinnedToBottom = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  }, []);
+
+  const followBottom = useCallback((force = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (force || pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+  }, []);
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -35,6 +51,8 @@ export default function MizanAIFloating({ lawyerName }: Props) {
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
+    pinnedToBottom.current = true;
+    requestAnimationFrame(() => followBottom(true));
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -69,6 +87,7 @@ export default function MizanAIFloating({ lawyerName }: Props) {
                     msg.id === assistantId ? { ...msg, content: msg.content + delta } : msg
                   )
                 );
+                requestAnimationFrame(() => followBottom());
               }
             } catch { /* ignore */ }
           }
@@ -107,7 +126,7 @@ export default function MizanAIFloating({ lawyerName }: Props) {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-3 space-y-3">
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
@@ -117,7 +136,9 @@ export default function MizanAIFloating({ lawyerName }: Props) {
                       : "bg-[#1a2d4f] text-white"
                   }`}
                 >
-                  {msg.content || (loading && msg.role === "assistant" ? (
+                  {msg.role === "assistant" && msg.content ? (
+                    <MarkdownRenderer content={msg.content} invert />
+                  ) : msg.content || (loading && msg.role === "assistant" ? (
                     <span className="flex gap-1">
                       <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                       <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />

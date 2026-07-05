@@ -89,8 +89,9 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/xml; charset=utf-8",
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "X-UDF-DocType": docTypeLabel,
-        "X-UDF-Note": "UYAP UDF formatı - e-imza ile imzalandıktan sonra yükleyiniz",
+        // HTTP header degerleri Latin-1 olmali — Turkce karakter kullanma
+        "X-UDF-DocType": encodeURIComponent(docTypeLabel),
+        "X-UDF-Note": "UYAP UDF formati - e-imza ile imzalandiktan sonra yukleyiniz",
       },
     });
   } catch (err) {

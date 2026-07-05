@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2, Scale, StopCircle, ChevronDown, Sparkles } from "lucide-react";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -26,7 +27,7 @@ export default function AvukatAIPanel({ lawyerName }: Props) {
   const greeting: Message = {
     id: "greeting",
     role: "assistant",
-    content: `Sayın Av. ${firstName} Bey, bugün size nasıl yardımcı olabilirim?\n\nTakvim, davalar, müvekkiller veya ödemeler hakkında soru sorabilir, dilekçe hazırlatabilir ya da emsal karar araştırması yaptırabilirsiniz.`,
+    content: `Sayın Av. ${firstName}, bugün size nasıl yardımcı olabilirim?\n\nTakvim, davalar, müvekkiller veya ödemeler hakkında soru sorabilir, dilekçe hazırlatabilir ya da emsal karar araştırması yaptırabilirsiniz.`,
   };
 
   const [messages, setMessages] = useState<Message[]>([greeting]);
@@ -58,11 +59,16 @@ export default function AvukatAIPanel({ lawyerName }: Props) {
     setShowScrollBtn(dist > 80);
   }, []);
 
+  // Scroll-anchor: kullanıcı en alttaysa takip et, yukarı kaydırdıysa dokunma
   const scrollToBottom = useCallback((force = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
     if (force || !userScrolledUp.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      userScrolledUp.current = false;
-      setShowScrollBtn(false);
+      el.scrollTop = el.scrollHeight;
+      if (force) {
+        userScrolledUp.current = false;
+        setShowScrollBtn(false);
+      }
     }
   }, []);
 
@@ -121,7 +127,7 @@ export default function AvukatAIPanel({ lawyerName }: Props) {
             if (data.sessionId) setSessionId(data.sessionId);
             if (data.text) {
               setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: m.content + data.text } : m));
-              scrollToBottom();
+              requestAnimationFrame(() => scrollToBottom());
             }
             if (data.error) {
               setMessages((prev) => prev.map((m) => m.id === assistantId ? { ...m, content: `❌ ${data.error}` } : m));
@@ -175,13 +181,17 @@ export default function AvukatAIPanel({ lawyerName }: Props) {
               </div>
             )}
             <div
-              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 font-body text-sm leading-relaxed whitespace-pre-wrap ${
+              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 font-body text-sm leading-relaxed ${
                 msg.role === "user"
-                  ? "bg-primary text-white rounded-tr-sm"
+                  ? "bg-primary text-white rounded-tr-sm whitespace-pre-wrap"
                   : "bg-muted text-foreground rounded-tl-sm"
               }`}
             >
-              {msg.content}
+              {msg.role === "assistant" && msg.content ? (
+                <MarkdownRenderer content={msg.content} />
+              ) : (
+                msg.content
+              )}
               {loading && msg.role === "assistant" && msg === messages[messages.length - 1] && msg.content === "" && (
                 <span className="inline-flex gap-1 items-center">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary/40 animate-bounce" style={{ animationDelay: "0ms" }} />

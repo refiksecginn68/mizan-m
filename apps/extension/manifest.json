@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Mizanım UYAP Aktarım",
+  "version": "0.1.0",
+  "description": "UYAP Avukat Portal'da açık dosyalarınızı Mizanım'a aktarır. Otomatik giriş yapmaz; yalnızca sizin açtığınız oturumu okur.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://*.uyap.gov.tr/*",
+    "https://*.xn--mizanm-t9a.com/*",
+    "https://xn--mizanm-t9a.com/*",
+    "http://localhost:3000/*",
+    "http://localhost:3001/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.uyap.gov.tr/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mizanım'a Aktar"
+  },
+  "icons": {
+    "128": "icon128.png"
+  }
+}

@@ -8,7 +8,7 @@ import {
   CheckCircle, Clock, ChevronRight, MessageSquare,
   PanelLeftClose, PanelLeftOpen, AlertCircle,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface Message {
   id: string;
@@ -64,6 +64,23 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Scroll-anchor: kullanıcı en alttaysa takip et, yukarı kaydırdıysa dokunma
+  const pinnedToBottom = useRef(true);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  }, []);
+
+  const followBottom = useCallback((force = false) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (force || pinnedToBottom.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, []);
 
   useEffect(() => {
     loadSessions();
@@ -116,6 +133,9 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     const userMsgId = Date.now().toString();
     setMessages((m) => [...m, { id: userMsgId, role: "user", content: msg }]);
     setLoading(true);
+    // Yeni mesaj gönderildiğinde en alta in
+    pinnedToBottom.current = true;
+    requestAnimationFrame(() => followBottom(true));
 
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -195,7 +215,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                     : msg2
                 )
               );
-              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+              requestAnimationFrame(() => followBottom());
             }
 
             if (json.done && json.actions && (json.actions as Action[]).length > 0) {
@@ -216,7 +236,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, activeSessionId]);
+  }, [input, loading, messages, activeSessionId, followBottom]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -352,7 +372,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
         )}
 
         {/* Mesajlar */}
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
           {messages.length === 0 ? (
             /* Boş durum — karşılama */
             <div className="flex flex-col items-center justify-center h-full px-6 py-10 text-center max-w-2xl mx-auto">
@@ -401,9 +421,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                   >
                     {msg.role === "assistant" ? (
                       msg.displayContent ? (
-                        <div className="prose prose-sm max-w-none prose-headings:font-heading prose-headings:text-[#0f1729] prose-strong:text-[#0f1729] prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded">
-                          <ReactMarkdown>{msg.displayContent}</ReactMarkdown>
-                        </div>
+                        <MarkdownRenderer content={msg.displayContent} />
                       ) : loading ? (
                         <span className="flex gap-1 items-center py-1">
                           <span className="w-2 h-2 bg-[#c9a84c] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />

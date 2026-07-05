@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Plus, X, TrendingUp, TrendingDown, Download, CheckCircle, Clock, XCircle, RotateCcw, BarChart2 } from "lucide-react";
+import { useState, useMemo, Fragment } from "react";
+import { Plus, X, TrendingUp, TrendingDown, Download, CheckCircle, Clock, XCircle, RotateCcw, BarChart2, ChevronDown, ChevronRight, Layers } from "lucide-react";
 
 interface Payment {
   id: string;
@@ -49,6 +49,69 @@ function formatCurrency(amount: number, currency = "TRY") {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(amount);
 }
 
+// Taksit deseni: "Duruşma Masrafları (2/6)" → temel ad + sıra + toplam
+const TAKSIT_RE = /^(.*?)\s*\((\d+)\/(\d+)\)\s*$/;
+
+interface PaymentGroup {
+  key: string;
+  description: string;
+  items: Payment[];
+  isTaksit: boolean;
+  totalAmount: number;
+  paidCount: number;
+  totalCount: number;
+  currency: string;
+  latestDate: string;
+}
+
+// Taksitli ödemeleri tek satırda topla (açıklama + toplam taksit sayısına göre)
+function groupPayments(payments: Payment[]): PaymentGroup[] {
+  const groups = new Map<string, PaymentGroup>();
+  const order: string[] = [];
+
+  for (const p of payments) {
+    const m = p.description?.match(TAKSIT_RE);
+    if (m) {
+      const base = m[1].trim() || "Taksitli Ödeme";
+      const total = parseInt(m[3], 10);
+      const key = `taksit:${base}:${total}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key, description: base, items: [], isTaksit: true,
+          totalAmount: 0, paidCount: 0, totalCount: total,
+          currency: p.currency, latestDate: p.created_at,
+        });
+        order.push(key);
+      }
+      const g = groups.get(key)!;
+      g.items.push(p);
+      g.totalAmount += p.amount;
+      if (p.status === "success") g.paidCount += 1;
+    } else {
+      const key = `tek:${p.id}`;
+      groups.set(key, {
+        key, description: p.description ?? "", items: [p], isTaksit: false,
+        totalAmount: p.amount, paidCount: p.status === "success" ? 1 : 0,
+        totalCount: 1, currency: p.currency, latestDate: p.created_at,
+      });
+      order.push(key);
+    }
+  }
+
+  // Taksitleri sıra numarasına göre diz
+  for (const g of Array.from(groups.values())) {
+    if (g.isTaksit) {
+      g.items.sort((a: Payment, b: Payment) => {
+        const ai = parseInt(a.description?.match(TAKSIT_RE)?.[2] ?? "0", 10);
+        const bi = parseInt(b.description?.match(TAKSIT_RE)?.[2] ?? "0", 10);
+        return ai - bi;
+      });
+    }
+  }
+
+  return order.map((k) => groups.get(k)!);
+}
+
 function getMonthKey(dateStr: string) {
   const d = new Date(dateStr);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -70,6 +133,18 @@ export default function FinansClient({ initialPayments }: FinansClientProps) {
   const filtered = payments.filter(
     (p) => statusFilter === "tumu" || p.status === statusFilter
   );
+
+  // Taksitli kayıtlar tek satırda gruplanır; tıklayınca detay açılır
+  const groupedPayments = useMemo(() => groupPayments(filtered), [filtered]);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  function toggleGroup(key: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   // Özet hesapları
   const totalSuccess = payments.filter((p) => p.status === "success").reduce((s, p) => s + p.amount, 0);
@@ -286,27 +361,88 @@ export default function FinansClient({ initialPayments }: FinansClientProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((payment) => {
-                const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
-                const StatusIcon = statusCfg.icon;
+              {groupedPayments.map((group) => {
+                // Tek kayıt — normal satır
+                if (!group.isTaksit) {
+                  const payment = group.items[0];
+                  const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+                  const StatusIcon = statusCfg.icon;
+                  return (
+                    <tr key={group.key} className="hover:bg-primary/5 transition-colors">
+                      <td className="font-body text-sm text-muted-foreground px-4 py-3 whitespace-nowrap">
+                        {new Date(payment.created_at).toLocaleDateString("tr-TR")}
+                      </td>
+                      <td className="font-body text-sm text-foreground px-4 py-3">
+                        {payment.description || <span className="text-muted-foreground italic">—</span>}
+                      </td>
+                      <td className="font-heading text-sm font-bold text-right px-4 py-3 whitespace-nowrap">
+                        {formatCurrency(payment.amount, payment.currency)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-medium ${statusCfg.color}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          {statusCfg.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // Taksitli grup — tek satır + accordion
+                const isOpen = expandedGroups.has(group.key);
+                const done = group.paidCount >= group.totalCount;
                 return (
-                  <tr key={payment.id} className="hover:bg-primary/5 transition-colors">
-                    <td className="font-body text-sm text-muted-foreground px-4 py-3 whitespace-nowrap">
-                      {new Date(payment.created_at).toLocaleDateString("tr-TR")}
-                    </td>
-                    <td className="font-body text-sm text-foreground px-4 py-3">
-                      {payment.description || <span className="text-muted-foreground italic">—</span>}
-                    </td>
-                    <td className="font-heading text-sm font-bold text-right px-4 py-3 whitespace-nowrap">
-                      {formatCurrency(payment.amount, payment.currency)}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-medium ${statusCfg.color}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {statusCfg.label}
-                      </span>
-                    </td>
-                  </tr>
+                  <Fragment key={group.key}>
+                    <tr
+                      onClick={() => toggleGroup(group.key)}
+                      className="hover:bg-primary/5 transition-colors cursor-pointer"
+                    >
+                      <td className="font-body text-sm text-muted-foreground px-4 py-3 whitespace-nowrap">
+                        {new Date(group.latestDate).toLocaleDateString("tr-TR")}
+                      </td>
+                      <td className="font-body text-sm text-foreground px-4 py-3">
+                        <span className="inline-flex items-center gap-1.5">
+                          {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                          <Layers className="w-3.5 h-3.5 text-primary/60" />
+                          {group.description || <span className="text-muted-foreground italic">Taksitli Ödeme</span>}
+                        </span>
+                      </td>
+                      <td className="font-heading text-sm font-bold text-right px-4 py-3 whitespace-nowrap">
+                        {formatCurrency(group.totalAmount, group.currency)}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-body font-medium ${
+                          done ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                        }`}>
+                          <Layers className="w-3 h-3" />
+                          Taksitli {group.paidCount}/{group.totalCount}
+                        </span>
+                      </td>
+                    </tr>
+                    {isOpen && group.items.map((payment) => {
+                      const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+                      const StatusIcon = statusCfg.icon;
+                      return (
+                        <tr key={payment.id} className="bg-primary/[0.03]">
+                          <td className="font-body text-xs text-muted-foreground px-4 py-2 whitespace-nowrap pl-8">
+                            {new Date(payment.created_at).toLocaleDateString("tr-TR")}
+                          </td>
+                          <td className="font-body text-xs text-muted-foreground px-4 py-2 pl-10">
+                            {payment.description}
+                          </td>
+                          <td className="font-body text-xs font-semibold text-right px-4 py-2 whitespace-nowrap text-muted-foreground">
+                            {formatCurrency(payment.amount, payment.currency)}
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-body font-medium ${statusCfg.color}`}>
+                              <StatusIcon className="w-2.5 h-2.5" />
+                              {statusCfg.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </Fragment>
                 );
               })}
             </tbody>

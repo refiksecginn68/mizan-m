@@ -51,7 +51,14 @@ export default function HaberlerClient() {
   const [debouncedQ, setDebouncedQ] = useState("");
   const [page, setPage] = useState(1);
   const [selectedNews, setSelectedNews] = useState<LegalNews | null>(null);
+  // "Kaynağa Git" onay penceresi — dış siteye yönlendirme uyarısı
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const limit = 12;
+
+  function confirmRedirect() {
+    if (redirectUrl) window.open(redirectUrl, "_blank", "noopener,noreferrer");
+    setRedirectUrl(null);
+  }
 
   // Debounce arama
   useEffect(() => {
@@ -135,7 +142,7 @@ export default function HaberlerClient() {
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {featured.map((item) => (
-                  <NewsCard key={item.id} item={item} featured onOpen={setSelectedNews} />
+                  <NewsCard key={item.id} item={item} featured onOpen={setSelectedNews} onRedirect={setRedirectUrl} />
                 ))}
               </div>
             </div>
@@ -145,7 +152,7 @@ export default function HaberlerClient() {
           {regular.length > 0 && (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {regular.map((item) => (
-                <NewsCard key={item.id} item={item} onOpen={setSelectedNews} />
+                <NewsCard key={item.id} item={item} onOpen={setSelectedNews} onRedirect={setRedirectUrl} />
               ))}
             </div>
           )}
@@ -215,15 +222,45 @@ export default function HaberlerClient() {
                 Kapat
               </button>
               {selectedNews.source_url && (
-                <a
-                  href={selectedNews.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setRedirectUrl(selectedNews.source_url!)}
                   className="flex items-center gap-1.5 text-sm font-semibold text-[#0f1729] hover:text-[#c9a84c] transition-colors"
                 >
                   Kaynağa Git <ArrowUpRight className="w-4 h-4" />
-                </a>
+                </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dış siteye yönlendirme onayı */}
+      {redirectUrl && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setRedirectUrl(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+              <ExternalLink className="w-5 h-5 text-amber-600" />
+            </div>
+            <h3 className="font-heading text-base font-bold text-[#0f1729] text-center mb-1.5">
+              Başka siteye yönlendiriliyorsunuz
+            </h3>
+            <p className="text-xs text-gray-500 text-center mb-1 break-all">{redirectUrl}</p>
+            <p className="text-xs text-gray-400 text-center mb-5">
+              Bu bağlantı Mizanım dışındaki bir haber kaynağına aittir. Devam etmek istiyor musunuz?
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRedirectUrl(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={confirmRedirect}
+                className="flex-1 py-2.5 rounded-xl bg-[#c9a84c] text-white text-sm font-semibold hover:bg-[#b8963c] transition-colors"
+              >
+                Devam Et
+              </button>
             </div>
           </div>
         </div>
@@ -232,15 +269,12 @@ export default function HaberlerClient() {
   );
 }
 
-function NewsCard({ item, featured = false, onOpen }: { item: LegalNews; featured?: boolean; onOpen: (item: LegalNews) => void }) {
+function NewsCard({ item, featured = false, onOpen, onRedirect }: { item: LegalNews; featured?: boolean; onOpen: (item: LegalNews) => void; onRedirect: (url: string) => void }) {
   const catStyle = KATEGORI_RENK[item.category] ?? "bg-gray-100 text-gray-600 border-gray-200";
 
+  // Kart tıklaması detay penceresini açar; dış siteye gidiş onaydan geçer
   function handleClick() {
-    if (item.source_url) {
-      window.open(item.source_url, "_blank", "noopener,noreferrer");
-    } else {
-      onOpen(item);
-    }
+    onOpen(item);
   }
 
   return (
@@ -287,7 +321,17 @@ function NewsCard({ item, featured = false, onOpen }: { item: LegalNews; feature
             <ExternalLink className="w-3 h-3 text-gray-300" />
             <span className="text-[10px] text-gray-400">{item.source}</span>
           </div>
-          <span className="text-[10px] text-gray-300">{formatDate(item.published_at)}</span>
+          <div className="flex items-center gap-2">
+            {item.source_url && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onRedirect(item.source_url!); }}
+                className="flex items-center gap-0.5 text-[10px] font-semibold text-[#c9a84c] hover:text-[#b8963c] transition-colors"
+              >
+                Kaynağa Git <ArrowUpRight className="w-3 h-3" />
+              </button>
+            )}
+            <span className="text-[10px] text-gray-300">{formatDate(item.published_at)}</span>
+          </div>
         </div>
       </div>
     </div>

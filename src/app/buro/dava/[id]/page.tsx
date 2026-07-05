@@ -11,7 +11,11 @@ import {
   FileText,
   MessageSquare,
   AlertCircle,
+  BookOpen,
+  ExternalLink,
 } from "lucide-react";
+import DavaBelgeler from "@/components/buro/DavaBelgeler";
+import DavaAsistanPanel from "@/components/buro/DavaAsistanPanel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -57,7 +61,25 @@ export default async function DavaDetayPage({
     .eq("lawyer_id", user.id)
     .order("created_at", { ascending: false });
 
+  // Emsal/mevzuat referansları ile gerçek dosyaları ayır
+  const allDocs = (documents ?? []) as AnyClient[];
+  const kararRefs = allDocs.filter((d) => d.file_type === "emsal_karar" || d.file_type === "mevzuat");
+  const fileDocs = allDocs.filter((d) => d.file_type !== "emsal_karar" && d.file_type !== "mevzuat");
+
   const statusInfo = STATUS_MAP[caseData.status] || STATUS_MAP.aktif;
+
+  // Yan bar asistan için dava bağlamı
+  const caseContext = [
+    `Dava: ${caseData.title}`,
+    caseData.case_number ? `Dava No: ${caseData.case_number}` : "",
+    caseData.court ? `Mahkeme: ${caseData.court}` : "",
+    caseData.clients?.full_name ? `Müvekkil: ${caseData.clients.full_name}` : "",
+    caseData.opposing_party ? `Karşı Taraf: ${caseData.opposing_party}` : "",
+    caseData.description ? `Açıklama: ${caseData.description}` : "",
+    caseData.notes ? `Notlar: ${caseData.notes}` : "",
+    fileDocs.length > 0 ? `Belgeler: ${fileDocs.map((d) => d.name).join(", ")}` : "",
+    kararRefs.length > 0 ? `Bağdaştırılan kararlar: ${kararRefs.map((d) => d.name).join("; ")}` : "",
+  ].filter(Boolean).join("\n");
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,6 +174,64 @@ export default async function DavaDetayPage({
               </dl>
             </div>
 
+            {/* Bağdaştırılan Kararlar / Mevzuat */}
+            <div className="card">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-heading text-lg font-bold text-primary flex items-center gap-2">
+                  <BookOpen className="w-5 h-5" />
+                  Bağdaştırılan Kararlar / Mevzuat
+                </h2>
+                <span className="font-body text-xs text-muted-foreground bg-primary/5 px-2.5 py-1 rounded-full">
+                  {kararRefs.length} kayıt
+                </span>
+              </div>
+              {kararRefs.length === 0 ? (
+                <div className="text-center py-6 border border-border rounded-xl">
+                  <BookOpen className="w-7 h-7 text-muted-foreground mx-auto mb-1.5" />
+                  <p className="font-body text-sm text-muted-foreground">
+                    Henüz karar veya mevzuat bağdaştırılmadı. Karar Arama sayfasından &quot;Dosyaya Ekle&quot; ile ekleyebilirsiniz.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {kararRefs.map((ref: AnyClient) => {
+                    const meta = (ref.ai_risks ?? {}) as Record<string, string | null>;
+                    const kararId = meta.karar_id ?? ref.ai_summary?.match(/Karar ID: (\S+)/)?.[1];
+                    return (
+                      <div key={ref.id} className="p-3 rounded-lg bg-primary/5">
+                        <div className="flex items-start gap-3">
+                          <Scale className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-body text-sm font-medium text-foreground">{ref.name}</p>
+                            {ref.ai_summary && (
+                              <p className="font-body text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                {ref.ai_summary.split("\n")[0]}
+                              </p>
+                            )}
+                            <p className="font-body text-xs text-muted-foreground mt-1">
+                              {meta.decision_date && `Karar tarihi: ${meta.decision_date} · `}
+                              Eklendi: {new Date(ref.created_at).toLocaleDateString("tr-TR")}
+                            </p>
+                          </div>
+                          {kararId && (
+                            <a
+                              href={`/buro/emsal/${encodeURIComponent(kararId)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 flex-shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-border text-primary hover:border-accent hover:text-accent transition-colors"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              Yeni Sekmede Aç
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
             {/* Documents card */}
             <div className="card">
               <div className="flex items-center justify-between mb-4">
@@ -160,33 +240,19 @@ export default async function DavaDetayPage({
                   Belgeler
                 </h2>
                 <span className="font-body text-xs text-muted-foreground bg-primary/5 px-2.5 py-1 rounded-full">
-                  {documents?.length ?? 0} belge
+                  {fileDocs.length} belge
                 </span>
               </div>
-
-              {!documents || documents.length === 0 ? (
-                <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
-                  <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="font-body text-sm text-muted-foreground">
-                    Bu davaya henüz belge eklenmedi.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {documents.map((doc: AnyClient) => (
-                    <div key={doc.id} className="flex items-center gap-3 p-3 rounded-lg bg-primary/5">
-                      <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-body text-sm text-foreground truncate">{doc.name}</p>
-                        <p className="font-body text-xs text-muted-foreground">
-                          {new Date(doc.created_at).toLocaleDateString("tr-TR")} ·{" "}
-                          {(doc.file_size / 1024).toFixed(1)} KB
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <DavaBelgeler
+                caseId={params.id}
+                initialDocuments={fileDocs.map((d: AnyClient) => ({
+                  id: d.id,
+                  name: d.name,
+                  file_type: d.file_type,
+                  file_size: d.file_size,
+                  created_at: d.created_at,
+                }))}
+              />
             </div>
           </div>
 
@@ -230,12 +296,11 @@ export default async function DavaDetayPage({
               <p className="font-body text-xs text-white/70 mb-3">
                 Bu dava dosyası bağlamında içtihat araştırması yapın, strateji geliştirin.
               </p>
-              <Link
-                href={`/buro/asistan?case=${params.id}`}
-                className="block w-full text-center bg-accent text-primary font-body font-semibold text-sm py-2.5 rounded-lg hover:bg-accent/90 transition-colors"
-              >
-                Asistanı Aç
-              </Link>
+              <DavaAsistanPanel
+                caseId={params.id}
+                caseTitle={caseData.title}
+                caseContext={caseContext}
+              />
             </div>
           </div>
         </div>

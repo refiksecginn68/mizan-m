@@ -49,7 +49,8 @@ const COURT_OPTIONS = [
   { value: "anayasa", label: "Anayasa Mahkemesi" },
   { value: "bam_hukuk", label: "BAM Hukuk" },
   { value: "bam_ceza", label: "BAM Ceza" },
-  { value: "aym", label: "AYM" },
+  { value: "bolge_idare", label: "Bölge İdare Mahkemesi" },
+  { value: "ilk_derece", label: "İlk Derece Mahkemeleri" },
 ];
 
 const DAIRE_OPTIONS: Record<string, { value: string; label: string }[]> = {
@@ -237,12 +238,16 @@ export default function KararAramaClient({ cases }: Props) {
     setDosyaEklendi(null);
   }
 
-  // PDF indirme
+  // PDF indirme — Türkçe karakter desteği için DejaVu Sans + fontkit
   async function downloadPDF() {
     if (!selectedKarar) return;
-    const { PDFDocument, StandardFonts, rgb } = await import("pdf-lib");
+    try {
+    const { PDFDocument, rgb } = await import("pdf-lib");
+    const fontkit = (await import("@pdf-lib/fontkit")).default;
+    const fontBytes = await fetch("/fonts/DejaVuSans.ttf").then((r) => r.arrayBuffer());
     const pdfDoc = await PDFDocument.create();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    pdfDoc.registerFontkit(fontkit);
+    const font = await pdfDoc.embedFont(fontBytes, { subset: true });
     const fontSize = 10;
     const margin = 50;
     const lineHeight = fontSize * 1.5;
@@ -284,6 +289,10 @@ export default function KararAramaClient({ cases }: Props) {
     a.download = `karar-${selectedKarar.case_number?.replace(/\//g, "-") ?? "indirilen"}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("PDF error:", err);
+      showToast("PDF oluşturulurken hata oluştu.");
+    }
   }
 
   // UDF indirme
@@ -302,6 +311,7 @@ export default function KararAramaClient({ cases }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ docType: "karar", content }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -329,8 +339,9 @@ export default function KararAramaClient({ cases }: Props) {
       const res = await fetch("/api/buro/dilekce/export-word", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, title: `Karar ${selectedKarar.case_number}` }),
+        body: JSON.stringify({ metin: content, baslik: `Karar ${selectedKarar.case_number}` }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -482,12 +493,14 @@ export default function KararAramaClient({ cases }: Props) {
   }
 
   async function doSearch(q: string, c: string, p: number, mod: SearchMode) {
-    if (!q.trim() && mod !== "dosya") return;
+    // Sorgu boş olsa da esas/karar no veya tarih filtresi varsa ara
+    const hasFilter = !!(esasNo.trim() || kararNo.trim() || startDate || endDate);
+    if (!q.trim() && !hasFilter && mod !== "dosya") return;
     setLoading(true);
     setSearched(true);
     try {
       const params = new URLSearchParams({
-        q: q || esasNo || kararNo,
+        q,
         court: c,
         page: String(p),
         mode: mod,
@@ -731,7 +744,7 @@ export default function KararAramaClient({ cases }: Props) {
               />
               <button
                 onClick={() => doSearch(query, court, 1, mode)}
-                disabled={loading || !query.trim()}
+                disabled={loading || (!query.trim() && !esasNo.trim() && !kararNo.trim() && !startDate && !endDate)}
                 className="flex items-center gap-2 bg-[#c9a84c] hover:bg-[#e7b743] text-white text-sm font-semibold px-5 py-2 rounded-xl transition-colors disabled:opacity-40"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Search className="w-4 h-4" /> Ara</>}

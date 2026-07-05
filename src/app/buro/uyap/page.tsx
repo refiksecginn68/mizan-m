@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import UYAPClient from "./UYAPClient";
+import EklentiBaglanti from "@/components/buro/EklentiBaglanti";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -47,6 +48,7 @@ export default async function UYAPPage() {
           cases={(cases as AnyClient[]) || []}
           clients={(clients as AnyClient[]) || []}
         />
+        <EklentiBaglanti />
       </main>
     </div>
   );
