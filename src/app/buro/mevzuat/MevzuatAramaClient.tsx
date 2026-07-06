@@ -20,6 +20,7 @@ interface Mevzuat {
 
 type RightTab = "metin" | "ozet";
 
+// Bedesten mevzuat türleriyle birebir eşleşen filtreler
 const TUR_OPTIONS = [
   { value: "all", label: "Tümü" },
   { value: "kanun", label: "Kanun" },
@@ -27,7 +28,9 @@ const TUR_OPTIONS = [
   { value: "khk", label: "KHK" },
   { value: "teblig", label: "Tebliğ" },
   { value: "cbkararname", label: "CB Kararnamesi" },
-  { value: "yonerge", label: "Yönerge" },
+  { value: "cbkarar", label: "CB Kararı" },
+  { value: "genelge", label: "Genelge" },
+  { value: "tuzuk", label: "Tüzük" },
 ];
 
 // Metin satır kaydırma (pdf-lib için)
@@ -76,15 +79,18 @@ export default function MevzuatAramaClient() {
   const [ozetLoading, setOzetLoading] = useState(false);
   const [rightTab, setRightTab] = useState<RightTab>("metin");
 
-  async function doSearch(q: string, t: string) {
+  async function doSearch(q: string, t: string, over?: { startDate?: string; endDate?: string; yururluk?: string }) {
     if (!q.trim()) return;
     setLoading(true);
     setSearched(true);
     try {
       const params = new URLSearchParams({ q, tur: t });
-      if (startDate) params.set("startDate", startDate);
-      if (endDate) params.set("endDate", endDate);
-      if (yururluk) params.set("yururluk", yururluk);
+      const sd = over?.startDate ?? startDate;
+      const ed = over?.endDate ?? endDate;
+      const yr = over?.yururluk ?? yururluk;
+      if (sd) params.set("startDate", sd);
+      if (ed) params.set("endDate", ed);
+      if (yr) params.set("yururluk", yr);
       if (maddeNo) params.set("madde", maddeNo);
       const res = await fetch(`/api/mevzuat/search?${params}`);
       const data = (await res.json()) as { results: Mevzuat[]; total: number };
@@ -102,13 +108,12 @@ export default function MevzuatAramaClient() {
     setRightTab("metin");
     setMaddeler(null);
     setOzetText("");
-    // Tam metin için mevzuat.gov.tr'den çekmeyi dene (proxy olmadığı için genellikle başarısız olur)
+    // Tam metin — Bedesten getDocumentContent (id = mevzuatId); madde no girildiyse sadece o madde
     setMaddelerLoading(true);
     try {
-      const res = await fetch(
-        `/api/mevzuat/metin?no=${encodeURIComponent(m.mevzuatNo)}&tur=${encodeURIComponent(m.mevzuatTur)}`,
-        { signal: AbortSignal.timeout(8000) }
-      );
+      const params = new URLSearchParams({ id: m.id });
+      if (maddeNo.trim() && /^\d+$/.test(maddeNo.trim())) params.set("madde", maddeNo.trim());
+      const res = await fetch(`/api/mevzuat/metin?${params}`, { signal: AbortSignal.timeout(30000) });
       if (res.ok) {
         const data = (await res.json()) as { content?: string };
         setMaddeler(data.content ?? null);
@@ -315,10 +320,12 @@ export default function MevzuatAramaClient() {
             ))}
             <div className="flex items-center gap-1.5 ml-2">
               <Calendar className="w-3.5 h-3.5 text-gray-400" />
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+              <input type="date" value={startDate}
+                onChange={(e) => { setStartDate(e.target.value); if (searched) doSearch(query, tur, { startDate: e.target.value }); }}
                 className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
               <span className="text-gray-400 text-xs">—</span>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
+              <input type="date" value={endDate}
+                onChange={(e) => { setEndDate(e.target.value); if (searched) doSearch(query, tur, { endDate: e.target.value }); }}
                 className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c] w-36" />
             </div>
 
@@ -327,7 +334,7 @@ export default function MevzuatAramaClient() {
               {(["", "yururlukte", "mulga"] as const).map((val) => (
                 <button
                   key={val || "tumu"}
-                  onClick={() => setYururluk(val)}
+                  onClick={() => { setYururluk(val); if (searched) doSearch(query, tur, { yururluk: val }); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     yururluk === val
                       ? "bg-[#0f1729] text-white"

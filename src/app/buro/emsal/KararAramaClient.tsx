@@ -116,15 +116,11 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-function matchScore(item: CaseLaw, query: string): number {
-  if (item.score) return Math.round(item.score * 100);
-  if (!query) return 0;
-  const q = query.toLowerCase();
-  const subj = (item.subject || "").toLowerCase();
-  const summ = (item.summary || "").toLowerCase();
-  if (subj.includes(q)) return 95 + Math.floor(Math.random() * 5);
-  if (summ.includes(q)) return 78 + Math.floor(Math.random() * 15);
-  return 60 + Math.floor(Math.random() * 20);
+// Gerçek alaka skoru: backend karar tam metni üzerinden hesaplar (0..1).
+// Skor yoksa gösterge gizlenir — uydurma skor gösterilmez.
+function matchScore(item: CaseLaw): number | null {
+  if (typeof item.score === "number") return Math.round(item.score * 100);
+  return null;
 }
 
 // Metin satır kaydırma yardımcı fonksiyonu (pdf-lib için)
@@ -167,7 +163,7 @@ export default function KararAramaClient({ cases }: Props) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<"alakalilik" | "guncel" | "eski">("alakalilik");
+  const [sortBy, setSortBy] = useState<"alakalilik" | "guncel" | "eski" | "daire">("alakalilik");
   const [belgeTuru, setBelgeTuru] = useState("");
   const [ozetDurumu, setOzetDurumu] = useState<"" | "ozetli" | "ozetsiz">("");
   const [results, setResults] = useState<CaseLaw[]>([]);
@@ -492,7 +488,7 @@ export default function KararAramaClient({ cases }: Props) {
     setFileLoadingList(false);
   }
 
-  async function doSearch(q: string, c: string, p: number, mod: SearchMode) {
+  async function doSearch(q: string, c: string, p: number, mod: SearchMode, sortOverride?: typeof sortBy) {
     // Sorgu boş olsa da esas/karar no veya tarih filtresi varsa ara
     const hasFilter = !!(esasNo.trim() || kararNo.trim() || startDate || endDate);
     if (!q.trim() && !hasFilter && mod !== "dosya") return;
@@ -504,7 +500,7 @@ export default function KararAramaClient({ cases }: Props) {
         court: c,
         page: String(p),
         mode: mod,
-        sort: sortBy,
+        sort: sortOverride ?? sortBy,
       });
       if (esasNo) params.set("esas", esasNo);
       if (kararNo) params.set("karar", kararNo);
@@ -582,7 +578,7 @@ export default function KararAramaClient({ cases }: Props) {
         <div className="space-y-2">
           {results.map((item) => {
             const id = getId(item);
-            const score = matchScore(item, query);
+            const score = matchScore(item);
             const dateStr = item.decision_date
               ? new Date(item.decision_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
               : "";
@@ -591,10 +587,11 @@ export default function KararAramaClient({ cases }: Props) {
             return (
               <div
                 key={id}
-                className={`bg-white rounded-xl border p-4 transition-all ${
+                onClick={() => selectKarar(item)}
+                className={`bg-white rounded-xl border p-4 transition-all cursor-pointer ${
                   isSelected
                     ? "border-[#c9a84c] shadow-md"
-                    : "border-gray-100 hover:border-gray-200 hover:shadow-sm"
+                    : "border-gray-100 hover:border-[#c9a84c]/60 hover:shadow-sm"
                 }`}
               >
                 {/* Badges */}
@@ -621,15 +618,19 @@ export default function KararAramaClient({ cases }: Props) {
                 {/* Eşleşme + Butonlar */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1">
-                    <div className="w-12 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
-                    <span className={`text-[10px] font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
-                      %{score}
-                    </span>
+                    {score !== null && (
+                      <>
+                        <div className="w-12 h-1 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
+                            style={{ width: `${score}%` }}
+                          />
+                        </div>
+                        <span className={`text-[10px] font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
+                          %{score}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
@@ -640,7 +641,7 @@ export default function KararAramaClient({ cases }: Props) {
                       Ekle
                     </button>
                     <button
-                      onClick={() => selectKarar(item)}
+                      onClick={(e) => { e.stopPropagation(); selectKarar(item); }}
                       className={`text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors ${
                         isSelected
                           ? "bg-[#c9a84c] text-white"
@@ -807,12 +808,18 @@ export default function KararAramaClient({ cases }: Props) {
               <Filter className="w-3.5 h-3.5" />
               Filtrele
             </button>
-            {/* Sıralama — her zaman görünür */}
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            {/* Sıralama — her zaman görünür, değişince arama yenilenir */}
+            <select value={sortBy}
+              onChange={(e) => {
+                const val = e.target.value as typeof sortBy;
+                setSortBy(val);
+                if (searched) doSearch(query, court, 1, mode, val);
+              }}
               className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
               <option value="alakalilik">↑ Alakalılık</option>
-              <option value="guncel">↓ En Güncel</option>
-              <option value="eski">↑ En Eski</option>
+              <option value="guncel">↓ En Yeni (Karar Tarihi)</option>
+              <option value="eski">↑ En Eski (Karar Tarihi)</option>
+              <option value="daire">Mahkeme / Daire</option>
             </select>
             {/* Aktif filtre sayısı */}
             {(court !== "all" || daire || esasNo || kararNo || startDate || endDate || belgeTuru || ozetDurumu) && (
@@ -1136,7 +1143,9 @@ export default function KararAramaClient({ cases }: Props) {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-400">
                   <span>Sırala:</span>
-                  <span className="font-semibold text-gray-600 border-b border-gray-300 cursor-pointer">Alakalılık</span>
+                  <span className="font-semibold text-gray-600">
+                    {sortBy === "alakalilik" ? "Alakalılık" : sortBy === "guncel" ? "En Yeni" : sortBy === "eski" ? "En Eski" : "Mahkeme/Daire"}
+                  </span>
                 </div>
               </div>
             )}
@@ -1163,13 +1172,14 @@ export default function KararAramaClient({ cases }: Props) {
                 <div className="space-y-3 pt-2">
                   {results.map((item) => {
                     const id = getId(item);
-                    const score = matchScore(item, query);
+                    const score = matchScore(item);
                     const dateStr = item.decision_date
                       ? new Date(item.decision_date).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })
                       : "";
 
                     return (
-                      <div key={id} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all p-5">
+                      <div key={id} onClick={() => selectKarar(item)}
+                        className="bg-white rounded-2xl border border-gray-100 hover:border-[#c9a84c]/60 hover:shadow-md transition-all p-5 cursor-pointer">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -1184,27 +1194,29 @@ export default function KararAramaClient({ cases }: Props) {
                             <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{item.summary}</p>
                           </div>
                           <div className="flex flex-col items-end gap-3 flex-shrink-0">
-                            <div className="flex items-center gap-1.5">
-                              <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
-                                  style={{ width: `${score}%` }}
-                                />
+                            {score !== null && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${score >= 90 ? "bg-green-500" : score >= 70 ? "bg-[#c9a84c]" : "bg-gray-300"}`}
+                                    style={{ width: `${score}%` }}
+                                  />
+                                </div>
+                                <span className={`text-xs font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
+                                  %{score}
+                                </span>
                               </div>
-                              <span className={`text-xs font-bold ${score >= 90 ? "text-green-600" : score >= 70 ? "text-[#c9a84c]" : "text-gray-400"}`}>
-                                %{score}
-                              </span>
-                            </div>
+                            )}
                             <div className="flex items-center gap-2">
                               <button
-                                onClick={() => setDosyaModalId(id)}
+                                onClick={(e) => { e.stopPropagation(); setDosyaModalId(id); }}
                                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors"
                               >
                                 <FolderPlus className="w-3.5 h-3.5" />
                                 Dosyaya Ekle
                               </button>
                               <button
-                                onClick={() => selectKarar(item)}
+                                onClick={(e) => { e.stopPropagation(); selectKarar(item); }}
                                 className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5" />

@@ -88,7 +88,7 @@ function BaroDropdown({ value, onChange }: { value: string; onChange: (v: string
               />
             </div>
           </div>
-          <div className="max-h-48 overflow-y-auto py-1">
+          <div className="max-h-[min(12rem,35dvh)] overflow-y-auto py-1">
             <button
               type="button"
               onClick={() => { onChange(""); setOpen(false); setSearch(""); }}
@@ -179,10 +179,10 @@ export default function OnboardingModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-slide-up flex flex-col max-h-[90dvh]">
 
         {/* Header */}
-        <div className="bg-[#0f1729] px-6 py-5 flex items-center justify-between">
+        <div className="bg-[#0f1729] px-6 py-5 flex items-center justify-between flex-shrink-0">
           <div>
             <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">
               Adım {step + 1} / {steps.length}
@@ -200,7 +200,7 @@ export default function OnboardingModal() {
         </div>
 
         {/* Progress */}
-        <div className="flex gap-1 px-6 pt-4">
+        <div className="flex gap-1 px-6 pt-4 flex-shrink-0">
           {steps.map((_, i) => (
             <div
               key={i}
@@ -209,8 +209,8 @@ export default function OnboardingModal() {
           ))}
         </div>
 
-        {/* Content */}
-        <div className="px-6 py-6">
+        {/* Content — dar ekranda taşmayı önlemek için iç scroll */}
+        <div className="px-6 py-6 flex-1 overflow-y-auto min-h-0">
           <div className="w-12 h-12 rounded-2xl bg-[#c9a84c]/10 flex items-center justify-center mb-4">
             <StepIcon className="w-6 h-6 text-[#c9a84c]" />
           </div>
@@ -311,7 +311,7 @@ export default function OnboardingModal() {
         </div>
 
         {/* Footer butonlar */}
-        <div className="px-6 pb-6 flex items-center justify-between gap-3">
+        <div className="px-6 pb-6 pt-3 flex items-center justify-between gap-3 flex-shrink-0 border-t border-gray-50">
           <button
             onClick={() => setStep((s) => s - 1)}
             disabled={step === 0 || loading}

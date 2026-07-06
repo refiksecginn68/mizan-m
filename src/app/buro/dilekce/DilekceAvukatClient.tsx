@@ -66,17 +66,45 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // UDF/PDF/DOCX ikili dosyalardır — file.text() çöp üretir; sunucuda çıkarılır
+  const extractFileText = useCallback(async (file: File): Promise<{ text: string; warning?: string }> => {
+    const ext = file.name.toLowerCase().split(".").pop() ?? "";
+    if (["udf", "pdf", "docx", "doc"].includes(ext)) {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/buro/dilekce/extract", { method: "POST", body: form });
+      const data = (await res.json()) as { text?: string; warning?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Belge okunamadı");
+      return { text: data.text ?? "", warning: data.warning };
+    }
+    return { text: await file.text().catch(() => "") };
+  }, []);
+
   const handleFileUpload = useCallback(async (file: File) => {
     setUploadedFile(file);
-    const text = await file.text().catch(() => "");
-    setDosyaMetni(text.slice(0, 5000));
-  }, []);
+    setError("");
+    try {
+      const { text, warning } = await extractFileText(file);
+      setDosyaMetni(text.slice(0, 30000));
+      if (warning) setError(warning);
+    } catch (e) {
+      setDosyaMetni("");
+      setError(e instanceof Error ? e.message : "Belge okunamadı");
+    }
+  }, [extractFileText]);
 
   const handleEvrakUpload = useCallback(async (file: File) => {
     setEvrakFile(file);
-    const text = await file.text().catch(() => "");
-    setEvrakMetin(text.slice(0, 10000));
-  }, []);
+    setError("");
+    try {
+      const { text, warning } = await extractFileText(file);
+      setEvrakMetin(text.slice(0, 30000));
+      if (warning) setError(warning);
+    } catch (e) {
+      setEvrakMetin("");
+      setError(e instanceof Error ? e.message : "Belge okunamadı");
+    }
+  }, [extractFileText]);
 
   async function generate(mod: "ai" | "duzenle" = "ai") {
     if (!konu.trim() && mod === "ai") return;

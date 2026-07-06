@@ -1,127 +1,100 @@
 import { createHash } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import {
+  searchMevzuatRaw,
+  MEVZUAT_TUR_MAP,
+  YURURLUK_TUM_TURLER,
+  type BedestenMevzuatItem,
+} from "@/lib/services/bedesten";
 
-// Demo mevzuat verisi — API erişilemez olduğunda kullanılır
-const DEMO_MEVZUAT = [
-  {
-    id: "4857",
-    mevzuatNo: "4857",
-    mevzuatTur: "Kanun",
-    adi: "İş Kanunu",
-    resmiGazeteSayisi: "25134",
-    resmiGazeteTarihi: "2003-06-10",
-    madde_sayisi: 112,
-    ozet: "İş sözleşmesi, işçi hakları, kıdem tazminatı, iş güvencesi ve toplu iş hukuku düzenlemeleri.",
-  },
-  {
-    id: "6098",
-    mevzuatNo: "6098",
-    mevzuatTur: "Kanun",
-    adi: "Türk Borçlar Kanunu",
-    resmiGazeteSayisi: "27836",
-    resmiGazeteTarihi: "2011-02-04",
-    madde_sayisi: 649,
-    ozet: "Borç ilişkileri, sözleşmeler, haksız fiil, sebepsiz zenginleşme ve borçların sona ermesi.",
-  },
-  {
-    id: "6100",
-    mevzuatNo: "6100",
-    mevzuatTur: "Kanun",
-    adi: "Hukuk Muhakemeleri Kanunu",
-    resmiGazeteSayisi: "27836",
-    resmiGazeteTarihi: "2011-02-04",
-    madde_sayisi: 476,
-    ozet: "Medeni yargılama usulü, mahkeme teşkilatı, yargılama ilkeleri ve kanun yolları.",
-  },
-  {
-    id: "4721",
-    mevzuatNo: "4721",
-    mevzuatTur: "Kanun",
-    adi: "Türk Medeni Kanunu",
-    resmiGazeteSayisi: "24607",
-    resmiGazeteTarihi: "2001-12-08",
-    madde_sayisi: 1030,
-    ozet: "Kişiler hukuku, aile hukuku, miras hukuku ve eşya hukuku.",
-  },
-  {
-    id: "2709",
-    mevzuatNo: "2709",
-    mevzuatTur: "Kanun",
-    adi: "Türkiye Cumhuriyeti Anayasası",
-    resmiGazeteSayisi: "17844",
-    resmiGazeteTarihi: "1982-11-09",
-    madde_sayisi: 177,
-    ozet: "Temel haklar, devlet organları, yasama, yürütme ve yargı yapılanması.",
-  },
-  {
-    id: "5237",
-    mevzuatNo: "5237",
-    mevzuatTur: "Kanun",
-    adi: "Türk Ceza Kanunu",
-    resmiGazeteSayisi: "25611",
-    resmiGazeteTarihi: "2004-10-12",
-    madde_sayisi: 345,
-    ozet: "Suçlar, cezalar, yaptırım türleri ve ceza sorumluluğu.",
-  },
-  {
-    id: "2577",
-    mevzuatNo: "2577",
-    mevzuatTur: "Kanun",
-    adi: "İdari Yargılama Usulü Kanunu",
-    resmiGazeteSayisi: "17580",
-    resmiGazeteTarihi: "1982-01-20",
-    madde_sayisi: 65,
-    ozet: "İdare mahkemelerinde yargılama usulü, iptal ve tam yargı davaları.",
-  },
-  {
-    id: "6362",
-    mevzuatNo: "6362",
-    mevzuatTur: "Kanun",
-    adi: "Sermaye Piyasası Kanunu",
-    resmiGazeteSayisi: "28513",
-    resmiGazeteTarihi: "2012-12-30",
-    madde_sayisi: 143,
-    ozet: "Sermaye piyasası araçları, halka arz, borsa ve SPK düzenlemeleri.",
-  },
-  {
-    id: "5510",
-    mevzuatNo: "5510",
-    mevzuatTur: "Kanun",
-    adi: "Sosyal Sigortalar ve GSS Kanunu",
-    resmiGazeteSayisi: "26200",
-    resmiGazeteTarihi: "2006-06-16",
-    madde_sayisi: 108,
-    ozet: "Sosyal güvenlik, emeklilik, iş kazası ve hastalık sigortası.",
-  },
-  {
-    id: "6698",
-    mevzuatNo: "6698",
-    mevzuatTur: "Kanun",
-    adi: "Kişisel Verilerin Korunması Kanunu",
-    resmiGazeteSayisi: "29677",
-    resmiGazeteTarihi: "2016-04-07",
-    madde_sayisi: 32,
-    ozet: "Kişisel veri işleme, KVKK, GDPR uyumu, veri sorumlusu yükümlülükleri.",
-  },
+interface MevzuatResult {
+  id: string;
+  mevzuatNo: string;
+  mevzuatTur: string;
+  adi: string;
+  resmiGazeteSayisi?: string;
+  resmiGazeteTarihi?: string;
+  ozet?: string;
+  url?: string;
+}
+
+// Demo veri — Bedesten erişilemezse son çare
+const DEMO_MEVZUAT: MevzuatResult[] = [
+  { id: "103054", mevzuatNo: "4857", mevzuatTur: "Kanun", adi: "İş Kanunu", resmiGazeteSayisi: "25134", resmiGazeteTarihi: "2003-06-10", ozet: "İş sözleşmesi, işçi hakları, kıdem tazminatı, iş güvencesi düzenlemeleri." },
+  { id: "6098", mevzuatNo: "6098", mevzuatTur: "Kanun", adi: "Türk Borçlar Kanunu", resmiGazeteSayisi: "27836", resmiGazeteTarihi: "2011-02-04", ozet: "Borç ilişkileri, sözleşmeler, haksız fiil, sebepsiz zenginleşme." },
+  { id: "6100", mevzuatNo: "6100", mevzuatTur: "Kanun", adi: "Hukuk Muhakemeleri Kanunu", resmiGazeteSayisi: "27836", resmiGazeteTarihi: "2011-02-04", ozet: "Medeni yargılama usulü, mahkeme teşkilatı, kanun yolları." },
+  { id: "4721", mevzuatNo: "4721", mevzuatTur: "Kanun", adi: "Türk Medeni Kanunu", resmiGazeteSayisi: "24607", resmiGazeteTarihi: "2001-12-08", ozet: "Kişiler, aile, miras ve eşya hukuku." },
+  { id: "5237", mevzuatNo: "5237", mevzuatTur: "Kanun", adi: "Türk Ceza Kanunu", resmiGazeteSayisi: "25611", resmiGazeteTarihi: "2004-10-12", ozet: "Suçlar, cezalar, yaptırım türleri ve ceza sorumluluğu." },
 ];
+
+// Türkçe küçük harf (İ/I sorunu)
+function trLower(s: string): string {
+  return (s ?? "").replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
+}
+
+// Başlık eşleşmesine göre yeniden sıralama:
+// Bedesten'in alaka sırası mevzuat ADI eşleşmesini öne almıyor (canlı testte
+// "iş kanunu" araması 4857'yi 4. sıraya koyuyor). Tam ad > ad ile başlayan >
+// adda geçen > diğer; eşitlikte RG tarihi yeni olan üstte (güncel temel kanun).
+function rankByTitle(results: MevzuatResult[], q: string): MevzuatResult[] {
+  const ql = trLower(q.trim());
+  const score = (r: MevzuatResult): number => {
+    const adi = trLower(r.adi);
+    if (adi === ql) return 4000;
+    if (adi.startsWith(ql)) return 3000 - Math.min(adi.length, 900);
+    if (adi.includes(ql)) return 2000 - Math.min(adi.length, 900);
+    const terms = ql.split(/\s+/).filter((t) => t.length >= 2);
+    if (terms.length > 0 && terms.every((t) => adi.includes(t))) return 1000 - Math.min(adi.length, 900);
+    return 0;
+  };
+  return [...results].sort((a, b) => {
+    const d = score(b) - score(a);
+    if (d !== 0) return d;
+    // Eşit skorda güncel olan üstte: kanun numarası büyük = yeni
+    // (RG tarihi temel kanunlarda boş gelebiliyor, numara daha güvenilir)
+    const noA = parseInt(a.mevzuatNo, 10) || 0;
+    const noB = parseInt(b.mevzuatNo, 10) || 0;
+    if (noA !== noB) return noB - noA;
+    return (b.resmiGazeteTarihi ?? "").localeCompare(a.resmiGazeteTarihi ?? "");
+  });
+}
+
+function toResult(item: BedestenMevzuatItem): MevzuatResult {
+  const rgTarih = item.resmiGazeteTarihi ? String(item.resmiGazeteTarihi).slice(0, 10) : undefined;
+  return {
+    id: item.mevzuatId,
+    mevzuatNo: item.mevzuatNo != null ? String(item.mevzuatNo) : "",
+    mevzuatTur: item.mevzuatTur?.description ?? item.mevzuatTur?.name ?? "Mevzuat",
+    adi: item.mevzuatAdi ?? "",
+    resmiGazeteSayisi: item.resmiGazeteSayisi ?? undefined,
+    resmiGazeteTarihi: rgTarih,
+    ozet: [
+      item.mevzuatTur?.description,
+      item.resmiGazeteSayisi ? `RG Sayı: ${item.resmiGazeteSayisi}` : "",
+      rgTarih ? `RG Tarihi: ${rgTarih}` : "",
+    ].filter(Boolean).join(" · "),
+    url: item.url,
+  };
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() ?? "";
-  // Kanun, yonetmelik, khk, teblig veya all
   const tur = searchParams.get("tur") ?? "all";
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const yururluk = searchParams.get("yururluk") ?? "";
+  const startDate = searchParams.get("startDate") ?? "";
+  const endDate = searchParams.get("endDate") ?? "";
+  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10) || 1);
 
   if (!q || q.length < 2) {
     return Response.json({ results: [], total: 0 });
   }
 
-  // Cache key oluştur
   const cacheKey = createHash("md5")
-    .update(`mevzuat|${q}|${tur}|${page}`)
+    .update(`mevzuat-v4|${q}|${tur}|${yururluk}|${startDate}|${endDate}|${page}`)
     .digest("hex");
 
-  // Supabase cache kontrolü (mevzuat_cache tablosu varsa)
+  // Önbellek (24 saat)
   try {
     const supabase = createServiceClient();
     const { data: cached } = await supabase
@@ -129,59 +102,82 @@ export async function GET(request: Request) {
       .select("results, total, created_at")
       .eq("query_hash", cacheKey)
       .single();
-
     if (cached) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cachedAny = cached as any;
-      const ageMs = Date.now() - new Date(cachedAny.created_at as string).getTime();
-      // 24 saat geçerli
-      if (ageMs < 24 * 60 * 60 * 1000) {
-        return Response.json({ results: cachedAny.results, total: cachedAny.total, source: "cache" });
+      const c = cached as any;
+      if ((c.total ?? 0) > 0 && Date.now() - new Date(c.created_at as string).getTime() < 24 * 60 * 60 * 1000) {
+        return Response.json({ results: c.results, total: c.total, source: "cache" });
       }
     }
-  } catch {
-    // Tablo yoksa veya bağlantı hatası — devam et
+  } catch { /* tablo yoksa devam */ }
+
+  // Tür listesi: seçilen tür + yürürlük filtresi kombinasyonu
+  let turList: string[] | undefined;
+  if (yururluk === "mulga") {
+    turList = ["MULGA"];
+  } else if (tur !== "all" && MEVZUAT_TUR_MAP[tur]) {
+    turList = MEVZUAT_TUR_MAP[tur];
+  } else if (yururluk === "yururlukte") {
+    turList = YURURLUK_TUM_TURLER;
   }
 
-  // Gerçek mevzuat arama — mevzuat.gov.tr proxy
+  // Sorgu tamamen sayısal ise mevzuat no araması olarak dene
+  const isNumeric = /^\d{2,6}$/.test(q);
+
   try {
-    const apiUrl = `https://mevzuat.gov.tr/MevzuatMetin/searchV3.aspx?keyword=${encodeURIComponent(q)}&mevzuatTur=${tur !== "all" ? tur : ""}&pageSize=10&pageIndex=${page}`;
-    const res = await fetch(apiUrl, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0",
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { results?: unknown[]; total?: number };
-      return Response.json({
-        results: data.results ?? [],
-        total: data.total ?? 0,
-        source: "live",
-      });
+    let raw = null;
+    if (isNumeric) {
+      raw = await searchMevzuatRaw({ mevzuatNo: parseInt(q, 10), turList, pageSize: 20, pageNumber: page });
+    }
+    if (!raw || raw.items.length === 0) {
+      // Önce kesin ifade, sonra geniş arama
+      raw = await searchMevzuatRaw({ phrase: `"${q}"`, turList, pageSize: 20, pageNumber: page });
+      if (!raw || raw.items.length === 0) {
+        raw = await searchMevzuatRaw({ phrase: q, turList, pageSize: 20, pageNumber: page });
+      }
+    }
+
+    if (raw && raw.items.length > 0) {
+      let results = rankByTitle(raw.items.map(toResult), q);
+      let total = raw.total;
+
+      // Tarih aralığı post-filter (Resmî Gazete tarihi üzerinden)
+      if (startDate || endDate) {
+        results = results.filter((r) => {
+          if (!r.resmiGazeteTarihi) return false;
+          if (startDate && r.resmiGazeteTarihi < startDate) return false;
+          if (endDate && r.resmiGazeteTarihi > endDate) return false;
+          return true;
+        });
+        total = results.length;
+      }
+
+      // Önbelleğe yaz (fire-and-forget)
+      if (results.length > 0) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const supabase = createServiceClient() as any;
+          void supabase.from("mevzuat_cache").upsert({
+            query_hash: cacheKey,
+            query_text: q,
+            results,
+            total,
+            created_at: new Date().toISOString(),
+          }, { onConflict: "query_hash" }).then(() => {}, () => {});
+        } catch { /* ignore */ }
+      }
+
+      return Response.json({ results, total, source: "live" });
     }
   } catch {
-    // API erişilemez — demo veriye düş
+    // Bedesten erişilemez — demo veriye düş
   }
 
-  // Fallback: demo mevzuat verisi
+  // Fallback: demo veri
   const qLower = q.toLowerCase();
   let filtered = DEMO_MEVZUAT.filter(
-    (m) =>
-      m.adi.toLowerCase().includes(qLower) ||
-      m.ozet.toLowerCase().includes(qLower) ||
-      m.mevzuatNo.includes(q)
+    (m) => m.adi.toLowerCase().includes(qLower) || (m.ozet ?? "").toLowerCase().includes(qLower) || m.mevzuatNo.includes(q)
   );
-  if (tur !== "all") {
-    filtered = filtered.filter(
-      (m) => m.mevzuatTur.toLowerCase() === tur.toLowerCase()
-    );
-  }
-
-  return Response.json({
-    results: filtered,
-    total: filtered.length,
-    source: "demo",
-  });
+  if (tur !== "all") filtered = filtered.filter((m) => m.mevzuatTur.toLowerCase() === tur.toLowerCase());
+  return Response.json({ results: filtered, total: filtered.length, source: "demo" });
 }

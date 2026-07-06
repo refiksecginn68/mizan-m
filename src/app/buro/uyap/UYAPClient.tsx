@@ -387,6 +387,21 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
         )}
       </div>
 
+      {/* Gizlilik / KVKK uyarısı */}
+      <div className="flex items-start gap-3 rounded-lg p-4 mb-6 border bg-[#f8f9fa] border-gray-200">
+        <Shield className="w-5 h-5 text-[#c9a84c] flex-shrink-0 mt-0.5" />
+        <p className="font-body text-xs leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Gizlilik hatırlatması:</strong>{" "}
+          Mizanım, UYAP hesabınıza sizin yerinize giriş yapmaz; e-imza/mobil imza
+          süreci tamamen sizin kontrolünüzdedir. Tarayıcı eklentisi yalnızca
+          sizin açtığınız oturumda ekranda görünen dosya bilgilerini okur ve
+          aktarır. UYAP şifreniz veya e-imza PIN&apos;iniz Mizanım tarafından
+          istenmez, işlenmez ve depolanmaz. Aktarılan veriler 6698 sayılı KVKK
+          kapsamındaki yükümlülüklere uygun şekilde yalnızca sizin hesabınızda
+          saklanır.
+        </p>
+      </div>
+
       {/* Tabs */}
       <div className="flex gap-1 bg-muted/50 p-1 rounded-xl mb-6 overflow-x-auto">
         {TABS.map(({ id, label, icon: Icon }) => (

@@ -34,20 +34,22 @@ export async function POST(request: Request) {
   const avukatAd = profile?.full_name ?? "Avukat";
   const turBilgi = body.tur ? `\nDilekçe türü: ${body.tur}` : "";
 
-  const systemPrompt = `Sen Türk hukuku alanında uzman, 20 yıllık deneyimli bir avukatsın.
+  const systemPrompt = `Sen 30 yıllık deneyime sahip, alanında uzman bir dilekçe yazarı avukatsın.
 Meslektaşın olan Av. ${avukatAd} için profesyonel hukuki belgeler hazırlıyorsun.
 
 KURALLAR:
-- Türk hukuku ve usulüne tam uygunluk
-- Doğru mahkeme hitabı ve standart dilekçe formatı
-- İlgili kanun maddeleri ve içtihat atıfları
-- Profesyonel, resmi Türkçe
-- Zorunlu bölümler: başlık, yetkili makam, taraflar, konu, açıklama, hukuki dayanak, sonuç ve talep, saygılarımla + imza yeri
+- Türk hukuku ve usulüne tam uygunluk; USUL ve ESAS ayrımını gözet (usuli itirazlar önce, esasa ilişkin savunma/talep sonra)
+- Doğru ve tam mahkeme hitabı (ör. "İSTANBUL ( ). ASLİYE HUKUK MAHKEMESİ SAYIN HÂKİMLİĞİ'NE"); görevli/yetkili mahkemeyi konuya göre doğru seç
+- İlgili kanun maddelerine açık atıf (kanun adı + madde no); biliniyorsa yerleşik Yargıtay içtihadına atıf
+- Kusursuz, resmi Türkçe hukuk dili; devrik/konuşma dili yok
+- Zorunlu bölümler: başlık/makam, taraflar (ad-soyad, T.C., adres alanları), vekil bilgisi, konu, açıklamalar (numaralı), hukuki nedenler, hukuki deliller, sonuç ve istem (net taleplerle), tarih + Av. imza bloğu
+- Belge yüklenmişse: içeriğini dikkatle analiz et, olay örgüsünü ve iddiaları belgeden çıkar, dilekçeyi bu somut olaya dayandır — genel geçer metin yazma
+- Bilinmeyen bilgiler için [KÖŞELİ PARANTEZ] yer tutucu kullan
 - Sadece dilekçe metnini üret, ek açıklama ekleme`;
 
   const userMessage = body.mod === "duzenle" && body.mevcutMetin
     ? `Aşağıdaki dilekçeyi şu yönde düzenle/iyileştir:\n\nYeni konu/talimat: ${body.konu}\n\nMevcut dilekçe:\n${body.mevcutMetin}`
-    : `Konu: ${body.konu}${turBilgi}${body.ekBilgi ? `\n\nEk bilgi:\n${body.ekBilgi}` : ""}${body.dosyaMetni ? `\n\nYüklenen belgeden çıkarılan bilgi:\n${body.dosyaMetni.slice(0, 3000)}` : ""}\n\nBu konuda profesyonel bir dilekçe hazırla.`;
+    : `Konu: ${body.konu}${turBilgi}${body.ekBilgi ? `\n\nEk bilgi:\n${body.ekBilgi}` : ""}${body.dosyaMetni ? `\n\nYüklenen belgeden çıkarılan metin:\n${body.dosyaMetni.slice(0, 20000)}` : ""}\n\nBu konuda profesyonel bir dilekçe hazırla.`;
 
   const encoder = new TextEncoder();
   let fullText = "";

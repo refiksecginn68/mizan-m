@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import { loginAction } from "@/lib/actions/auth";
 
 function GirisForm() {
@@ -182,6 +182,17 @@ function GirisForm() {
             Avukat Kaydı
           </Link>
         </div>
+      </div>
+
+      {/* Gizlilik / KVKK güven metni */}
+      <div className="mt-6 flex items-start gap-2.5 bg-[#f8f9fa] border border-gray-100 rounded-xl px-4 py-3">
+        <ShieldCheck className="w-4 h-4 text-[#c9a84c] flex-shrink-0 mt-0.5" />
+        <p className="font-body text-[11px] leading-relaxed text-muted-foreground">
+          Giriş bilgileriniz yalnızca kimlik doğrulama amacıyla işlenir; şifreniz
+          düz metin olarak saklanmaz, üçüncü kişilerle paylaşılmaz. Kişisel
+          verileriniz 6698 sayılı KVKK kapsamında korunmaya çalışılır. Ayrıntılar
+          için <Link href="/kvkk" className="text-accent hover:underline">Aydınlatma Metni</Link>ne bakabilirsiniz.
+        </p>
       </div>
 
     </div>
