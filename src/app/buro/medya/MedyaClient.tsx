@@ -201,7 +201,8 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
         fileName={result.fileName}
         analysisType={result.analysisType}
         onClose={handleReset}
-        onSaveToCase={result.caseId ? undefined : undefined}
+        cases={cases}
+        initialCaseId={result.caseId ?? ""}
       />
     );
   }

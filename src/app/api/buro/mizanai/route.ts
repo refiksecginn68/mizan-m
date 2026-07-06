@@ -137,16 +137,35 @@ async function getBuroContext(userId: string, svc: Any): Promise<string> {
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 
-function buildSystemPrompt(lawyerName: string, contextData: string): string {
+interface LawyerProfileCtx {
+  baro?: string | null;
+  sicilNo?: string | null;
+  universite?: string | null;
+  uzmanliklar?: string[];
+  basarilar?: string | null;
+}
+
+function buildSystemPrompt(lawyerName: string, contextData: string, p?: LawyerProfileCtx): string {
   const now = new Date();
   const tarih = now.toLocaleDateString("tr-TR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const saat = now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 
   const firstName = lawyerName.trim().split(/\s+/)[0] ?? lawyerName;
 
+  // Profil sayfasındaki bilgiler asistan bağlamına girer — branşa uygun yanıt
+  const profilSatirlari = [
+    p?.baro ? `Baro: ${p.baro}${p.sicilNo ? ` (Sicil No: ${p.sicilNo})` : ""}` : "",
+    p?.universite ? `Mezuniyet: ${p.universite}` : "",
+    p?.uzmanliklar && p.uzmanliklar.length > 0 ? `Uzmanlık/branş alanları: ${p.uzmanliklar.join(", ")}` : "",
+    p?.basarilar ? `Deneyim/başarılar: ${p.basarilar.slice(0, 500)}` : "",
+  ].filter(Boolean);
+  const profilBolumu = profilSatirlari.length > 0
+    ? `\n## AVUKAT PROFİLİ\n${profilSatirlari.join("\n")}\nYanıtlarını bu profile göre uyarla: uzmanlık alanındaki konularda meslektaş düzeyinde teknik konuş; alan dışı konularda temel usul hatırlatmalarını da ekle. Emsal/mevzuat önerirken avukatın branşına öncelik ver. Yerel uygulama sorularında avukatın barosunun bulunduğu ili dikkate al.\n`
+    : "";
+
   return `Sen Mizanım platformunun MizanAI asistanısın. Av. ${lawyerName}'in kişisel hukuki büro asistanısın.
 Bugün: ${tarih} — Saat: ${saat}
-
+${profilBolumu}
 ## KİMLİĞİN
 Yılların deneyimine sahip, kıdemli bir hukuk büro asistanısın — teknik, doğrudan, verimlilik odaklı ve PROAKTİF. Türkiye hukukunu (TMK, TBK, TCK, HMK, İİK, İş Kanunu vb.) ve Yargıtay/Danıştay/AYM içtihadını çok iyi biliyorsun. Büronun günlük işleyişine (davalar, müvekkiller, takvim, finans) tam hâkimsin. Riskleri ve yaklaşan süreleri sorulmadan hatırlatırsın.
 
@@ -283,7 +302,9 @@ export async function POST(request: Request) {
 
     if (!body.message?.trim()) return Response.json({ error: "Mesaj boş olamaz" }, { status: 400 });
 
-    const { data: profile } = await svc.from("profiles").select("full_name, user_type").eq("id", user.id).single();
+    const { data: profile } = await svc.from("profiles")
+      .select("full_name, user_type, bar_city, bar_number, university, specializations, achievements")
+      .eq("id", user.id).single();
     if (!profile || profile.user_type !== "avukat") {
       return Response.json({ error: "Bu özellik sadece avukatlara açıktır" }, { status: 403 });
     }
@@ -299,7 +320,13 @@ export async function POST(request: Request) {
     }
 
     const contextData = await getBuroContext(user.id, svc);
-    const systemPrompt = buildSystemPrompt(profile.full_name as string, contextData);
+    const systemPrompt = buildSystemPrompt(profile.full_name as string, contextData, {
+      baro: profile.bar_city as string | null,
+      sicilNo: profile.bar_number as string | null,
+      universite: profile.university as string | null,
+      uzmanliklar: (profile.specializations as string[] | null) ?? [],
+      basarilar: profile.achievements as string | null,
+    });
 
     // Sohbet geçmişi
     const history: Array<{ role: "user" | "assistant"; content: string }> = (body.history ?? []).slice(-10);

@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Mizanım UYAP Aktarım",
-  "version": "1.0.0",
-  "description": "UYAP Avukat Portal'da açık dosyalarınızı Mizanım'a aktarır. Otomatik giriş yapmaz; yalnızca sizin açtığınız oturumu okur.",
+  "name": "Mizanım UYAP + UETS Aktarım",
+  "version": "1.1.0",
+  "description": "UYAP dosyalarınızı ve UETS e-Tebligatlarınızı Mizanım'a aktarır. Otomatik giriş yapmaz; yalnızca sizin açtığınız oturumu okur.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
     "https://*.uyap.gov.tr/*",
+    "https://*.etebligat.gov.tr/*",
+    "https://uets.ptt.gov.tr/*",
     "https://*.xn--mizanm-t9a.com/*",
     "https://xn--mizanm-t9a.com/*"
   ],
@@ -16,6 +18,11 @@
     {
       "matches": ["https://*.uyap.gov.tr/*"],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.etebligat.gov.tr/*", "https://uets.ptt.gov.tr/*"],
+      "js": ["uets-content.js"],
       "run_at": "document_idle"
     }
   ],

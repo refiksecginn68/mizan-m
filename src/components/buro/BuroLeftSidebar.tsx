@@ -191,19 +191,23 @@ export default function BuroLeftSidebar({ lawyerName }: Props) {
         </div>
       </nav>
 
-      {/* Kullanıcı */}
+      {/* Kullanıcı — tıklayınca profil sayfası açılır */}
       <div className="border-t border-white/5 p-3 flex-shrink-0">
-        <div className={`flex items-center gap-2.5 mb-2 ${collapsed ? "justify-center" : ""}`}>
+        <Link
+          href="/buro/profil"
+          title="Profilim"
+          className={`flex items-center gap-2.5 mb-2 rounded-xl px-1 py-1 hover:bg-white/5 transition-colors ${collapsed ? "justify-center" : ""}`}
+        >
           <div className="w-8 h-8 rounded-full bg-[#c9a84c]/20 flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-bold text-[#c9a84c]">{initials}</span>
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-white truncate">Av. {lawyerName}</p>
-              <p className="text-[10px] text-white/30">Avukat</p>
+              <p className="text-[10px] text-white/30">Profili görüntüle</p>
             </div>
           )}
-        </div>
+        </Link>
         <form action={logoutAction}>
           <button
             type="submit"

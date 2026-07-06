@@ -23,12 +23,20 @@ interface AnalysisResult {
   falKeyGerekildi?: boolean;
 }
 
+interface CaseOption {
+  id: string;
+  title: string;
+  case_number?: string;
+}
+
 interface AnalizSonucuProps {
   result: AnalysisResult;
   fileName: string;
   analysisType: string;
   onClose: () => void;
   onSaveToCase?: () => void;
+  cases?: CaseOption[];
+  initialCaseId?: string;
 }
 
 const ANALYSIS_TYPE_LABELS: Record<string, string> = {
@@ -46,9 +54,46 @@ export default function AnalizSonucu({
   analysisType,
   onClose,
   onSaveToCase,
+  cases = [],
+  initialCaseId = "",
 }: AnalizSonucuProps) {
   const [showRaw, setShowRaw] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [saveCaseId, setSaveCaseId] = useState(initialCaseId);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Analizi seçilen mahkeme dosyasına kaydet (case_documents)
+  const handleSaveToCase = async () => {
+    if (!saveCaseId) {
+      setSaveMsg({ ok: false, text: "Önce bir dava dosyası seçin" });
+      return;
+    }
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const res = await fetch("/api/buro/medya/kaydet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: saveCaseId,
+          fileName,
+          analysisType: ANALYSIS_TYPE_LABELS[analysisType] || analysisType,
+          reportText: result.rawText || result.hukukiDegerlendirme || result.ozet || "",
+        }),
+      });
+      const data = await res.json() as { success?: boolean; document?: { name: string }; error?: string };
+      if (res.ok && data.success) {
+        setSaveMsg({ ok: true, text: `✓ "${data.document?.name}" dava dosyasına eklendi` });
+      } else {
+        setSaveMsg({ ok: false, text: data.error ?? "Kaydedilemedi" });
+      }
+    } catch {
+      setSaveMsg({ ok: false, text: "Bağlantı hatası" });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCopy = async () => {
     const text = result.rawText || result.hukukiDegerlendirme || "";
@@ -189,6 +234,45 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
           için mutlaka uzman avukata danışınız.
         </p>
       </div>
+
+      {/* Analizi dosyaya ekle */}
+      {!result.falKeyGerekildi && cases.length > 0 && (
+        <div className="bg-muted/30 rounded-xl p-4 space-y-3">
+          <h4 className="font-heading text-sm font-bold text-primary flex items-center gap-2">
+            <FolderOpen className="w-4 h-4" />
+            Analizi Dosyaya Ekle
+          </h4>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={saveCaseId}
+              onChange={(e) => setSaveCaseId(e.target.value)}
+              className="input-field flex-1"
+            >
+              <option value="">Dava dosyası seçin...</option>
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title} {c.case_number ? `— ${c.case_number}` : ""}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleSaveToCase}
+              disabled={saving || !saveCaseId}
+              className="btn-accent text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {saving ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <FolderOpen className="w-4 h-4" />
+              )}
+              Dosyaya Kaydet
+            </button>
+          </div>
+          {saveMsg && (
+            <p className={`font-body text-xs ${saveMsg.ok ? "text-green-700" : "text-red-600"}`}>{saveMsg.text}</p>
+          )}
+        </div>
+      )}
 
       {/* Aksiyonlar */}
       <div className="flex flex-wrap gap-3 pt-2 border-t border-border">

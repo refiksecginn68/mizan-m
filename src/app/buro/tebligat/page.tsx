@@ -20,19 +20,22 @@ export default async function TebligatPage() {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
+  // NOT: tebligat_records gerçek şeması: uets_id, notes, is_processed
+  // (status/content/is_read kolonları YOK — eski select sorguyu patlatıp
+  // sayfayı hep boş gösteriyordu). Alanlar aşağıda UI modeline eşlenir.
   const [tebligatResult, casesResult] = await Promise.all([
     serviceSupabase
       .from("tebligat_records")
       .select(`
         id,
         case_id,
+        uets_id,
         sender,
         subject,
         received_at,
         deadline_at,
-        status,
-        content,
-        is_read,
+        is_processed,
+        notes,
         created_at,
         cases (id, title, case_number)
       `)
@@ -46,6 +49,14 @@ export default async function TebligatPage() {
       .order("created_at", { ascending: false }),
   ]);
 
+  // DB satırı → TebligatClient modeli (status/content/is_read)
+  const tebligatlar = ((tebligatResult.data as AnyClient[]) || []).map((t: AnyClient) => ({
+    ...t,
+    status: t.is_processed ? "islendi" : "yeni",
+    content: t.notes ?? undefined,
+    is_read: !!t.is_processed,
+  }));
+
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
@@ -56,7 +67,7 @@ export default async function TebligatPage() {
           </p>
         </div>
         <TebligatClient
-          initialTebligatlar={(tebligatResult.data as AnyClient[]) || []}
+          initialTebligatlar={tebligatlar}
           cases={(casesResult.data as AnyClient[]) || []}
         />
       </main>

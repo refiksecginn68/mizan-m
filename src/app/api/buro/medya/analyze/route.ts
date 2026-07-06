@@ -8,60 +8,60 @@ type AnyClient = any;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Uzman-gözü değerlendirme çerçevesi: her analiz avukat, hâkim, savcı ve
+// bilirkişi perspektifinden delil niteliği + çelişki/tutarlılık içerir.
+const UZMAN_CERCEVE = `
+Analizi DÖRT uzman perspektifiyle yap; her başlığı MUTLAKA yaz (delil değeri düşükse veya perspektif uygulanamıyorsa o başlıkta bunu bir-iki cümleyle gerekçelendir, başlığı atlama):
+- AVUKAT GÖZÜYLE: Bu delil müvekkil lehine/aleyhine nasıl kullanılır? Hangi iddiayı destekler veya çürütür?
+- HÂKİM GÖZÜYLE: Delilin ispat gücü, hükme esas alınabilirliği; HMK/CMK delil değerlendirme ölçütleri.
+- SAVCI GÖZÜYLE: Suç unsuru barındırıyor mu; soruşturmada hangi yönde kullanılır?
+- BİLİRKİŞİ GÖZÜYLE: Teknik bütünlük, manipülasyon/montaj şüphesi, metadata tutarlılığı, orijinallik göstergeleri.
+
+Ayrıca mutlaka değerlendir:
+- DELİL NİTELİĞİ: Hukuka uygun elde edilmiş mi olabilir (özel hayat, gizli kayıt, KVKK)? Kesin delil mi takdiri delil mi?
+- ÇELİŞKİ/TUTARLILIK: İçerikte kendi içinde veya bilinen olgularla çelişen unsurlar var mı? Tarih/saat/mekân tutarlı mı?
+
+Yanıtı Türkçe, profesyonel hukuk diliyle ve Markdown başlıklarıyla yaz:
+önce "## Özet", sonra "## Hukuki Değerlendirme" (uzman perspektifleri burada), en sonda "## Öneriler" (madde listesi).`;
+
 const ANALYSIS_PROMPTS: Record<string, string> = {
-  ses: `Bu ses kaydını hukuki delil açısından analiz et. Şunları değerlendir:
-1. Konuşmanın ana konusu ve içeriği
-2. Hukuki açıdan önemli ifadeler veya itiraflar
-3. Ses kaydının delil değeri (gönüllü mü, gizli mi?)
-4. Olası kullanım alanları (mahkeme, arabuluculuk, vb.)
-5. Dikkat edilmesi gereken hususlar
+  ses: `Bu ses kaydını hukuki delil açısından analiz et:
+1. Konuşmanın ana konusu, taraflar ve içerik özeti
+2. Hukuki açıdan önemli ifadeler, ikrar/itiraf niteliğindeki beyanlar
+3. Kaydın elde ediliş biçimine göre delil değeri (aleni mi, gizli kayıt mı; TCK m. 132-133 riski)
+4. Olası kullanım alanları (hukuk/ceza yargılaması, arabuluculuk)
+${UZMAN_CERCEVE}`,
 
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
+  goruntu: `Bu görseli hukuki delil açısından analiz et:
+1. Görselin içeriği, bağlamı ve görünür unsurları
+2. Tarih/saat bilgisi, konum ipuçları, metadata göstergeleri
+3. Olası hukuki önemi (kaza, yaralanma, hasar, hakaret vb.)
+${UZMAN_CERCEVE}`,
 
-  goruntu: `Bu görseli hukuki delil açısından analiz et. Şunları değerlendir:
-1. Görselin içeriği ve bağlamı
-2. Görülebilen tarih/saat bilgisi veya metadata ipuçları
-3. Delil olarak kullanılabilirlik ve güvenilirlik
-4. Olası hukuki önemi (kaza, yaralanma, hasar, vb.)
-5. Dikkat edilmesi gereken teknik veya hukuki sorunlar
+  video: `Bu videoyu hukuki delil açısından analiz et:
+1. Video içeriğinin özeti ve kritik anlar
+2. Görsel/ses kalitesi ve bütünlük
+3. Delil değeri ve güvenilirlik
+${UZMAN_CERCEVE}`,
 
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
+  pdf: `Bu belgeyi hukuki açıdan analiz et:
+1. Belgenin türü, tarafları ve içeriği
+2. Önemli hükümler, yükümlülükler ve şartlar
+3. Risk faktörleri, eksik veya muğlak hükümler
+4. İmza/tarih/şekil şartları yönünden geçerlilik göstergeleri
+${UZMAN_CERCEVE}`,
 
-  video: `Bu videoyu hukuki delil açısından analiz et. Şunları değerlendir:
-1. Video içeriğinin özeti
-2. Hukuki açıdan kritik anlar
-3. Görsel ve ses kalitesi
-4. Delil değeri ve güvenilirlik
-5. Dikkat edilmesi gereken hususlar
+  ekran: `Bu ekran görüntüsünü hukuki delil açısından analiz et:
+1. Kaynağı ve içeriği (sosyal medya, mesajlaşma, e-posta vb.)
+2. Tarih/saat bilgileri ve kimlik göstergeleri
+3. Dijital delil olarak kullanılabilirlik (değiştirilebilirlik riski, tespit ihtiyacı — noter/e-tespit)
+${UZMAN_CERCEVE}`,
 
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
-
-  pdf: `Bu belgeyi hukuki açıdan analiz et. Şunları değerlendir:
-1. Belgenin türü ve içeriği
-2. Taraflar ve yükümlülükler
-3. Önemli hükümler, maddeler ve şartlar
-4. Risk faktörleri ve dikkat edilmesi gereken alanlar
-5. Eksik veya muğlak hükümler
-
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
-
-  ekran: `Bu ekran görüntüsünü hukuki delil açısından analiz et. Şunları değerlendir:
-1. Görüntünün kaynağı ve içeriği (sosyal medya, mesajlaşma, e-posta vb.)
-2. Tarih ve saat bilgileri
-3. Delil olarak kullanılabilirlik
-4. İçeriğin hukuki önemi
-5. Dijital delil olarak dikkat edilmesi gereken hususlar
-
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
-
-  ses_karsilastirma: `Bu iki ses kaydını karşılaştır ve hukuki açıdan analiz et. Şunları değerlendir:
+  ses_karsilastirma: `Bu iki ses kaydını karşılaştır ve hukuki açıdan analiz et:
 1. Her iki kaydın içerik özeti
-2. Ses karakteristiklerinin benzerliği/farklılığı
-3. Konuşmacı kimliği açısından bulgular
-4. Tutarsızlıklar veya çelişkiler
-5. Karşılaştırmanın hukuki değeri
-
-Yanıtı Türkçe ver ve profesyonel hukuki bir dille yaz.`,
+2. Ses karakteristiklerinin benzerliği/farklılığı, konuşmacı kimliği bulguları
+3. Kayıtlar arasındaki tutarsızlık ve çelişkiler
+${UZMAN_CERCEVE}`,
 };
 
 export async function POST(req: NextRequest) {
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
       const prompt = ANALYSIS_PROMPTS[analysisType] ?? ANALYSIS_PROMPTS.ses;
       const claudeRes = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
-        max_tokens: 2000,
+        max_tokens: 3000,
         messages: [{
           role: "user",
           content: transkript
@@ -236,7 +236,7 @@ export async function POST(req: NextRequest) {
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
-      max_tokens: 2000,
+      max_tokens: 3000,
       messages: [
         {
           role: "user",

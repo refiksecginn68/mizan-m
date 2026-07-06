@@ -33,10 +33,11 @@ export async function PATCH(
       is_read?: boolean;
     };
 
+    // Gerçek şemada status/is_read yok — is_processed'a eşlenir
     const updateData: Record<string, unknown> = {};
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined) updateData.is_processed = status === "islendi" || status === "okundu";
     if (case_id !== undefined) updateData.case_id = case_id;
-    if (is_read !== undefined) updateData.is_read = is_read;
+    if (is_read !== undefined) updateData.is_processed = is_read;
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: "Güncellenecek alan yok" }, { status: 400 });

@@ -23,18 +23,19 @@ export async function GET() {
       return NextResponse.json({ error: "Bu özellik sadece avukatlar içindir" }, { status: 403 });
     }
 
+    // Gerçek şema: uets_id, notes, is_processed → UI modeli status/content/is_read'e eşlenir
     const { data, error } = await serviceSupabase
       .from("tebligat_records")
       .select(`
         id,
         case_id,
+        uets_id,
         sender,
         subject,
         received_at,
         deadline_at,
-        status,
-        content,
-        is_read,
+        is_processed,
+        notes,
         created_at,
         cases (id, title, case_number)
       `)
@@ -46,7 +47,13 @@ export async function GET() {
       return NextResponse.json({ error: "Tebligatlar alınamadı" }, { status: 500 });
     }
 
-    return NextResponse.json({ data });
+    const mapped = ((data as AnyClient[]) ?? []).map((t: AnyClient) => ({
+      ...t,
+      status: t.is_processed ? "islendi" : "yeni",
+      content: t.notes ?? undefined,
+      is_read: !!t.is_processed,
+    }));
+    return NextResponse.json({ data: mapped });
   } catch (err) {
     console.error("Tebligat GET error:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
@@ -91,12 +98,11 @@ export async function POST(req: NextRequest) {
       sender,
       subject,
       received_at: received_at || new Date().toISOString(),
-      status: "beklemede",
-      is_read: false,
+      is_processed: false,
     };
 
     if (deadline_at) insertData.deadline_at = deadline_at;
-    if (content) insertData.content = content;
+    if (content) insertData.notes = content;
     if (case_id) insertData.case_id = case_id;
 
     const { data, error } = await serviceSupabase
@@ -145,7 +151,7 @@ export async function PATCH(req: NextRequest) {
 
     const { data, error } = await serviceSupabase
       .from("tebligat_records")
-      .update({ is_read: true })
+      .update({ is_processed: true })
       .eq("id", id)
       .eq("lawyer_id", user.id)
       .select()

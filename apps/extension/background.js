@@ -40,6 +40,28 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true; // async yanıt
   }
 
+  if (msg.type === "MIZANIM_TRANSFER_UETS") {
+    (async () => {
+      const { token, apiBase } = await getSettings();
+      if (!token) return sendResponse({ ok: false, error: "Önce bağlantı kodu girin" });
+      try {
+        const res = await fetch(`${apiBase}/api/extension/tebligat`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ tebligatlar: msg.tebligatlar || [] }),
+        });
+        const data = await res.json();
+        sendResponse(res.ok ? { ok: true, ...data } : { ok: false, error: data.error || `HTTP ${res.status}` });
+      } catch (e) {
+        sendResponse({ ok: false, error: "Aktarım hatası: " + String(e) });
+      }
+    })();
+    return true; // async yanıt
+  }
+
   if (msg.type === "MIZANIM_TRANSFER") {
     (async () => {
       const { token, apiBase } = await getSettings();
