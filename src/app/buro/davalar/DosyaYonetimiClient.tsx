@@ -404,9 +404,19 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 mt-3 pt-3 border-t border-gray-50 text-[10px] text-gray-400">
-                    <Calendar className="w-3 h-3" />
-                    {new Date(c.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
+                    <span className="flex items-center gap-1 text-[10px] text-gray-400">
+                      <Calendar className="w-3 h-3" />
+                      {new Date(c.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                    {/* Finans'a çapraz geçiş — ödeme bu dosya + müvekkille ön-ilişkilendirilir */}
+                    <a
+                      href={`/buro/finans?case=${c.id}&caseTitle=${encodeURIComponent(c.case_number || c.title)}${c.clients ? `&client=${c.clients.id}&clientName=${encodeURIComponent(c.clients.full_name)}` : ""}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-green-500 hover:text-green-600 transition-colors"
+                    >
+                      ₺ Finans
+                    </a>
                   </div>
                 </div>
               );

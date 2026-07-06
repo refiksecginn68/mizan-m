@@ -57,6 +57,8 @@ interface Props {
   initialClients: Client[];
   casesByClient: Record<string, DavaItem[]>;
   allCases: SimpleCase[];
+  // Müvekkil bazlı ödeme özeti (Finans modülü metadata.client_id üzerinden)
+  paymentSummary?: Record<string, { paid: number; pending: number }>;
 }
 
 const EMPTY_FORM = {
@@ -88,7 +90,7 @@ interface TalepResult {
   smsError: string;
 }
 
-export default function MuvekkilYonetimClient({ initialClients, casesByClient, allCases }: Props) {
+export default function MuvekkilYonetimClient({ initialClients, casesByClient, allCases, paymentSummary = {} }: Props) {
   const [clients, setClients] = useState<ClientWithData[]>(() =>
     initialClients.map((c) => ({
       ...c,
@@ -318,6 +320,20 @@ export default function MuvekkilYonetimClient({ initialClients, casesByClient, a
               </div>
             )}
 
+            {/* Ödeme özeti + Finans'a hızlı geçiş */}
+            {paymentSummary[c.id] && (
+              <div className="bg-green-50 rounded-xl px-3 py-2 mb-3 flex items-center justify-between">
+                <p className="text-[10px] font-semibold text-green-700">
+                  Tahsil: {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(paymentSummary[c.id].paid)}
+                </p>
+                {paymentSummary[c.id].pending > 0 && (
+                  <p className="text-[10px] font-semibold text-yellow-700">
+                    Bekleyen: {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(paymentSummary[c.id].pending)}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 onClick={() => openTalepModal(c.id)}
@@ -325,6 +341,12 @@ export default function MuvekkilYonetimClient({ initialClients, casesByClient, a
               >
                 <FileUp className="w-3.5 h-3.5" /> Belge İste
               </button>
+              <a
+                href={`/buro/finans?client=${c.id}&clientName=${encodeURIComponent(c.full_name)}`}
+                className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-green-500 hover:text-green-600 transition-colors"
+              >
+                ₺ Finans
+              </a>
               <button
                 onClick={() => { setExpandedId(expandedId === c.id ? null : c.id); setViewMode("liste"); }}
                 className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-2 rounded-lg bg-[#0f1729]/5 text-[#0f1729] hover:bg-[#0f1729]/10 transition-colors"

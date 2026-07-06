@@ -9,7 +9,9 @@ import {
   FileCode2,
 } from "lucide-react";
 
-type Tab = "ai" | "evrak" | "sablonar";
+import { DILEKCE_SABLONLARI, SABLON_KATEGORILERI, type DilekceSablonu } from "@/lib/data/dilekce-sablonlari";
+
+type Tab = "ai" | "evrak" | "sablonar" | "ornekler";
 
 interface Sablon {
   id: string;
@@ -312,6 +314,48 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
     setTab("ai");
   }
 
+  // ── Örnek şablonlar (hazır kütüphane) ──
+  const [ornekArama, setOrnekArama] = useState("");
+  const [ornekKategori, setOrnekKategori] = useState("");
+  const [ornekIndiriliyor, setOrnekIndiriliyor] = useState("");
+
+  const filtreliOrnekler = DILEKCE_SABLONLARI.filter((s) => {
+    if (ornekKategori && s.kategori !== ornekKategori) return false;
+    if (ornekArama.trim()) {
+      const q = ornekArama.toLowerCase();
+      return `${s.baslik} ${s.kategori} ${s.aciklama}`.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  function ornekEditordeAc(s: DilekceSablonu) {
+    setMetin(s.icerik);
+    setKonu(s.baslik);
+    setTab("ai");
+  }
+
+  // Şablonu editöre yüklemeden doğrudan indir (mevcut export uçlarını kullanır)
+  async function ornekIndir(s: DilekceSablonu, format: "pdf" | "word" | "udf") {
+    setOrnekIndiriliyor(`${s.id}-${format}`);
+    try {
+      const res = await fetch(`/api/buro/dilekce/export-${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metin: s.icerik, baslik: s.baslik }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${s.id}.${format === "word" ? "docx" : format}`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch { /* ignore */ }
+    setOrnekIndiriliyor("");
+  }
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
@@ -322,7 +366,7 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
             <p className="text-sm text-gray-400 mt-0.5">Av. {firstName} · AI destekli belge hazırlama</p>
           </div>
           <div className="flex items-center gap-1">
-            {(["ai", "evrak", "sablonar"] as Tab[]).map((t) => (
+            {(["ai", "evrak", "ornekler", "sablonar"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -332,6 +376,7 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
               >
                 {t === "ai" && "AI ile Oluştur"}
                 {t === "evrak" && "Evrak Yükle & Düzenle"}
+                {t === "ornekler" && `Örnek Şablonlar (${DILEKCE_SABLONLARI.length})`}
                 {t === "sablonar" && `Şablonlarım (${sablonar.length})`}
               </button>
             ))}
@@ -653,6 +698,102 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors">
                             <Edit3 className="w-3.5 h-3.5" /> Düzenle
                           </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ÖRNEK ŞABLONLAR SEKMESİ */}
+        {tab === "ornekler" && (
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-4xl mx-auto p-6">
+              <div className="mb-5">
+                <h2 className="font-heading text-lg font-bold text-[#0f1729]">Örnek Dilekçe Şablonları</h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  Özgün olarak hazırlanmış, [köşeli parantezli] yer tutucular içeren standart iskeletler.
+                  Editörde açıp doldurun veya doğrudan indirin.
+                </p>
+              </div>
+
+              {/* Arama + kategori filtresi */}
+              <div className="flex flex-col gap-3 mb-5">
+                <input
+                  value={ornekArama}
+                  onChange={(e) => setOrnekArama(e.target.value)}
+                  placeholder="Şablon ara... (ör. kıdem, boşanma, itiraz)"
+                  className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 placeholder:text-gray-300 focus:outline-none focus:border-[#c9a84c]"
+                />
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setOrnekKategori("")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      ornekKategori === "" ? "bg-[#0f1729] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                  >
+                    Tümü
+                  </button>
+                  {SABLON_KATEGORILERI.map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => setOrnekKategori(ornekKategori === k ? "" : k)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        ornekKategori === k ? "bg-[#0f1729] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Şablon kartları */}
+              {filtreliOrnekler.length === 0 ? (
+                <div className="text-center py-16">
+                  <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                  <p className="text-sm text-gray-400">Aramanızla eşleşen şablon bulunamadı</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filtreliOrnekler.map((s) => (
+                    <div key={s.id} className="bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-bold text-[#c9a84c] bg-[#c9a84c]/10 px-2 py-0.5 rounded-full">{s.kategori}</span>
+                          </div>
+                          <p className="font-heading text-sm font-bold text-[#0f1729]">{s.baslik}</p>
+                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{s.aciklama}</p>
+                          <p className="text-[11px] text-gray-400 mt-2 line-clamp-2 leading-relaxed font-mono">{s.icerik.slice(0, 150)}...</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => ornekEditordeAc(s)}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" /> Editörde Aç
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {(["pdf", "word", "udf"] as const).map((f) => (
+                              <button
+                                key={f}
+                                onClick={() => ornekIndir(s, f)}
+                                disabled={ornekIndiriliyor === `${s.id}-${f}`}
+                                className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:border-[#c9a84c] hover:text-[#c9a84c] transition-colors disabled:opacity-50"
+                              >
+                                {ornekIndiriliyor === `${s.id}-${f}` ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <Download className="w-3 h-3" />
+                                )}
+                                {f.toUpperCase()}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>

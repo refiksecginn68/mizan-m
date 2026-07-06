@@ -6,7 +6,11 @@ import { TrendingUp } from "lucide-react";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
 
-export default async function FinansPage() {
+export default async function FinansPage({
+  searchParams,
+}: {
+  searchParams?: { client?: string; clientName?: string; case?: string; caseTitle?: string };
+}) {
   const supabase = createClient() as AnyClient;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/giris");
@@ -21,11 +25,23 @@ export default async function FinansPage() {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
-  const { data: payments } = await serviceSupabase
-    .from("payments")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: payments }, { data: clients }, { data: cases }] = await Promise.all([
+    serviceSupabase
+      .from("payments")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    serviceSupabase
+      .from("clients")
+      .select("id, full_name")
+      .eq("lawyer_id", user.id)
+      .order("full_name"),
+    serviceSupabase
+      .from("cases")
+      .select("id, title, case_number, client_id")
+      .eq("lawyer_id", user.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,7 +58,18 @@ export default async function FinansPage() {
           </div>
         </div>
 
-        <FinansClient initialPayments={payments ?? []} />
+        <FinansClient
+          initialPayments={payments ?? []}
+          clients={clients ?? []}
+          cases={cases ?? []}
+          preselect={{
+            clientId: searchParams?.client,
+            clientName: searchParams?.clientName,
+            caseId: searchParams?.case,
+            caseTitle: searchParams?.caseTitle,
+          }}
+        />
+
       </main>
     </div>
   );
