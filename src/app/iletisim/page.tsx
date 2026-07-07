@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Scale, Phone, Clock, Loader2, CheckCircle2, AlertCircle, Send } from "lucide-react";
+import { Scale, Phone, Mail, Clock, Loader2, CheckCircle2, AlertCircle, Send } from "lucide-react";
 
 // İletişim & Destek sayfası — form birincil kanal (mesajlar DB'ye kaydedilir)
 export default function IletisimPage() {
@@ -92,6 +92,18 @@ export default function IletisimPage() {
                   <p className="text-xs text-white/50">Telefon</p>
                   <p className="text-sm font-semibold group-hover:text-accent transition-colors">
                     0530 113 90 21
+                  </p>
+                </div>
+              </a>
+
+              <a href="mailto:refiksecginn@hotmail.com" className="flex items-start gap-3 group">
+                <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-accent" />
+                </div>
+                <div>
+                  <p className="text-xs text-white/50">E-posta</p>
+                  <p className="text-sm font-semibold group-hover:text-accent transition-colors">
+                    refiksecginn@hotmail.com
                   </p>
                 </div>
               </a>
