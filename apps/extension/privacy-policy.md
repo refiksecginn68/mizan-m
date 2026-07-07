@@ -1,12 +1,15 @@
-# Mizanım UYAP Aktarım — Gizlilik Politikası
+# Mizanım UYAP & UETS Aktarım — Gizlilik Politikası
 
-Son güncelleme: 6 Temmuz 2026
+Son güncelleme: 7 Temmuz 2026
+
+Yayın adresi: https://www.xn--mizanm-t9a.com/eklenti-gizlilik
 
 ## Özet
-Mizanım UYAP Aktarım eklentisi, **yalnızca sizin talebinizle** ve **yalnızca sizin
-e-imzanızla açtığınız UYAP oturumunda** ekranda görünen dosya bilgilerini okur ve
-bunları **yalnızca sizin Mizanım hesabınıza** iletir. Eklenti UYAP'a otomatik giriş
-yapmaz, e-imza işlemi gerçekleştirmez, şifre veya kimlik bilgisi toplamaz.
+Mizanım UYAP & UETS Aktarım eklentisi, **yalnızca sizin talebinizle** ve **yalnızca sizin
+e-imzanızla açtığınız UYAP / UETS oturumunda** ekranda görünen dosya ve tebligat
+bilgilerini okur ve bunları **yalnızca sizin Mizanım hesabınıza** iletir. Eklenti UYAP
+veya UETS'e otomatik giriş yapmaz, e-imza işlemi gerçekleştirmez, şifre veya kimlik
+bilgisi toplamaz.
 
 ## Okunan veriler
 Eklenti, UYAP Avukat Portal sayfalarında görüntülenen şu alanları okur:
@@ -16,6 +19,12 @@ Eklenti, UYAP Avukat Portal sayfalarında görüntülenen şu alanları okur:
 - Taraf adları (davacı/davalı, alacaklı/borçlu vb.)
 - Dosya durumu ve açılış tarihi
 - Safahat özet satırları (varsa)
+
+UETS (Ulusal Elektronik Tebligat Sistemi) sayfalarında ise şu alanları okur:
+- Tebligat konusu ve tebligat numarası
+- Gönderen kurum / birim adı
+- Tebliğ tarihi ve tebligat durumu
+- İlgili dosya esas numarası (varsa)
 
 Eklenti bunların dışında hiçbir sayfa içeriğini, çerezi, oturum bilgisini veya
 kişisel veriyi okumaz ve iletmez.
