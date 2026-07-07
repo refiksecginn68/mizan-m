@@ -106,12 +106,18 @@ function getId(item: CaseLaw) {
   return item.documentId || item.id || "";
 }
 
+// Aranan ifade + tek tek terimler, göz yormayan şeffaf vurguyla işaretlenir
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query || !text) return text;
-  const parts = text.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi"));
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const terms = [query.trim(), ...query.trim().split(/\s+/).filter((t) => t.length >= 3)];
+  const uniq = Array.from(new Set(terms.map((t) => t.toLowerCase()))).sort((a, b) => b.length - a.length);
+  if (uniq.length === 0) return text;
+  const re = new RegExp(`(${uniq.map(esc).join("|")})`, "gi");
+  const parts = text.split(re);
   return parts.map((part, i) =>
-    part.toLowerCase() === query.toLowerCase()
-      ? <mark key={i} className="bg-yellow-200 text-yellow-900 rounded px-0.5">{part}</mark>
+    uniq.includes(part.toLowerCase())
+      ? <mark key={i} className="bg-[#c9a84c]/20 text-inherit rounded-sm px-0.5">{part}</mark>
       : part
   );
 }
@@ -205,6 +211,7 @@ export default function KararAramaClient({ cases }: Props) {
   // Karar seç + içerik çek
   async function selectKarar(item: CaseLaw) {
     setSelectedKarar(item);
+    window.scrollTo({ top: 0, behavior: "smooth" });
     setRightTab("metin");
     setContentFull(null);
     setOzetText("");
@@ -544,7 +551,7 @@ export default function KararAramaClient({ cases }: Props) {
 
   // ─── Arama sonuçları listesi (hem standalone hem split view'da kullanılır)
   const SearchResults = (
-    <div className="flex-1 overflow-y-auto p-4">
+    <div className="p-4">
       {/* Sonuç bilgisi */}
       {searched && !loading && (
         <div className="flex items-center justify-between mb-3">
@@ -696,7 +703,7 @@ export default function KararAramaClient({ cases }: Props) {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="min-h-full flex flex-col">
       {toastMsg && (
         <div className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${toastMsg.type === "error" ? "bg-red-600 text-white" : "bg-green-600 text-white"}`}>
           {toastMsg.text}
@@ -905,18 +912,18 @@ export default function KararAramaClient({ cases }: Props) {
         </div>
       </div>
 
-      {/* Ana içerik alanı */}
-      <div className="flex-1 overflow-hidden flex">
+      {/* Ana içerik alanı — doğal sayfa kaydırması, iç scroll yok */}
+      <div className="flex-1 flex items-stretch">
         {selectedKarar ? (
           /* ── SPLIT VIEW: Sol liste + Sağ panel ── */
           <>
             {/* Sol: Arama sonuçları listesi */}
-            <div className="w-96 flex-shrink-0 border-r border-gray-200 bg-[#f8f9fa] flex flex-col overflow-hidden">
+            <div className="hidden lg:block w-96 flex-shrink-0 border-r border-gray-200 bg-[#f8f9fa]">
               {SearchResults}
             </div>
 
             {/* Sağ: Karar detay paneli */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+            <div className="flex-1 min-w-0 flex flex-col bg-white">
               {/* Panel başlık */}
               <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center gap-3 flex-shrink-0">
                 <button onClick={closePanel} className="text-gray-400 hover:text-gray-700 transition-colors">
@@ -985,8 +992,8 @@ export default function KararAramaClient({ cases }: Props) {
                 })}
               </div>
 
-              {/* Panel içerik */}
-              <div className="flex-1 overflow-y-auto">
+              {/* Panel içerik — sayfa ile birlikte akar */}
+              <div className="flex-1">
                 {/* Karar Metni */}
                 {rightTab === "metin" && (
                   <div className="p-6">
@@ -1007,7 +1014,7 @@ export default function KararAramaClient({ cases }: Props) {
 
                     <div className="mb-4">
                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Özet</h3>
-                      <p className="text-sm text-gray-700 leading-relaxed">{selectedKarar.summary}</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{highlightText(selectedKarar.summary, query)}</p>
                     </div>
 
                     <div>
@@ -1018,8 +1025,8 @@ export default function KararAramaClient({ cases }: Props) {
                           <span className="text-sm">Karar metni yükleniyor...</span>
                         </div>
                       ) : contentFull ? (
-                        <div className="bg-[#f8f9fa] rounded-xl p-4">
-                          <pre className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap font-sans">{contentFull}</pre>
+                        <div className="bg-[#f8f9fa] rounded-xl p-5">
+                          <pre className="text-[13px] text-gray-700 leading-7 whitespace-pre-wrap font-sans">{highlightText(contentFull, query)}</pre>
                         </div>
                       ) : (
                         <div className="bg-[#f8f9fa] rounded-xl p-4 text-center">
@@ -1078,8 +1085,8 @@ export default function KararAramaClient({ cases }: Props) {
 
                 {/* Sohbet */}
                 {rightTab === "sohbet" && (
-                  <div className="flex flex-col h-full">
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <div className="flex flex-col">
+                    <div className="flex-1 p-4 space-y-3 min-h-[320px]">
                       {chatMessages.length === 0 && (
                         <div className="text-center py-8">
                           <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />
@@ -1128,7 +1135,7 @@ export default function KararAramaClient({ cases }: Props) {
           </>
         ) : (
           /* ── NORMAL VIEW: Tam genişlik arama sonuçları ── */
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 flex flex-col">
             {/* Sonuç bilgisi */}
             {searched && !loading && (
               <div className="flex items-center justify-between px-6 pt-4 pb-2">
@@ -1150,7 +1157,7 @@ export default function KararAramaClient({ cases }: Props) {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="px-6 pb-6">
               {/* Yükleniyor */}
               {loading && (
                 <div className="space-y-3 pt-2">
@@ -1190,8 +1197,8 @@ export default function KararAramaClient({ cases }: Props) {
                               {item.case_number && <span className="text-xs text-gray-400 font-mono">{item.case_number}</span>}
                               {item.decision_number && <span className="text-xs text-gray-400 font-mono">K. {item.decision_number}</span>}
                             </div>
-                            <h3 className="font-heading text-sm font-bold text-[#0f1729] mb-1.5 leading-snug">{item.subject}</h3>
-                            <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{item.summary}</p>
+                            <h3 className="font-heading text-sm font-bold text-[#0f1729] mb-1.5 leading-snug">{highlightText(item.subject, query)}</h3>
+                            <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">{highlightText(item.summary, query)}</p>
                           </div>
                           <div className="flex flex-col items-end gap-3 flex-shrink-0">
                             {score !== null && (

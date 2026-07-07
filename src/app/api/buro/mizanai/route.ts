@@ -87,7 +87,7 @@ async function getBuroContext(userId: string, svc: Any): Promise<string> {
     svc.from("clients").select("id, full_name, phone, email, tc_no").eq("lawyer_id", userId).eq("is_active", true).order("full_name").limit(100),
     svc.from("cases").select("id, title, status, case_number, court, opposing_party, created_at").eq("lawyer_id", userId).in("status", ["aktif", "beklemede"]).order("created_at", { ascending: false }).limit(100),
     svc.from("calendar_events").select("id, title, event_type, starts_at, location").eq("lawyer_id", userId).gte("starts_at", todayStart).lte("starts_at", weekLater).order("starts_at", { ascending: true }).limit(20),
-    svc.from("payments").select("amount, description").eq("user_id", userId).eq("status", "pending").limit(30),
+    svc.from("payments").select("amount, description, metadata").eq("user_id", userId).eq("status", "pending").limit(30),
     svc.from("payments").select("amount").eq("user_id", userId).eq("status", "success").gte("created_at", monthStart),
   ]);
 
@@ -127,7 +127,13 @@ async function getBuroContext(userId: string, svc: Any): Promise<string> {
   if ((pendingPayments.data as Any[])?.length > 0) {
     lines.push("### BEKLEYEN ÖDEMELER");
     for (const p of pendingPayments.data as Any[]) {
-      lines.push(`• ${p.description ?? "Ödeme"}: ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.amount)}`);
+      const m = p.metadata ?? {};
+      const parcalar = [
+        m.client_name ? `Müvekkil: ${m.client_name}` : "",
+        m.case_title ? `Dava: ${m.case_title}` : "",
+        m.due_date ? `Vade: ${new Date(m.due_date).toLocaleDateString("tr-TR")}` : "",
+      ].filter(Boolean).join(" | ");
+      lines.push(`• ${p.description ?? "Ödeme"}: ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.amount)}${parcalar ? ` (${parcalar})` : ""}`);
     }
     lines.push("");
   }
@@ -188,7 +194,7 @@ ${contextData}
 2. Hukuki sorularda: tam kanun/madde/fıkra/bent + Yargıtay/Danıştay/AYM kararı esas+karar+tarih
 3. Hem destekleyen hem aykırı içtihadı göster
 4. Hak düşürücü süreler ve zamanaşımını HER ZAMAN vurgula — hayati önem taşır
-5. Bilmediğini söyle — "Güncel içtihat için Lexpera/Kazancı'ya bakın" de
+5. Bilmediğin içtihadı UYDURMA — "bu konuda güncel içtihadı doğrulayamıyorum" de. Kullanıcıyı ASLA harici uygulama/platform/siteye yönlendirme (LegalDesk, Avukat365, Lexpera, Kazancı, "muhasebe sisteminizi kontrol edin" vb. YASAK) — cevap sende, gerekiyorsa Mizanım'ın kendi modüllerini (Emsal Arama, Finans, Dilekçe) işaret et. CANLI BÜRO VERİSİ'nde olan bilgi için "göremiyorum/erişimim yok" DEME.
 6. HUMK dönemindeki kararları HMK ile karşılaştır
 7. Dilekçe/belge istenirse start_dilekce aracını kullan, ardından kısa taslak sun
 8. Yanıt formatı: Kısa başlık → madde/içtihat → prosedürel notlar → strateji. Gereksiz nezaket yok.

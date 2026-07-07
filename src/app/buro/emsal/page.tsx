@@ -27,8 +27,8 @@ export default async function BuroEmsalPage() {
     .order("created_at", { ascending: false });
 
   return (
-    // h-screen + overflow-hidden: sonuç listesi ve karar paneli bağımsız scroll edebilsin
-    <div className="h-screen overflow-hidden bg-[#f4f5f7]">
+    // Doğal sayfa kaydırması: iç scroll kutusu yok, içerik sayfayla birlikte akar
+    <div className="min-h-screen bg-[#f4f5f7]">
       <KararAramaClient cases={(cases as AnyClient[]) || []} />
     </div>
   );

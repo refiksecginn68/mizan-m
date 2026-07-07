@@ -38,6 +38,7 @@ interface Filters {
   startDate: string;
   endDate: string;
   belgeTuru: string;
+  ozet: "" | "ozetli" | "ozetsiz";
   sort: "alakalilik" | "guncel" | "eski" | "daire";
   mode: "akilli" | "kelime" | "anlam" | "dosya";
   page: number;
@@ -74,6 +75,7 @@ function parseFilters(url: URL): Filters {
   const sp = url.searchParams;
   const sort = sp.get("sort") ?? "alakalilik";
   const mode = sp.get("mode") ?? "akilli";
+  const ozet = sp.get("ozet") ?? "";
   return {
     q: sp.get("q")?.trim() ?? "",
     court: sp.get("court") ?? "all",
@@ -83,6 +85,7 @@ function parseFilters(url: URL): Filters {
     startDate: sp.get("startDate") ?? "",
     endDate: sp.get("endDate") ?? "",
     belgeTuru: sp.get("belge_turu") ?? "",
+    ozet: (["ozetli", "ozetsiz"].includes(ozet) ? ozet : "") as Filters["ozet"],
     sort: (["alakalilik", "guncel", "eski", "daire"].includes(sort) ? sort : "alakalilik") as Filters["sort"],
     mode: (["akilli", "kelime", "anlam", "dosya"].includes(mode) ? mode : "akilli") as Filters["mode"],
     page: Math.max(1, parseInt(sp.get("page") ?? "1", 10) || 1),
@@ -130,6 +133,17 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   KYB: "Yargıtay (KYB)",
 };
 
+// Bedesten verisinde bozuk yıllar var ("6006-09-20", "0212-05-21") — tarih
+// sıralamasında en üste/alta çıkıyorlar; makul aralık dışını null say
+function sanitizeDate(raw: unknown): string | null {
+  if (!raw) return null;
+  const d = String(raw).slice(0, 10);
+  const year = parseInt(d.slice(0, 4), 10);
+  const maxYear = new Date().getFullYear() + 1;
+  if (!Number.isFinite(year) || year < 1920 || year > maxYear) return null;
+  return d;
+}
+
 function toResult(item: BedestenEmsalItem): EmsalResult {
   const courtType =
     item.itemType?.description ?? ITEM_TYPE_LABELS[item.itemType?.name ?? ""] ?? "";
@@ -142,7 +156,7 @@ function toResult(item: BedestenEmsalItem): EmsalResult {
     court,
     case_number: item.esasNo ?? "",
     decision_number: item.kararNo ?? null,
-    decision_date: item.kararTarihi ? String(item.kararTarihi).slice(0, 10) : null,
+    decision_date: sanitizeDate(item.kararTarihi),
     subject: [courtName, item.esasNo ? `${item.esasNo} E.` : "", item.kararNo ? `${item.kararNo} K.` : ""]
       .filter(Boolean).join(" · ") || "Karar",
     summary: "",
@@ -242,6 +256,12 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
       const text = `${r.subject} ${r.summary}`.toLowerCase();
       return patterns.some((p) => text.includes(p));
     });
+    if (filtered.length !== results.length) { results = filtered; total = filtered.length; }
+  }
+
+  // Özet durumu filtresi: zenginleştirme sonrası özet metni olan/olmayan
+  if (f.ozet) {
+    const filtered = results.filter((r) => (f.ozet === "ozetli" ? !!r.summary : !r.summary));
     if (filtered.length !== results.length) { results = filtered; total = filtered.length; }
   }
 
@@ -350,6 +370,10 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
     });
   }
 
+  if (f.ozet) {
+    results = results.filter((r) => (f.ozet === "ozetli" ? !!r.summary : !r.summary));
+  }
+
   if (f.sort === "guncel") results = [...results].sort((a, b) => (b.decision_date ?? "").localeCompare(a.decision_date ?? ""));
   else if (f.sort === "eski") results = [...results].sort((a, b) => (a.decision_date ?? "9999").localeCompare(b.decision_date ?? "9999"));
   else if (f.sort === "daire") results = [...results].sort((a, b) => (a.court ?? "").localeCompare(b.court ?? "", "tr"));
@@ -373,7 +397,7 @@ export async function GET(request: Request) {
     const supabase = createServiceClient() as Any;
     // v5: önceki sürümlerin önbelleği hatalı motor çıktıları içeriyor — kullanılmaz
     const cacheKey = createHash("md5")
-      .update(["v5", f.q, f.court, f.daire, f.esas, f.karar, f.startDate, f.endDate, f.belgeTuru, f.sort, f.mode, f.page].join("|"))
+      .update(["v7", f.q, f.court, f.daire, f.esas, f.karar, f.startDate, f.endDate, f.belgeTuru, f.ozet, f.sort, f.mode, f.page].join("|"))
       .digest("hex");
 
     // Önbellek (24 saat) — boş kayıtlar kullanılmaz

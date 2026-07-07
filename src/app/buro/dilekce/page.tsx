@@ -24,19 +24,28 @@ export default async function DilecePage({ searchParams }: PageProps) {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
-  const { data: sablonar } = await serviceSupabase
-    .from("generated_documents")
-    .select("id, title, document_type, content, created_at")
-    .eq("user_id", user.id)
-    .eq("document_type", "avukat_dilekce")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  // Şablonlarım: yalnızca kullanıcının bilinçli kaydettikleri (avukat_sablon).
+  // AI üretim geçmişi (avukat_dilekce) otomatik kaydedilir, burada listelenmez.
+  const [{ data: sablonar }, { data: favoriRows }] = await Promise.all([
+    serviceSupabase
+      .from("generated_documents")
+      .select("id, title, document_type, content, created_at")
+      .eq("user_id", user.id)
+      .eq("document_type", "avukat_sablon")
+      .order("created_at", { ascending: false })
+      .limit(50),
+    serviceSupabase
+      .from("dilekce_favoriler")
+      .select("sablon_id")
+      .eq("user_id", user.id),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
       <DilekceAvukatClient
         lawyerName={profile.full_name}
         sablonar={(sablonar as AnyClient[]) || []}
+        initialFavoriler={((favoriRows as AnyClient[]) || []).map((r) => r.sablon_id as string)}
         initialKonu={searchParams.konu ?? ""}
         initialTur={searchParams.tur ?? ""}
       />

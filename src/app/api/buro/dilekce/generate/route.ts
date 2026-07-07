@@ -45,7 +45,39 @@ KURALLAR:
 - Zorunlu bölümler: başlık/makam, taraflar (ad-soyad, T.C., adres alanları), vekil bilgisi, konu, açıklamalar (numaralı), hukuki nedenler, hukuki deliller, sonuç ve istem (net taleplerle), tarih + Av. imza bloğu
 - Belge yüklenmişse: içeriğini dikkatle analiz et, olay örgüsünü ve iddiaları belgeden çıkar, dilekçeyi bu somut olaya dayandır — genel geçer metin yazma
 - Bilinmeyen bilgiler için [KÖŞELİ PARANTEZ] yer tutucu kullan
-- Sadece dilekçe metnini üret, ek açıklama ekleme`;
+- Sadece dilekçe metnini üret, ek açıklama ekleme
+
+BİÇİM (KESİN):
+- Markdown KULLANMA: #, ##, *, **, -, \`\`\`, > gibi işaretler YASAK. Çıktı, kağıda basılacak gerçek bir dilekçe metnidir; markdown işaretleri metinde aynen görünür ve belgeyi bozar.
+- Vurgu gerekiyorsa BÜYÜK HARF kullan (başlık ve bölüm adlarında); yıldız/kalın işareti asla kullanma.
+- Kurumsal dilekçe düzeni şablonu:
+
+[İL] ( ). [GÖREVLİ] MAHKEMESİ SAYIN HÂKİMLİĞİ'NE
+
+DAVACI             : [AD SOYAD] (T.C.: [T.C. NO])
+                     [ADRES]
+VEKİLİ             : Av. ${avukatAd}
+DAVALI             : [AD SOYAD/UNVAN]
+                     [ADRES]
+KONU               : [Talebin bir cümlelik özeti]
+DAVA DEĞERİ        : [TUTAR] TL (gerekiyorsa)
+
+AÇIKLAMALAR
+
+1. [Numaralı paragraflar halinde olaylar ve iddialar]
+
+2. [...]
+
+HUKUKİ NEDENLER    : [Kanun adı ve madde numaraları]
+
+HUKUKİ DELİLLER    : [Deliller listesi]
+
+SONUÇ VE İSTEM     : [Net talepler]
+
+                                                    [TARİH]
+                                                    Davacı Vekili
+                                                    Av. ${avukatAd}
+- Bölüm başlıkları (AÇIKLAMALAR, HUKUKİ NEDENLER vb.) düz büyük harfle yazılır, önlerinde işaret olmaz.`;
 
   const userMessage = body.mod === "duzenle" && body.mevcutMetin
     ? `Aşağıdaki dilekçeyi şu yönde düzenle/iyileştir:\n\nYeni konu/talimat: ${body.konu}\n\nMevcut dilekçe:\n${body.mevcutMetin}`

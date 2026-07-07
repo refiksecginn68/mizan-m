@@ -68,6 +68,37 @@ export default async function DavaDetayPage({
 
   const statusInfo = STATUS_MAP[caseData.status] || STATUS_MAP.aktif;
 
+  // Bu dava/müvekkile ait finans kayıtları — asistan bağlamına girer
+  const { data: allPayments } = await serviceSupabase
+    .from("payments")
+    .select("description, amount, status, metadata, created_at")
+    .eq("user_id", user.id)
+    .limit(200);
+
+  const davaOdemeleri = ((allPayments ?? []) as AnyClient[]).filter(
+    (p) => p.metadata?.case_id === params.id || (caseData.clients?.id && p.metadata?.client_id === caseData.clients.id)
+  );
+
+  const fmtTL = (v: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(v);
+  const finansSatirlari: string[] = [];
+  if (davaOdemeleri.length > 0) {
+    let tahsil = 0;
+    let bekleyen = 0;
+    for (const p of davaOdemeleri) {
+      const yon = p.metadata?.direction === "gider" ? "Gider" : "Gelir";
+      const durum = p.status === "success" ? "ÖDENDİ" : p.status === "pending" ? "BEKLİYOR" : p.status;
+      const vade = p.metadata?.due_date
+        ? ` | Vade: ${new Date(p.metadata.due_date).toLocaleDateString("tr-TR")}`
+        : "";
+      if (p.metadata?.direction !== "gider") {
+        if (p.status === "success") tahsil += p.amount;
+        if (p.status === "pending") bekleyen += p.amount;
+      }
+      finansSatirlari.push(`• [${yon}/${durum}] ${p.description ?? "Ödeme"}: ${fmtTL(p.amount)}${vade}`);
+    }
+    finansSatirlari.push(`Toplam tahsil edilen: ${fmtTL(tahsil)} | Bekleyen tahsilat: ${fmtTL(bekleyen)}`);
+  }
+
   // Yan bar asistan için dava bağlamı
   const caseContext = [
     `Dava: ${caseData.title}`,
@@ -79,6 +110,9 @@ export default async function DavaDetayPage({
     caseData.notes ? `Notlar: ${caseData.notes}` : "",
     fileDocs.length > 0 ? `Belgeler: ${fileDocs.map((d) => d.name).join(", ")}` : "",
     kararRefs.length > 0 ? `Bağdaştırılan kararlar: ${kararRefs.map((d) => d.name).join("; ")}` : "",
+    finansSatirlari.length > 0
+      ? `Ödeme/Taksit Durumu (müvekkilin finans kayıtları):\n${finansSatirlari.join("\n")}`
+      : "Ödeme/Taksit Durumu: bu dosya için kayıtlı ödeme yok.",
   ].filter(Boolean).join("\n");
 
   return (

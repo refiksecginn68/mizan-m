@@ -95,16 +95,16 @@ export default async function BuroPage() {
       .limit(4)
       .then((r: AnyClient) => r)
       .catch(() => ({ data: null })),
-    // Bekleyen ödemeler/taksitler — takvim hatırlatması olarak gösterilir
+    // Bekleyen ödemeler/taksitler — vade hatırlatma kartı için
     serviceSupabase
       .from("payments")
       .select("id, description, amount, metadata, created_at")
       .eq("user_id", user.id)
       .eq("status", "pending")
-      .limit(10),
+      .limit(50),
   ]);
 
-  // Takviminiz: duruşmalar + ödeme/taksit hatırlatmaları + notlar, tarihe göre sıralı
+  // Takviminiz: duruşmalar + notlar, tarihe göre sıralı (ödemeler ayrı hatırlatma kartında)
   interface TakvimItem {
     id: string;
     title: string;
@@ -125,20 +125,42 @@ export default async function BuroPage() {
     });
   }
 
+  takvimItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+  const takvim = takvimItems.slice(0, 8);
+
+  // Yaklaşan ödeme hatırlatmaları: vadesine ≤2 gün kalan veya vadesi geçmiş bekleyen ödemeler
+  interface OdemeHatirlatma {
+    id: string;
+    clientName: string;
+    description: string;
+    amount: number;
+    due: Date;
+    gecikti: boolean;
+  }
+
+  const bugun = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const odemeHatirlatmalari: OdemeHatirlatma[] = [];
+
   for (const p of ((pendingPaymentsResult?.data ?? []) as AnyClient[])) {
-    const due = p.metadata?.due_date ? new Date(p.metadata.due_date) : null;
-    // Vadesi geçmişse de göster (hatırlatma), vadesizse listeye alma
-    if (!due) continue;
-    takvimItems.push({
-      id: `pay-${p.id}`,
-      title: `${p.description ?? "Ödeme"} — ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(p.amount)}`,
-      type: "odeme",
-      date: due,
+    if (!p.metadata?.due_date) continue;
+    const due = new Date(p.metadata.due_date);
+    const dueGun = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const kalanGun = Math.round((dueGun.getTime() - bugun.getTime()) / 86400000);
+    if (kalanGun > 2) continue;
+    odemeHatirlatmalari.push({
+      id: p.id,
+      clientName: p.metadata?.client_name ?? "Müvekkil",
+      description: p.description ?? "Ödeme",
+      amount: p.amount,
+      due,
+      gecikti: kalanGun < 0,
     });
   }
 
-  takvimItems.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const takvim = takvimItems.slice(0, 8);
+  odemeHatirlatmalari.sort((a, b) => a.due.getTime() - b.due.getTime());
+
+  const formatTL = (v: number) =>
+    new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(v);
 
   // Dashboard için 4 haber — DB'den veya fallback
   const FALLBACK_NEWS: LegalNews[] = [
@@ -184,6 +206,27 @@ export default async function BuroPage() {
       <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
         {/* Sol + Orta */}
         <div className="flex-1 min-w-0 space-y-6">
+
+          {/* Yaklaşan ödeme hatırlatmaları */}
+          {odemeHatirlatmalari.length > 0 && (
+            <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-3.5 bg-amber-50 border-b border-amber-100">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <h2 className="font-heading text-sm font-bold text-amber-800">Yaklaşan Ödemeler</h2>
+              </div>
+              <div className="divide-y divide-gray-50">
+                {odemeHatirlatmalari.map((o) => (
+                  <div key={o.id} className={`px-5 py-3 ${o.gecikti ? "bg-red-50" : ""}`}>
+                    <p className={`text-xs font-medium ${o.gecikti ? "text-red-700" : "text-gray-800"}`}>
+                      {o.clientName} — {o.description} son gün{" "}
+                      {o.due.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}, tutar{" "}
+                      {formatTL(o.amount)} TL. {o.gecikti ? "Vadesi geçti — ödeme hatırlatınız!" : "Ödeme hatırlatınız!"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 2 Büyük Kart */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -324,7 +367,7 @@ export default async function BuroPage() {
         {/* Sağ Kolon */}
         <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
 
-          {/* Takviminiz — duruşmalar, ödeme/taksit hatırlatmaları, notlar */}
+          {/* Takviminiz — duruşmalar, toplantılar, süreler, notlar */}
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
               <h2 className="font-heading text-sm font-bold text-[#0f1729]">Takviminiz</h2>
@@ -359,9 +402,7 @@ export default async function BuroPage() {
                         <p className="text-xs font-semibold text-gray-800 truncate">{item.title}</p>
                         <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
                           <Clock className="w-2.5 h-2.5" />
-                          {item.type === "odeme"
-                            ? evDate.toLocaleDateString("tr-TR", { day: "numeric", month: "long" })
-                            : evDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                          {evDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
                           {item.location && (
                             <>
                               <MapPin className="w-2.5 h-2.5 ml-1" />

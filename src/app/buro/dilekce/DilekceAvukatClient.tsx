@@ -4,9 +4,10 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Sparkles, FileUp, BookOpen, Download, FileText,
   Loader2, Copy, Check, RefreshCw, Edit3,
-  Clock, X, AlertCircle, Save, Bold, Italic,
-  AlignLeft, AlignCenter, AlignRight, Type, ChevronRight,
-  FileCode2,
+  Clock, X, AlertCircle, Save, Bold, Italic, Underline,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Type, ChevronRight,
+  FileCode2, Star, Trash2, List, ListOrdered, Palette,
+  Undo2, Redo2,
 } from "lucide-react";
 
 import { DILEKCE_SABLONLARI, SABLON_KATEGORILERI, type DilekceSablonu } from "@/lib/data/dilekce-sablonlari";
@@ -24,13 +25,15 @@ interface Sablon {
 interface Props {
   lawyerName: string;
   sablonar: Sablon[];
+  initialFavoriler?: string[];
   initialKonu?: string;
   initialTur?: string;
 }
 
-export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablonar, initialKonu = "", initialTur = "" }: Props) {
+export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablonar, initialFavoriler = [], initialKonu = "", initialTur = "" }: Props) {
   const [tab, setTab] = useState<Tab>("ai");
   const [sablonar, setSablonar] = useState<Sablon[]>(initialSablonar);
+  const [favoriler, setFavoriler] = useState<string[]>(initialFavoriler);
 
   // AI formu
   const [konu, setKonu] = useState(initialKonu);
@@ -52,13 +55,58 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
 
   // Formatting
   const [fontSize, setFontSize] = useState(14);
-  const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("left");
+  const [fontFamily, setFontFamily] = useState("'Times New Roman', serif");
+  const [renkPaletiAcik, setRenkPaletiAcik] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const evrakRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const editorSyncRef = useRef(false);
   const firstName = lawyerName.split(" ")[0];
+
+  // Dış kaynaklı metin değişimini (AI stream, şablon yükleme) editör DOM'una yaz.
+  // Kullanıcı yazarken (editorSyncRef) geri yazma yapılmaz — imleç zıplamasın.
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    if (editorSyncRef.current) { editorSyncRef.current = false; return; }
+    if (el.innerText !== metin) el.innerText = metin;
+  });
+
+  function handleEditorInput() {
+    const el = editorRef.current;
+    if (!el) return;
+    editorSyncRef.current = true;
+    setMetin(el.innerText);
+  }
+
+  // Zengin metin komutu: seçime uygular, metin state'ini senkron tutar
+  function exec(cmd: string, value?: string) {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand(cmd, false, value);
+    editorSyncRef.current = true;
+    setMetin(el.innerText);
+  }
+
+  const RENK_PALETI = [
+    "#000000", "#374151", "#6b7280", "#9ca3af",
+    "#7f1d1d", "#dc2626", "#ea580c", "#d97706",
+    "#166534", "#16a34a", "#0d9488", "#0284c7",
+    "#1e3a8a", "#2563eb", "#7c3aed", "#a21caf",
+    "#c9a84c", "#92400e", "#e11d48", "#ffffff",
+  ];
+
+  const FONTLAR = [
+    { value: "'Times New Roman', serif", label: "Times New Roman" },
+    { value: "Arial, sans-serif", label: "Arial" },
+    { value: "Calibri, sans-serif", label: "Calibri" },
+    { value: "Georgia, serif", label: "Georgia" },
+    { value: "'Courier New', monospace", label: "Courier New" },
+  ];
 
   // MizanAI'dan gelen konu varsa otomatik generate
   useEffect(() => {
@@ -214,20 +262,6 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function insertFormat(prefix: string, suffix = prefix) {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const selected = metin.slice(start, end);
-    const newText = metin.slice(0, start) + prefix + selected + suffix + metin.slice(end);
-    setMetin(newText);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + prefix.length, end + prefix.length);
-    }, 0);
-  }
-
   async function exportPDF() {
     setExporting("pdf");
     try {
@@ -294,18 +328,29 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
   async function saveAsTemplate() {
     if (!metin || !konu) return;
     try {
-      await fetch("/api/buro/sablon/kaydet", {
+      const res = await fetch("/api/buro/sablon/kaydet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: konu, content: metin, document_type: "avukat_dilekce" }),
+        body: JSON.stringify({ title: konu, content: metin, document_type: "avukat_sablon" }),
       });
+      const data = await res.json() as { ok?: boolean; id?: string; error?: string };
+      if (!res.ok || !data.ok) { setError(data.error ?? "Şablon kaydedilemedi"); return; }
       setSaved(true);
       setSablonar((prev) => [
-        { id: Date.now().toString(), title: konu, document_type: "avukat_dilekce", content: metin, created_at: new Date().toISOString() },
+        { id: data.id ?? Date.now().toString(), title: konu, document_type: "avukat_sablon", content: metin, created_at: new Date().toISOString() },
         ...prev,
       ]);
       setTimeout(() => setSaved(false), 2500);
-    } catch { /* ignore */ }
+    } catch { setError("Şablon kaydedilemedi"); }
+  }
+
+  async function deleteSablon(id: string) {
+    const onceki = sablonar;
+    setSablonar((prev) => prev.filter((s) => s.id !== id));
+    try {
+      const res = await fetch(`/api/buro/sablon/kaydet?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) setSablonar(onceki);
+    } catch { setSablonar(onceki); }
   }
 
   function loadSablon(s: Sablon) {
@@ -314,12 +359,32 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
     setTab("ai");
   }
 
+  // ── Favori örnek şablonlar ──
+  async function toggleFavori(sablonId: string) {
+    const favoriMi = favoriler.includes(sablonId);
+    setFavoriler((prev) => (favoriMi ? prev.filter((f) => f !== sablonId) : [...prev, sablonId]));
+    try {
+      const res = favoriMi
+        ? await fetch(`/api/buro/dilekce/favori?sablon_id=${encodeURIComponent(sablonId)}`, { method: "DELETE" })
+        : await fetch("/api/buro/dilekce/favori", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sablon_id: sablonId }),
+          });
+      if (!res.ok) setFavoriler((prev) => (favoriMi ? [...prev, sablonId] : prev.filter((f) => f !== sablonId)));
+    } catch {
+      setFavoriler((prev) => (favoriMi ? [...prev, sablonId] : prev.filter((f) => f !== sablonId)));
+    }
+  }
+
   // ── Örnek şablonlar (hazır kütüphane) ──
   const [ornekArama, setOrnekArama] = useState("");
   const [ornekKategori, setOrnekKategori] = useState("");
   const [ornekIndiriliyor, setOrnekIndiriliyor] = useState("");
+  const [sadeceFavoriler, setSadeceFavoriler] = useState(false);
 
   const filtreliOrnekler = DILEKCE_SABLONLARI.filter((s) => {
+    if (sadeceFavoriler && !favoriler.includes(s.id)) return false;
     if (ornekKategori && s.kategori !== ornekKategori) return false;
     if (ornekArama.trim()) {
       const q = ornekArama.toLowerCase();
@@ -499,47 +564,124 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                 </div>
               ) : (
                 <>
-                  {/* Editör toolbar */}
+                  {/* Editör toolbar — tüm düğmeler seçili metne gerçekten uygulanır */}
                   <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-1.5 flex-shrink-0 flex-wrap">
-                    {/* Formatting */}
+                    {/* Geri al / Yinele */}
                     <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
-                      <button onClick={() => insertFormat("**")} title="Kalın"
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("undo")} title="Geri Al"
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
-                        <Bold className="w-3.5 h-3.5" />
+                        <Undo2 className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => insertFormat("_")} title="İtalik"
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("redo")} title="Yinele"
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
-                        <Italic className="w-3.5 h-3.5" />
+                        <Redo2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* Font size */}
+                    {/* Font ailesi */}
+                    <div className="flex items-center gap-1 border-r border-gray-200 pr-2 mr-0.5">
+                      <select
+                        value={fontFamily}
+                        onChange={(e) => { setFontFamily(e.target.value); exec("fontName", e.target.value); }}
+                        title="Yazı Tipi"
+                        className="text-xs text-gray-600 border-none focus:outline-none bg-transparent max-w-[130px]"
+                      >
+                        {FONTLAR.map((f) => (
+                          <option key={f.value} value={f.value}>{f.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Punto: seçim + büyüt/küçült */}
                     <div className="flex items-center gap-1 border-r border-gray-200 pr-2 mr-0.5">
                       <Type className="w-3.5 h-3.5 text-gray-400" />
                       <select
                         value={fontSize}
                         onChange={(e) => setFontSize(Number(e.target.value))}
+                        title="Punto"
                         className="text-xs text-gray-600 border-none focus:outline-none bg-transparent"
                       >
-                        {[10, 11, 12, 13, 14, 16, 18].map((s) => (
+                        {[10, 11, 12, 13, 14, 16, 18, 20, 24].map((s) => (
                           <option key={s} value={s}>{s}pt</option>
                         ))}
                       </select>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => setFontSize((f) => Math.min(f + 1, 32))} title="Punto Büyüt"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors text-xs font-bold">
+                        A+
+                      </button>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => setFontSize((f) => Math.max(f - 1, 8))} title="Punto Küçült"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors text-[10px] font-bold">
+                        A−
+                      </button>
                     </div>
 
-                    {/* Alignment */}
+                    {/* Kalın / İtalik / Altı çizili */}
                     <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
-                      <button onClick={() => setTextAlign("left")}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "left" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("bold")} title="Kalın"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Bold className="w-3.5 h-3.5" />
+                      </button>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("italic")} title="İtalik"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Italic className="w-3.5 h-3.5" />
+                      </button>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("underline")} title="Altı Çizili"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Underline className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Renk paleti */}
+                    <div className="relative flex items-center border-r border-gray-200 pr-2 mr-0.5">
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => setRenkPaletiAcik(!renkPaletiAcik)} title="Yazı Rengi"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                        <Palette className="w-3.5 h-3.5" />
+                      </button>
+                      {renkPaletiAcik && (
+                        <div className="absolute top-9 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg p-2 grid grid-cols-5 gap-1 w-40">
+                          {RENK_PALETI.map((renk) => (
+                            <button
+                              key={renk}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => { exec("foreColor", renk); setRenkPaletiAcik(false); }}
+                              title={renk}
+                              className="w-6 h-6 rounded-md border border-gray-200 hover:scale-110 transition-transform"
+                              style={{ backgroundColor: renk }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hizalama */}
+                    <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("justifyLeft")} title="Sola Hizala"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                         <AlignLeft className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setTextAlign("center")}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "center" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("justifyCenter")} title="Ortala"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                         <AlignCenter className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => setTextAlign("right")}
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${textAlign === "right" ? "bg-gray-100 text-gray-800" : "text-gray-400 hover:bg-gray-100"}`}>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("justifyRight")} title="Sağa Hizala"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                         <AlignRight className="w-3.5 h-3.5" />
+                      </button>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("justifyFull")} title="İki Yana Yasla"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                        <AlignJustify className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Listeler */}
+                    <div className="flex items-center gap-0.5 border-r border-gray-200 pr-2 mr-0.5">
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("insertUnorderedList")} title="Madde İşaretli Liste"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                        <List className="w-3.5 h-3.5" />
+                      </button>
+                      <button onMouseDown={(e) => e.preventDefault()} onClick={() => exec("insertOrderedList")} title="Numaralı Liste"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
+                        <ListOrdered className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
@@ -591,16 +733,17 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                             </div>
                           </div>
                         ) : (
-                          <textarea
-                            ref={textareaRef}
-                            value={metin}
-                            onChange={(e) => setMetin(e.target.value)}
-                            className="w-full min-h-[600px] text-gray-800 leading-relaxed focus:outline-none resize-none"
+                          <div
+                            ref={editorRef}
+                            contentEditable
+                            suppressContentEditableWarning
+                            onInput={handleEditorInput}
+                            spellCheck={false}
+                            className="w-full min-h-[600px] text-gray-800 leading-relaxed focus:outline-none whitespace-pre-wrap [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
                             style={{
-                              fontFamily: "'Times New Roman', serif",
+                              fontFamily,
                               fontSize: `${fontSize}px`,
                               lineHeight: "1.8",
-                              textAlign,
                             }}
                           />
                         )}
@@ -698,6 +841,10 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                             className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-[#0f1729] text-white hover:bg-[#1a2744] transition-colors">
                             <Edit3 className="w-3.5 h-3.5" /> Düzenle
                           </button>
+                          <button onClick={() => deleteSablon(s.id)} title="Şablonu sil"
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-500 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" /> Sil
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -729,6 +876,15 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                   className="w-full text-sm border border-gray-200 rounded-xl px-4 py-2.5 text-gray-700 placeholder:text-gray-300 focus:outline-none focus:border-[#c9a84c]"
                 />
                 <div className="flex flex-wrap gap-1.5">
+                  <button
+                    onClick={() => setSadeceFavoriler(!sadeceFavoriler)}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      sadeceFavoriler ? "bg-[#c9a84c] text-white" : "bg-[#c9a84c]/10 text-[#c9a84c] hover:bg-[#c9a84c]/20"
+                    }`}
+                  >
+                    <Star className={`w-3 h-3 ${sadeceFavoriler ? "fill-white" : "fill-[#c9a84c]"}`} />
+                    Favori Dilekçeler ({favoriler.length})
+                  </button>
                   <button
                     onClick={() => setOrnekKategori("")}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
@@ -765,6 +921,13 @@ export default function DilekceAvukatClient({ lawyerName, sablonar: initialSablo
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
                             <span className="text-[10px] font-bold text-[#c9a84c] bg-[#c9a84c]/10 px-2 py-0.5 rounded-full">{s.kategori}</span>
+                            <button
+                              onClick={() => toggleFavori(s.id)}
+                              title={favoriler.includes(s.id) ? "Favoriden çıkar" : "Favoriye ekle"}
+                              className="text-gray-300 hover:text-[#c9a84c] transition-colors"
+                            >
+                              <Star className={`w-4 h-4 ${favoriler.includes(s.id) ? "fill-[#c9a84c] text-[#c9a84c]" : ""}`} />
+                            </button>
                           </div>
                           <p className="font-heading text-sm font-bold text-[#0f1729]">{s.baslik}</p>
                           <p className="text-xs text-gray-500 mt-1 leading-relaxed">{s.aciklama}</p>

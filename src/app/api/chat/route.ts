@@ -83,12 +83,17 @@ export async function POST(request: Request) {
       });
     }
 
-    // RAG context
-    const ragContext = await fetchRAGContext(message, queryType);
+    // RAG context + avukat adı (ismiyle hitap için)
+    const [ragContext, profileResult] = await Promise.all([
+      fetchRAGContext(message, queryType),
+      userType === "avukat"
+        ? serviceSupabase.from("profiles").select("full_name").eq("id", user.id).single()
+        : Promise.resolve({ data: null }),
+    ]);
     const contextStr = buildContextString(ragContext);
     const systemPrompt = body.ozet_type === "mevzuat"
       ? SYSTEM_PROMPT_MEVZUAT_OZET
-      : getSystemPrompt(userType, caseContext);
+      : getSystemPrompt(userType, caseContext, profileResult?.data?.full_name ?? undefined);
 
     const encoder = new TextEncoder();
     let fullResponse = "";
