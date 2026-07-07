@@ -43,3 +43,5 @@ public/           → statik dosyalar (logo.png, icons/, manifest.json)
 - Onay bekleme, otomatik devam et
 - Dış bağlantı (API key, external service kurulumu) gerekince DUR ve sor
 - Build temiz kalmalı: npm run type-check && npm run build
+
+@.claude/goat-fable/core/CLAUDE-CORE.md
