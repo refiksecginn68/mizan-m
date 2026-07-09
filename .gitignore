@@ -44,3 +44,8 @@ next-env.d.ts
 
 # Eval API disk cache (3MB+, yalnizca lokal eval kosulari icin)
 eval/bedesten_api_cache.json
+
+# Lokal calisma dosyalari
+server.log
+scratchpad/
+awesome-claude-skills/
