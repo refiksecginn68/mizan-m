@@ -42,7 +42,7 @@ export async function fetchRAGContext(
 
   try {
     // 1. Vektör arama (OpenAI key varsa)
-    const embedding = await generateEmbedding(query);
+    const embedding = await generateEmbedding(query, "query");
 
     if (embedding) {
       const threshold = queryType === "emsal_arastirma" ? 0.72 : 0.75;
@@ -56,8 +56,12 @@ export async function fetchRAGContext(
       }) as { data: EmbeddingSearchRow[] | null };
 
       vectorResults?.forEach((r) => {
+        // Künye başlığa gömülür — LLM kaynak gösterirken aynen aktarabilsin
+        const kunye = [r.metadata?.court, r.metadata?.case_number, r.metadata?.decision_date]
+          .filter(Boolean)
+          .join(" · ");
         chunks.push(
-          `[${r.source_type.toUpperCase()}] ${r.metadata?.title ?? ""}\n${r.content_chunk}`
+          `[${r.source_type.toUpperCase()}] ${r.metadata?.title ?? ""}${kunye ? ` (${kunye})` : ""}\n${r.content_chunk}`
         );
         sources.push({
           type: r.source_type as "kanun" | "karar" | "anayasa",
@@ -127,5 +131,5 @@ export async function fetchRAGContext(
 
 export function buildContextString(ragContext: RAGContext): string {
   if (ragContext.chunks.length === 0) return "";
-  return `\n\n## İLGİLİ HUKUKİ KAYNAKLAR\n${ragContext.chunks.join("\n\n")}`;
+  return `\n\n## İLGİLİ HUKUKİ KAYNAKLAR\n${ragContext.chunks.join("\n\n")}\n\nBu kaynaklara dayanan her iddiada künyeyi (mahkeme + esas/karar no + tarih veya kanun + madde) aynen belirt. Yukarıda künyesi verilmeyen bir kararı emsal olarak sunma.`;
 }

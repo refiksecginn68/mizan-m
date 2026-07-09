@@ -2,6 +2,9 @@
 // Emsal karar araması, karar tam metni, mevzuat araması ve mevzuat tam metni.
 // Kimlik doğrulama gerektirmez; UyapMevzuat uygulama başlığı ile çağrılır.
 
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { createHash } from "crypto";
+
 const EMSAL_BASE = "https://bedesten.adalet.gov.tr/emsal-karar";
 const MEVZUAT_BASE = "https://bedesten.adalet.gov.tr/mevzuat";
 
@@ -13,6 +16,38 @@ const HEADERS = {
 };
 
 // ── Ortak yardımcılar ─────────────────────────────────────────────────────────
+
+// Disk cache YALNIZCA eval koşularında aktif (BEDESTEN_DISK_CACHE=1):
+// eval tekrarlarında Bedesten throttle'ına takılmamak için. Production'da
+// kapalı — serverless'ta fs yazılamaz ve bayat veri servis edilmemeli.
+const CACHE_FILE = "eval/bedesten_api_cache.json";
+const diskCacheEnabled = () => process.env.BEDESTEN_DISK_CACHE === "1";
+
+function getCache(key: string): unknown {
+  if (!diskCacheEnabled()) return null;
+  try {
+    if (existsSync(CACHE_FILE)) {
+      const cache = JSON.parse(readFileSync(CACHE_FILE, "utf8")) as Record<string, unknown>;
+      return cache[key];
+    }
+  } catch {}
+  return null;
+}
+
+function setCache(key: string, val: unknown): void {
+  if (!diskCacheEnabled()) return;
+  try {
+    let cache: Record<string, unknown> = {};
+    if (existsSync(CACHE_FILE)) {
+      cache = JSON.parse(readFileSync(CACHE_FILE, "utf8")) as Record<string, unknown>;
+    } else {
+      const dir = "eval";
+      if (!existsSync(dir)) mkdirSync(dir);
+    }
+    cache[key] = val;
+    writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), "utf8");
+  } catch {}
+}
 
 // Global hız sınırlayıcı: Bedesten art arda hızlı isteklerde throttle edip
 // istekleri reddediyor (canlı testte doğrulandı). Tüm çağrılar arasına
@@ -49,6 +84,15 @@ function acquireSlot(): Promise<void> {
 async function bedestenPost<T>(
   url: string, data: unknown, timeoutMs = 20000, attempts = 3, essential = true
 ): Promise<T | null> {
+  const cacheKey = createHash("md5")
+    .update(url + "|" + JSON.stringify(data))
+    .digest("hex");
+
+  const cachedVal = getCache(cacheKey);
+  if (cachedVal !== undefined && cachedVal !== null) {
+    return cachedVal as T;
+  }
+
   const backoffs = [1500, 3500];
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (bedestenCoolingDown()) {
@@ -65,9 +109,14 @@ async function bedestenPost<T>(
       });
       if (res.ok) {
         const json = (await res.json()) as { data?: T; metadata?: { FMTY?: string } };
-        if (json.metadata?.FMTY === "SUCCESS") return json.data ?? null;
+        if (json.metadata?.FMTY === "SUCCESS") {
+          const val = json.data ?? null;
+          if (val !== null) setCache(cacheKey, val);
+          return val;
+        }
         return null; // geçerli yanıt ama boş/uygunsuz — retry anlamsız
       }
+
       if (res.status === 429) {
         blockedUntil = Date.now() + COOLDOWN_MS;
         console.warn(`[bedesten] HTTP 429 — ${COOLDOWN_MS / 1000}s soğuma (essential=${essential})`);

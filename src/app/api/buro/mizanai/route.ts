@@ -248,19 +248,26 @@ async function executeTool(
     if (name === "search_emsal") {
       const { query, mahkeme } = input;
       const qs = new URLSearchParams({ q: query });
-      if (mahkeme && mahkeme !== "all") qs.set("mahkeme", mahkeme);
+      if (mahkeme && mahkeme !== "all") qs.set("court", mahkeme);
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/emsal/search?${qs}`, {
-          signal: AbortSignal.timeout(8000),
+          signal: AbortSignal.timeout(15000),
         });
         const json = await res.json() as { results?: Any[] };
         const results = json.results?.slice(0, 5) ?? [];
         if (!results.length) return "Bu konuda emsal karar bulunamadı.";
-        return results.map((r: Any) =>
-          `• ${r.mahkeme ?? ""} ${r.esasNo ?? ""} ${r.kararNo ?? ""} (${r.tarih ?? ""}) — ${r.ozet ?? r.konu ?? ""}`.trim()
-        ).join("\n");
+        const list = results.map((r: Any) => {
+          const kunye = [
+            r.court,
+            r.case_number ? `${r.case_number} E.` : "",
+            r.decision_number ? `${r.decision_number} K.` : "",
+            r.decision_date ?? "",
+          ].filter(Boolean).join(" · ");
+          return `• [${kunye}] ${r.summary || r.subject || ""}`.trim();
+        }).join("\n");
+        return `${list}\nNOT: Bu kararları yanıtında MUTLAKA köşeli parantezdeki künyesiyle (mahkeme + esas/karar no + tarih) an. Künyesi olmayan bir kararı emsal olarak sunma.`;
       } catch {
-        return "Emsal arama geçici olarak kullanılamıyor. Lexpera veya Kazancı'yı deneyebilirsiniz.";
+        return "Emsal arama geçici olarak kullanılamıyor. Avukata Mizanım Emsal Arama modülünü (/buro/emsal) önerebilirsin; künyesiz karar iddia etme.";
       }
     }
 
@@ -313,6 +320,19 @@ export async function POST(request: Request) {
       .eq("id", user.id).single();
     if (!profile || profile.user_type !== "avukat") {
       return Response.json({ error: "Bu özellik sadece avukatlara açıktır" }, { status: 403 });
+    }
+
+    // Sorgu kotası harcaması
+    const { data: spent } = await svc.rpc("spend_queries", {
+      p_user_id: user.id,
+      p_amount: 1,
+    });
+
+    if (!spent) {
+      return Response.json(
+        { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
+        { status: 402 }
+      );
     }
 
     let activeSessionId = body.sessionId;

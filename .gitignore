@@ -41,3 +41,6 @@ next-env.d.ts
 .claude/settings.local.json
 .env.vercel-check
 .env.vercel-prod
+
+# Eval API disk cache (3MB+, yalnizca lokal eval kosulari icin)
+eval/bedesten_api_cache.json

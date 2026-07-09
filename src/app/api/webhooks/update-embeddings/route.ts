@@ -18,9 +18,9 @@ export async function POST(request: Request) {
     case_number?: string;
   };
 
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) {
-    return new Response(JSON.stringify({ error: "OpenAI key eksik" }), { status: 400 });
+  const cohereKey = process.env.COHERE_API_KEY;
+  if (!cohereKey) {
+    return new Response(JSON.stringify({ error: "Cohere API key eksik" }), { status: 400 });
   }
 
   const supabase = createServiceClient();
@@ -28,13 +28,13 @@ export async function POST(request: Request) {
     ? `${body.title} Madde ${body.article_number ?? ""}: ${body.content}`
     : `${body.court ?? ""} ${body.case_number ?? ""}: ${body.title} - ${body.content}`;
 
-  const embedding = await generateEmbedding(text);
+  const embedding = await generateEmbedding(text, "document");
   if (!embedding) {
     return new Response(JSON.stringify({ error: "Embedding üretilemedi" }), { status: 500 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.from("law_embeddings") as any).upsert({
+  const { error } = await (supabase.from("law_embeddings") as any).upsert({
     source_type: body.type === "legislation" ? "kanun" : "karar",
     source_id: body.id,
     content_chunk: text.slice(0, 1000),
@@ -45,7 +45,11 @@ export async function POST(request: Request) {
       court: body.court ?? "",
       case_number: body.case_number ?? "",
     },
-  });
+  }, { onConflict: "source_type,source_id" });
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+  }
 
   return new Response(JSON.stringify({ success: true }), { status: 200 });
 }

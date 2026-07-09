@@ -1,66 +1,83 @@
-export const EMBEDDING_DIMENSIONS = 1536;
+export const EMBEDDING_DIMENSIONS = 1024;
 
-export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) return null; // OpenAI key yoksa full-text fallback kullanılır
+export async function generateEmbedding(
+  text: string,
+  type: "query" | "document" = "document"
+): Promise<number[] | null> {
+  const cohereKey = process.env.COHERE_API_KEY;
+  if (!cohereKey) return null;
 
-  const response = await fetch("https://api.openai.com/v1/embeddings", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${openaiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "text-embedding-3-small",
-      input: text.slice(0, 8000),
-      dimensions: EMBEDDING_DIMENSIONS,
-    }),
-  });
-
-  if (!response.ok) {
-    console.error("Embedding hatası:", response.statusText);
-    return null;
-  }
-
-  const data = await response.json() as { data: { embedding: number[] }[] };
-  return data.data[0].embedding;
-}
-
-export async function generateEmbeddingBatch(
-  texts: string[]
-): Promise<(number[] | null)[]> {
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) return texts.map(() => null);
-
-  const batches: string[][] = [];
-  for (let i = 0; i < texts.length; i += 100) {
-    batches.push(texts.slice(i, i + 100));
-  }
-
-  const results: (number[] | null)[] = [];
-  for (const batch of batches) {
-    const response = await fetch("https://api.openai.com/v1/embeddings", {
+  try {
+    const response = await fetch("https://api.cohere.com/v1/embed", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${openaiKey}`,
+        Authorization: `Bearer ${cohereKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "text-embedding-3-small",
-        input: batch.map((t) => t.slice(0, 8000)),
-        dimensions: EMBEDDING_DIMENSIONS,
+        model: "embed-multilingual-v3.0",
+        texts: [text.slice(0, 4000)],
+        input_type: type === "query" ? "search_query" : "search_document",
+        embedding_types: ["float"],
       }),
     });
 
     if (!response.ok) {
-      results.push(...batch.map(() => null));
-      continue;
+      console.error("Cohere embedding error:", response.status, response.statusText);
+      return null;
     }
 
-    const data = await response.json() as { data: { embedding: number[]; index: number }[] };
-    const sorted = data.data.sort((a, b) => a.index - b.index);
-    results.push(...sorted.map((d) => d.embedding));
+    const data = await response.json() as { embeddings: { float: number[][] } };
+    return data.embeddings.float[0] || null;
+  } catch (err) {
+    console.error("Cohere embedding exception:", err);
+    return null;
+  }
+}
+
+export async function generateEmbeddingBatch(
+  texts: string[],
+  type: "query" | "document" = "document"
+): Promise<(number[] | null)[]> {
+  const cohereKey = process.env.COHERE_API_KEY;
+  if (!cohereKey) return texts.map(() => null);
+
+  const batches: string[][] = [];
+  for (let i = 0; i < texts.length; i += 96) {
+    batches.push(texts.slice(i, i + 96));
+  }
+
+  const results: (number[] | null)[] = [];
+  for (const batch of batches) {
+    try {
+      const response = await fetch("https://api.cohere.com/v1/embed", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${cohereKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "embed-multilingual-v3.0",
+          texts: batch.map((t) => t.slice(0, 4000)),
+          input_type: type === "query" ? "search_query" : "search_document",
+          embedding_types: ["float"],
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Cohere batch embedding error:", response.status, response.statusText);
+        results.push(...batch.map(() => null));
+        continue;
+      }
+
+      const data = await response.json() as { embeddings: { float: number[][] } };
+      results.push(...data.embeddings.float);
+    } catch (err) {
+      console.error("Cohere batch embedding exception:", err);
+      results.push(...batch.map(() => null));
+    }
   }
 
   return results;
 }
+

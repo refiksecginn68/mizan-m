@@ -16,6 +16,78 @@ type Any = any;
 
 const PAGE_SIZE = 10;
 
+// Cohere Rerank API helper
+async function cohereRerank(
+  query: string,
+  documents: { id: string; text: string }[],
+  limit = 10
+): Promise<{ id: string; score: number }[]> {
+  const apiKey = process.env.COHERE_API_KEY;
+  if (!apiKey || documents.length === 0) {
+    return documents.map((doc, idx) => ({ id: doc.id, score: 1 / (idx + 1) }));
+  }
+
+  try {
+    const response = await fetch("https://api.cohere.com/v1/rerank", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "rerank-multilingual-v3.0",
+        query,
+        documents: documents.map((doc) => doc.text),
+        top_n: limit,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Cohere Rerank API error:", response.statusText);
+      return documents.map((doc, idx) => ({ id: doc.id, score: 1 / (idx + 1) }));
+    }
+
+    const data = await response.json() as {
+      results: { index: number; relevance_score: number }[];
+    };
+
+    return data.results.map((res) => ({
+      id: documents[res.index].id,
+      score: res.relevance_score,
+    }));
+  } catch (err) {
+    console.error("Cohere Rerank network error:", err);
+    return documents.map((doc, idx) => ({ id: doc.id, score: 1 / (idx + 1) }));
+  }
+}
+
+// Reciprocal Rank Fusion (RRF)
+function rrf(
+  denseList: EmsalResult[],
+  sparseList: EmsalResult[],
+  k = 60
+): { id: string; score: number }[] {
+  const scores: Record<string, number> = {};
+
+  denseList.forEach((doc, index) => {
+    if (doc.id) {
+      const rank = index + 1;
+      scores[doc.id] = (scores[doc.id] || 0) + 1 / (k + rank);
+    }
+  });
+
+  sparseList.forEach((doc, index) => {
+    if (doc.id) {
+      const rank = index + 1;
+      scores[doc.id] = (scores[doc.id] || 0) + 1 / (k + rank);
+    }
+  });
+
+  return Object.keys(scores)
+    .map((id) => ({ id, score: scores[id] }))
+    .sort((a, b) => b.score - a.score);
+}
+
 interface EmsalResult {
   id?: string;
   documentId?: string;
@@ -94,6 +166,32 @@ function parseFilters(url: URL): Filters {
 
 function normalizeNo(s: string): string {
   return s.replace(/\s/g, "").toLowerCase();
+}
+
+// Serbest metindeki esas/karar no'yu ayıklayıp kesin-eşleşme yoluna sokar.
+// "2019/1234 E." | "esas no: 2019/1234" | "2020/5678 K." | "karar no 2020/5678"
+function preprocessQuery(f: Filters): void {
+  if (!f.q) return;
+  let q = f.q;
+  const take = (re: RegExp): string | null => {
+    const m = q.match(re);
+    if (!m) return null;
+    q = q.replace(m[0], " ");
+    return m[1];
+  };
+  if (!f.esas) {
+    const esas =
+      take(/\b(\d{4}\/\d{1,6})\s*(?:E\.|E\b|esas(?:\s*(?:no|sayılı))?)/i) ??
+      take(/\besas(?:\s*no)?\s*[:.]?\s*(\d{4}\/\d{1,6})/i);
+    if (esas) f.esas = esas;
+  }
+  if (!f.karar) {
+    const karar =
+      take(/\b(\d{4}\/\d{1,6})\s*(?:K\.|K\b|karar(?:\s*(?:no|sayılı))?)/i) ??
+      take(/\bkarar(?:\s*no)?\s*[:.]?\s*(\d{4}\/\d{1,6})/i);
+    if (karar) f.karar = karar;
+  }
+  f.q = q.replace(/\s{2,}/g, " ").trim();
 }
 
 // ── Bedesten doğrudan arama ───────────────────────────────────────────────────
@@ -194,8 +292,10 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
   if (courtTypes.length === 0) return null; // Bedesten'de bulunmayan kaynak (ör. AYM) → fallback
   const birimAdi = daireToBirimAdi(f.court, f.daire);
   const sort = f.sort === "guncel" ? "yeni" : f.sort === "eski" ? "eski" : "alaka";
-  // Esas/karar no veya belge türü filtresi varsa daha geniş sayfa çek, sonra süz
-  const needsWide = !!(f.esas || f.karar || f.belgeTuru);
+  const cohereKey = process.env.COHERE_API_KEY;
+  const isRerankActive = !!(cohereKey && f.q);
+  // Esas/karar no veya belge türü veya rerank aktifse geniş sayfa çek
+  const needsWide = !!(f.esas || f.karar || f.belgeTuru || isRerankActive);
   const pageSize = needsWide ? 50 : PAGE_SIZE;
 
   const phrases = buildPhrases(f);
@@ -237,17 +337,43 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
     if (exact.length === 0) return { results: [], total: 0 };
   }
 
-  // Sayfalama (geniş çekildiyse)
-  if (needsWide) {
+  // Sayfalama (geniş çekildiyse ve rerank aktif değilse)
+  if (needsWide && !isRerankActive) {
     total = Math.min(total, results.length);
     results = results.slice((f.page - 1) * PAGE_SIZE, f.page * PAGE_SIZE);
   }
 
   // Tam metin zenginleştirme: özet + gerçek alaka skoru.
-  // Yalnızca ilk 5 sonuç: her belge ayrı istek → 10 belge hem yavaş (30sn+)
-  // hem Bedesten throttle'ını tetikliyor. Kalanlar metadata ile listelenir.
-  const head = await enrich(results.slice(0, 5), f);
-  results = [...head, ...results.slice(5)];
+  // Yalnızca ilk 5 sonuç (rerank aktifse ilk 15 sonuç)
+  const enrichLimit = isRerankActive ? 15 : 5;
+  const head = await enrich(results.slice(0, enrichLimit), f);
+  results = [...head, ...results.slice(enrichLimit)];
+
+  // Rerank adımı (Cohere API ile)
+  if (isRerankActive && head.length > 1) {
+    const docsToRerank = head.map((r, index) => ({
+      id: String(index),
+      text: `${r.court} · ${r.case_number} · ${r.subject}\n${r.summary || ""}`.trim()
+    }));
+    const reranked = await cohereRerank(f.q, docsToRerank, enrichLimit);
+    const rerankedHead: EmsalResult[] = [];
+    reranked.forEach((item) => {
+      const idx = parseInt(item.id, 10);
+      const original = head[idx];
+      rerankedHead.push({
+        ...original,
+        score: item.score
+      });
+    });
+    // Herhangi bir hata/eksik durumunda listede kalanları ekle
+    const seenIndices = new Set(reranked.map(item => parseInt(item.id, 10)));
+    head.forEach((doc, idx) => {
+      if (!seenIndices.has(idx)) {
+        rerankedHead.push(doc);
+      }
+    });
+    results = [...rerankedHead, ...results.slice(enrichLimit)];
+  }
 
   // Belge türü filtresi zenginleştirilmiş özet + konu üzerinde
   if (f.belgeTuru && BELGE_TURU_PATTERNS[f.belgeTuru]) {
@@ -280,6 +406,12 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
     results = [...results].sort((a, b) => (a.decision_date ?? "9999").localeCompare(b.decision_date ?? "9999"));
   }
 
+  if (isRerankActive) {
+    total = Math.min(total, results.length);
+    const start = (f.page - 1) * PAGE_SIZE;
+    results = results.slice(start, start + PAGE_SIZE);
+  }
+
   return { results, total };
 }
 
@@ -292,76 +424,120 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
 async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; total: number }> {
   const supabase = createServiceClient() as Any;
   const cols = "id, court, source, case_number, decision_number, decision_date, subject, summary";
+  const cohereKey = process.env.COHERE_API_KEY;
+  const isRerankActive = !!(cohereKey && f.q);
 
-  function applyCommon(query: Any): Any {
-    if (f.court !== "all" && SOURCE_MAP[f.court]) query = query.eq("source", SOURCE_MAP[f.court]);
-    if (f.daire) {
-      const num = f.daire.match(/^\d+/)?.[0];
-      if (num) query = query.ilike("court", `%${num}.%`);
-    }
-    if (f.esas) query = query.ilike("case_number", `%${f.esas}%`);
-    if (f.karar) query = query.ilike("decision_number", `%${f.karar}%`);
-    if (f.startDate) query = query.gte("decision_date", f.startDate);
-    if (f.endDate) query = query.lte("decision_date", f.endDate);
-    if (f.sort === "eski") query = query.order("decision_date", { ascending: true, nullsFirst: false });
-    else query = query.order("decision_date", { ascending: false, nullsFirst: false });
-    return query;
-  }
+  // Ortak filtreleme sorguları
+  const courtFilter = f.court !== "all" && SOURCE_MAP[f.court] ? SOURCE_MAP[f.court] : null;
+  const daireFilter = f.daire ? f.daire.match(/^\d+/)?.[0] || null : null;
+  const startDateFilter = f.startDate || null;
+  const endDateFilter = f.endDate || null;
 
-  const seen = new Set<string>();
   let results: EmsalResult[] = [];
 
-  if (f.mode === "anlam" || f.mode === "akilli") {
-    try {
-      const embedding = f.q ? await generateEmbedding(f.q) : null;
-      if (embedding) {
-        const { data: vec } = await supabase.rpc("semantic_search", {
-          query_embedding: embedding,
-          match_threshold: 0.7,
-          match_count: 20,
-        }) as { data: Array<{ source_type: string; source_id: string; similarity: number }> | null };
-        const ids = (vec ?? []).filter((v) => v.source_type === "case_law").map((v) => v.source_id);
-        if (ids.length > 0) {
-          const { data } = await applyCommon(supabase.from("case_laws").select(cols).in("id", ids)).limit(40);
-          for (const row of (data ?? []) as EmsalResult[]) {
-            const sim = (vec ?? []).find((v) => v.source_id === row.id)?.similarity;
-            if (row.id && !seen.has(row.id)) { seen.add(row.id); results.push({ ...row, score: sim }); }
-          }
-        }
-      }
-    } catch { /* semantik arama yoksa devam */ }
-  }
+  if (f.q) {
+    // 1. Dense (Vector) Search & Sparse (FTS) Search in Parallel
+    const [densePromise, sparsePromise] = await Promise.allSettled([
+      // Dense (Vector) Arama
+      (async () => {
+        const embedding = await generateEmbedding(f.q, "query");
+        if (!embedding) return [];
 
-  if (f.mode !== "anlam" || results.length === 0) {
-    if (f.q) {
-      const { data: ftsData, error: ftsError } = await applyCommon(
-        supabase.from("case_laws").select(cols)
-          .textSearch("fts", f.q, { type: "websearch", config: "turkish" })
-      ).limit(40);
-      if (!ftsError) {
-        for (const row of ((ftsData ?? []) as EmsalResult[])) {
-          if (row.id && !seen.has(row.id)) { seen.add(row.id); results.push(row); }
+        const { data, error } = await supabase.rpc("semantic_search_case_laws", {
+          query_embedding: embedding,
+          court_filter: courtFilter,
+          daire_filter: daireFilter,
+          esas_filter: f.esas || null,
+          karar_filter: f.karar || null,
+          start_date_filter: startDateFilter,
+          end_date_filter: endDateFilter,
+          match_threshold: 0.5,
+          match_count: 50
+        }) as { data: EmsalResult[] | null; error: Any };
+
+        if (error) {
+          console.error("Supabase dense search error:", error);
+          return [];
         }
-      }
-      const { data: ilikeData } = await applyCommon(
-        supabase.from("case_laws").select(cols)
-          .or(`subject.ilike.%${f.q}%,summary.ilike.%${f.q}%,full_text.ilike.%${f.q}%`)
-      ).limit(40);
-      const ilikeRows = ((ilikeData ?? []) as EmsalResult[]).filter((r) => r.id && !seen.has(r.id!));
-      for (const row of ilikeRows) { seen.add(row.id!); results.push(row); }
-      if (f.mode === "kelime") {
-        const ql = f.q.toLowerCase();
-        const hasExact = (r: EmsalResult) => `${r.subject ?? ""} ${r.summary ?? ""}`.toLowerCase().includes(ql);
-        results = [...results.filter(hasExact), ...results.filter((r) => !hasExact(r))];
-      }
-    } else {
-      const { data } = await applyCommon(supabase.from("case_laws").select(cols)).limit(40);
-      for (const row of (data ?? []) as EmsalResult[]) {
-        if (row.id && !seen.has(row.id)) { seen.add(row.id); results.push(row); }
-      }
+        return data ?? [];
+      })(),
+
+      // Sparse (FTS) Arama
+      (async () => {
+        let query = supabase
+          .from("case_laws")
+          .select(cols)
+          .textSearch("fts", f.q, { type: "websearch", config: "turkish" });
+
+        if (courtFilter) query = query.eq("source", courtFilter);
+        if (daireFilter) query = query.ilike("court", `%${daireFilter}.%`);
+        if (f.esas) query = query.ilike("case_number", `%${f.esas}%`);
+        if (f.karar) query = query.ilike("decision_number", `%${f.karar}%`);
+        if (startDateFilter) query = query.gte("decision_date", startDateFilter);
+        if (endDateFilter) query = query.lte("decision_date", endDateFilter);
+
+        const { data, error } = await query.limit(50);
+        if (error) {
+          console.error("Supabase sparse search error:", error);
+          return [];
+        }
+        return (data ?? []) as EmsalResult[];
+      })()
+    ]);
+
+    const denseList = densePromise.status === "fulfilled" ? densePromise.value : [];
+    const sparseList = sparsePromise.status === "fulfilled" ? sparsePromise.value : [];
+
+    // 2. Reciprocal Rank Fusion (RRF) ile listeleri birleştir
+    const rrfScores = rrf(denseList, sparseList, 60);
+
+    const docMap = new Map<string, EmsalResult>();
+    denseList.forEach(d => { if (d.id) docMap.set(d.id, d); });
+    sparseList.forEach(d => { if (d.id) docMap.set(d.id, d); });
+
+    results = rrfScores.map(item => {
+      const doc = docMap.get(item.id)!;
+      return {
+        ...doc,
+        score: item.score
+      };
+    });
+
+    // 3. Cohere Rerank Entegrasyonu (varsa ve etkinse)
+    if (isRerankActive && results.length > 0) {
+      const docsToRerank = results.map(doc => ({
+        id: doc.id!,
+        text: `${doc.court} · ${doc.case_number} · ${doc.subject}\n${doc.summary}`.trim()
+      }));
+      const reranked = await cohereRerank(f.q, docsToRerank, 20); // Top 20 aday seç
+      const rerankedMap = new Map<string, number>();
+      reranked.forEach(item => rerankedMap.set(item.id, item.score));
+
+      const rerankedDocs = results
+        .filter(doc => rerankedMap.has(doc.id!))
+        .map(doc => ({ ...doc, score: rerankedMap.get(doc.id!) }))
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+
+      const otherDocs = results.filter(doc => !rerankedMap.has(doc.id!));
+      results = [...rerankedDocs, ...otherDocs];
+    }
+  } else {
+    // Sadece metadata filtreleri varsa standart SQL sorgusu
+    let query = supabase.from("case_laws").select(cols);
+    if (courtFilter) query = query.eq("source", courtFilter);
+    if (daireFilter) query = query.ilike("court", `%${daireFilter}.%`);
+    if (f.esas) query = query.ilike("case_number", `%${f.esas}%`);
+    if (f.karar) query = query.ilike("decision_number", `%${f.karar}%`);
+    if (startDateFilter) query = query.gte("decision_date", startDateFilter);
+    if (endDateFilter) query = query.lte("decision_date", endDateFilter);
+
+    const { data, error } = await query.limit(50);
+    if (!error && data) {
+      results = data as EmsalResult[];
     }
   }
 
+  // 4. Belge Türü & Özet Filtreleri (Post-processing)
   if (f.belgeTuru && BELGE_TURU_PATTERNS[f.belgeTuru]) {
     const patterns = BELGE_TURU_PATTERNS[f.belgeTuru];
     results = results.filter((r) => {
@@ -374,10 +550,19 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
     results = results.filter((r) => (f.ozet === "ozetli" ? !!r.summary : !r.summary));
   }
 
-  if (f.sort === "guncel") results = [...results].sort((a, b) => (b.decision_date ?? "").localeCompare(a.decision_date ?? ""));
-  else if (f.sort === "eski") results = [...results].sort((a, b) => (a.decision_date ?? "9999").localeCompare(b.decision_date ?? "9999"));
-  else if (f.sort === "daire") results = [...results].sort((a, b) => (a.court ?? "").localeCompare(b.court ?? "", "tr"));
+  // 5. Sıralama Seçenekleri
+  if (f.sort === "guncel") {
+    results = [...results].sort((a, b) => (b.decision_date ?? "").localeCompare(a.decision_date ?? ""));
+  } else if (f.sort === "eski") {
+    results = [...results].sort((a, b) => (a.decision_date ?? "9999").localeCompare(b.decision_date ?? "9999"));
+  } else if (f.sort === "daire") {
+    results = [...results].sort((a, b) => (a.court ?? "").localeCompare(b.court ?? "", "tr"));
+  } else if (f.sort === "alakalilik" && f.q) {
+    // Alakalılık sıralamasında skoru olan (rerank veya RRF skoru) üstte gelir
+    results = [...results].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+  }
 
+  // 6. Sayfalama
   const total = results.length;
   const start = (f.page - 1) * PAGE_SIZE;
   return { results: results.slice(start, start + PAGE_SIZE), total };
@@ -388,6 +573,7 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
 export async function GET(request: Request) {
   try {
     const f = parseFilters(new URL(request.url));
+    preprocessQuery(f);
 
     const hasAnyFilter = !!(f.esas || f.karar || f.startDate || f.endDate || f.court !== "all" || f.belgeTuru);
     if ((!f.q || f.q.length < 2) && !hasAnyFilter) {

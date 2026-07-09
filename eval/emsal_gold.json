@@ -1,0 +1,706 @@
+{
+  "kesin_eslesme": [
+    {
+      "id": "kesin_1",
+      "query_type": "kesin_eslesme",
+      "q": "7. Hukuk Dairesi 2013/19425 E. 2014/3950 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "7. Hukuk Dairesi",
+        "esas": "2013/19425",
+        "karar": "2014/3950",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "98045400",
+      "metadata": {
+        "court": "7. Hukuk Dairesi",
+        "esasNo": "2013/19425",
+        "kararNo": "2014/3950",
+        "kararTarihi": "2014-02-16T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_2",
+      "query_type": "kesin_eslesme",
+      "q": "9. Hukuk Dairesi 2020/7207 E. 2020/15463 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "9. Hukuk Dairesi",
+        "esas": "2020/7207",
+        "karar": "2020/15463",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "614392700",
+      "metadata": {
+        "court": "9. Hukuk Dairesi",
+        "esasNo": "2020/7207",
+        "kararNo": "2020/15463",
+        "kararTarihi": "2020-11-09T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_3",
+      "query_type": "kesin_eslesme",
+      "q": "6. Hukuk Dairesi 2014/5570 E. 2015/211 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "6. Hukuk Dairesi",
+        "esas": "2014/5570",
+        "karar": "2015/211",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "145929700",
+      "metadata": {
+        "court": "6. Hukuk Dairesi",
+        "esasNo": "2014/5570",
+        "kararNo": "2015/211",
+        "kararTarihi": "2015-01-13T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_4",
+      "query_type": "kesin_eslesme",
+      "q": "2. Hukuk Dairesi 2018/6638 E. 2018/12211 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "2. Hukuk Dairesi",
+        "esas": "2018/6638",
+        "karar": "2018/12211",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "454397300",
+      "metadata": {
+        "court": "2. Hukuk Dairesi",
+        "esasNo": "2018/6638",
+        "kararNo": "2018/12211",
+        "kararTarihi": "2018-10-30T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_5",
+      "query_type": "kesin_eslesme",
+      "q": "8. Hukuk Dairesi 2013/17732 E. 2014/16373 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "8. Hukuk Dairesi",
+        "esas": "2013/17732",
+        "karar": "2014/16373",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "335825200",
+      "metadata": {
+        "court": "8. Hukuk Dairesi",
+        "esasNo": "2013/17732",
+        "kararNo": "2014/16373",
+        "kararTarihi": "2014-09-17T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_6",
+      "query_type": "kesin_eslesme",
+      "q": "19. Hukuk Dairesi 2008/210 E. 2008/6782 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "19. Hukuk Dairesi",
+        "esas": "2008/210",
+        "karar": "2008/6782",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "888341500",
+      "metadata": {
+        "court": "19. Hukuk Dairesi",
+        "esasNo": "2008/210",
+        "kararNo": "2008/6782",
+        "kararTarihi": "2008-06-16T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_7",
+      "query_type": "kesin_eslesme",
+      "q": "3. Ceza Dairesi 2019/13934 E. 2019/18335 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "3. Ceza Dairesi",
+        "esas": "2019/13934",
+        "karar": "2019/18335",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "553537100",
+      "metadata": {
+        "court": "3. Ceza Dairesi",
+        "esasNo": "2019/13934",
+        "kararNo": "2019/18335",
+        "kararTarihi": "2019-10-13T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_8",
+      "query_type": "kesin_eslesme",
+      "q": "10. Daire 1989/2299 E. 1989/1735 K.",
+      "filters": {
+        "q": "",
+        "court": "danistay",
+        "daire": "10. Daire",
+        "esas": "1989/2299",
+        "karar": "1989/1735",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "18014800",
+      "metadata": {
+        "court": "10. Daire",
+        "esasNo": "1989/2299",
+        "kararNo": "1989/1735",
+        "kararTarihi": "1989-10-11T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_9",
+      "query_type": "kesin_eslesme",
+      "q": "1. Hukuk Dairesi 2016/9028 E. 2019/3024 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "1. Hukuk Dairesi",
+        "esas": "2016/9028",
+        "karar": "2019/3024",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "509609100",
+      "metadata": {
+        "court": "1. Hukuk Dairesi",
+        "esasNo": "2016/9028",
+        "kararNo": "2019/3024",
+        "kararTarihi": "2019-05-14T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_10",
+      "query_type": "kesin_eslesme",
+      "q": "2. Hukuk Dairesi 2006/22314 E. 2007/16874 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "2. Hukuk Dairesi",
+        "esas": "2006/22314",
+        "karar": "2007/16874",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "462293400",
+      "metadata": {
+        "court": "2. Hukuk Dairesi",
+        "esasNo": "2006/22314",
+        "kararNo": "2007/16874",
+        "kararTarihi": "2007-12-02T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_11",
+      "query_type": "kesin_eslesme",
+      "q": "11. Hukuk Dairesi 2020/4497 E. 2021/6897 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "11. Hukuk Dairesi",
+        "esas": "2020/4497",
+        "karar": "2021/6897",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "723525900",
+      "metadata": {
+        "court": "11. Hukuk Dairesi",
+        "esasNo": "2020/4497",
+        "kararNo": "2021/6897",
+        "kararTarihi": "2021-12-06T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_12",
+      "query_type": "kesin_eslesme",
+      "q": "Ceza Genel Kurulu 2023/519 E. 2024/105 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "Ceza Genel Kurulu",
+        "esas": "2023/519",
+        "karar": "2024/105",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "1021924400",
+      "metadata": {
+        "court": "Ceza Genel Kurulu",
+        "esasNo": "2023/519",
+        "kararNo": "2024/105",
+        "kararTarihi": "2024-02-27T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_13",
+      "query_type": "kesin_eslesme",
+      "q": "15. Ceza Dairesi 2018/3412 E. 2018/5377 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "15. Ceza Dairesi",
+        "esas": "2018/3412",
+        "karar": "2018/5377",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "440617600",
+      "metadata": {
+        "court": "15. Ceza Dairesi",
+        "esasNo": "2018/3412",
+        "kararNo": "2018/5377",
+        "kararTarihi": "2018-07-11T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_14",
+      "query_type": "kesin_eslesme",
+      "q": "9. Hukuk Dairesi 2025/8371 E. 2025/9609 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "9. Hukuk Dairesi",
+        "esas": "2025/8371",
+        "karar": "2025/9609",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "1206667800",
+      "metadata": {
+        "court": "9. Hukuk Dairesi",
+        "esasNo": "2025/8371",
+        "kararNo": "2025/9609",
+        "kararTarihi": "2025-12-07T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_15",
+      "query_type": "kesin_eslesme",
+      "q": "Hukuk Genel Kurulu 2023/975 E. 2025/324 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "Hukuk Genel Kurulu",
+        "esas": "2023/975",
+        "karar": "2025/324",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "1152709800",
+      "metadata": {
+        "court": "Hukuk Genel Kurulu",
+        "esasNo": "2023/975",
+        "kararNo": "2025/324",
+        "kararTarihi": "2025-05-20T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_16",
+      "query_type": "kesin_eslesme",
+      "q": "3. Hukuk Dairesi 2016/8667 E. 2018/284 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "3. Hukuk Dairesi",
+        "esas": "2016/8667",
+        "karar": "2018/284",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "402731000",
+      "metadata": {
+        "court": "3. Hukuk Dairesi",
+        "esasNo": "2016/8667",
+        "kararNo": "2018/284",
+        "kararTarihi": "2018-01-16T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_17",
+      "query_type": "kesin_eslesme",
+      "q": "17. Hukuk Dairesi 2015/9179 E. 2015/8687 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "17. Hukuk Dairesi",
+        "esas": "2015/9179",
+        "karar": "2015/8687",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "186079900",
+      "metadata": {
+        "court": "17. Hukuk Dairesi",
+        "esasNo": "2015/9179",
+        "kararNo": "2015/8687",
+        "kararTarihi": "2015-06-14T21:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_18",
+      "query_type": "kesin_eslesme",
+      "q": "19. Hukuk Dairesi 2015/11451 E. 2015/15308 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "19. Hukuk Dairesi",
+        "esas": "2015/11451",
+        "karar": "2015/15308",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "193972300",
+      "metadata": {
+        "court": "19. Hukuk Dairesi",
+        "esasNo": "2015/11451",
+        "kararNo": "2015/15308",
+        "kararTarihi": "2015-11-22T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_19",
+      "query_type": "kesin_eslesme",
+      "q": "21. Hukuk Dairesi 2012/13995 E. 2013/5503 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "21. Hukuk Dairesi",
+        "esas": "2012/13995",
+        "karar": "2013/5503",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "823596700",
+      "metadata": {
+        "court": "21. Hukuk Dairesi",
+        "esasNo": "2012/13995",
+        "kararNo": "2013/5503",
+        "kararTarihi": "2013-03-20T22:00:00.000+00:00"
+      }
+    },
+    {
+      "id": "kesin_20",
+      "query_type": "kesin_eslesme",
+      "q": "Hukuk Genel Kurulu 2007/206 E. 2007/202 K.",
+      "filters": {
+        "q": "",
+        "court": "yargitay",
+        "daire": "Hukuk Genel Kurulu",
+        "esas": "2007/206",
+        "karar": "2007/202",
+        "startDate": "",
+        "endDate": ""
+      },
+      "target_document_id": "16591800",
+      "metadata": {
+        "court": "Hukuk Genel Kurulu",
+        "esasNo": "2007/206",
+        "kararNo": "2007/202",
+        "kararTarihi": "2007-04-10T21:00:00.000+00:00"
+      }
+    }
+  ],
+  "konu_bazli": [
+    {
+      "id": "konu_1",
+      "query_type": "konu_bazli",
+      "q": "silahlı saldırı",
+      "filters": {
+        "q": "silahlı saldırı",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_2",
+      "query_type": "konu_bazli",
+      "q": "kıdem tazminatı zamanaşımı",
+      "filters": {
+        "q": "kıdem tazminatı zamanaşımı",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_3",
+      "query_type": "konu_bazli",
+      "q": "kira tespit davası",
+      "filters": {
+        "q": "kira tespit davası",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_4",
+      "query_type": "konu_bazli",
+      "q": "velayet hakkının kötüye kullanılması",
+      "filters": {
+        "q": "velayet hakkının kötüye kullanılması",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_5",
+      "query_type": "konu_bazli",
+      "q": "haksız işgal ecrimisil tazminatı",
+      "filters": {
+        "q": "haksız işgal ecrimisil tazminatı",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_6",
+      "query_type": "konu_bazli",
+      "q": "murisin mal kaçırması tapu iptal",
+      "filters": {
+        "q": "murisin mal kaçırması tapu iptal",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_7",
+      "query_type": "konu_bazli",
+      "q": "ayıplı araç satışı iade",
+      "filters": {
+        "q": "ayıplı araç satışı iade",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_8",
+      "query_type": "konu_bazli",
+      "q": "nitelikli dolandırıcılık bilişim sistemleri",
+      "filters": {
+        "q": "nitelikli dolandırıcılık bilişim sistemleri",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_9",
+      "query_type": "konu_bazli",
+      "q": "kat karşılığı inşaat sözleşmesi fesih",
+      "filters": {
+        "q": "kat karşılığı inşaat sözleşmesi fesih",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_10",
+      "query_type": "konu_bazli",
+      "q": "trafik kazası destekten yoksun kalma",
+      "filters": {
+        "q": "trafik kazası destekten yoksun kalma",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_11",
+      "query_type": "konu_bazli",
+      "q": "iş kazası maddi manevi tazminat",
+      "filters": {
+        "q": "iş kazası maddi manevi tazminat",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_12",
+      "query_type": "konu_bazli",
+      "q": "kamulaştırmasız el atma tazminat",
+      "filters": {
+        "q": "kamulaştırmasız el atma tazminat",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_13",
+      "query_type": "konu_bazli",
+      "q": "marka tecavüzünün önlenmesi",
+      "filters": {
+        "q": "marka tecavüzünün önlenmesi",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_14",
+      "query_type": "konu_bazli",
+      "q": "tüketici hakem heyeti kararına itiraz",
+      "filters": {
+        "q": "tüketici hakem heyeti kararına itiraz",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_15",
+      "query_type": "konu_bazli",
+      "q": "hizmet tespiti davalarında hak düşürücü süre",
+      "filters": {
+        "q": "hizmet tespiti davalarında hak düşürücü süre",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_16",
+      "query_type": "konu_bazli",
+      "q": "çek şikayeti karşılıksız çek",
+      "filters": {
+        "q": "çek şikayeti karşılıksız çek",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_17",
+      "query_type": "konu_bazli",
+      "q": "önalım şufa davası hak düşürücü süre",
+      "filters": {
+        "q": "önalım şufa davası hak düşürücü süre",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_18",
+      "query_type": "konu_bazli",
+      "q": "tasarrufun iptali davası mal kaçırma",
+      "filters": {
+        "q": "tasarrufun iptali davası mal kaçırma",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_19",
+      "query_type": "konu_bazli",
+      "q": "yıllık ücretli izin hakkı ispatı",
+      "filters": {
+        "q": "yıllık ücretli izin hakkı ispatı",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    },
+    {
+      "id": "konu_20",
+      "query_type": "konu_bazli",
+      "q": "haksız ihtiyati tedbir tazminat",
+      "filters": {
+        "q": "haksız ihtiyati tedbir tazminat",
+        "court": "all",
+        "daire": "",
+        "esas": "",
+        "karar": "",
+        "startDate": "",
+        "endDate": ""
+      }
+    }
+  ]
+}
