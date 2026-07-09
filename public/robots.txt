@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /buro/
+Disallow: /panel/
+Disallow: /api/
+
+Sitemap: https://mizanim.com/sitemap.xml

@@ -1,0 +1,290 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Check, Star, Mail, ArrowRight, ShieldCheck, Scale, Sparkles } from "lucide-react";
+
+export default function FiyatlandirmaPage() {
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+
+  const plans = [
+    {
+      name: "Vatandaş",
+      tagline: "Hukuki rehberlik herkes için",
+      price: "49₺",
+      period: "tek_seferlik",
+      credits: "50 kredi",
+      features: [
+        "Kayıtta 20 kredi hediye",
+        "AI hukuk asistanı",
+        "Belge analizi",
+        "Dilekçe üretimi",
+        "Emsal arama",
+      ],
+      buttonText: "Ücretsiz Başla",
+      buttonHref: "/kayit",
+      isPopular: false,
+      accent: false,
+    },
+    {
+      name: "Avukat Pro",
+      tagline: "Profesyonel hukuk pratiği için",
+      price: billingCycle === "monthly" ? "1.499₺" : "1.199₺",
+      period: "ay",
+      credits: "1.000 AI sorgu / ay",
+      features: [
+        "1.000 AI sorgu/ay",
+        "Tüm AI özellikleri (sohbet, AI özet, belge analizi, dilekçe)",
+        "Sınırsız emsal + mevzuat arama",
+        "CRM müvekkil yönetimi",
+        "Dava dosya takibi",
+        "Akıllı takvim & alarm",
+        "Finans takibi",
+      ],
+      buttonText: "14 Gün Ücretsiz Dene",
+      buttonHref: "/kayit?role=avukat",
+      isPopular: false,
+      accent: false,
+    },
+    {
+      name: "Avukat Max",
+      tagline: "Tam donanımlı profesyonel",
+      price: billingCycle === "monthly" ? "2.999₺" : "2.399₺",
+      period: "ay",
+      credits: "3.000 AI sorgu / ay",
+      features: [
+        "Avukat Pro'nun tüm özellikleri",
+        "3.000 AI sorgu/ay",
+        "UYAP entegrasyonu & duruşma sorgulama",
+        "UETS e-tebligat entegrasyonu",
+        "Öncelikli işlemci & hız",
+      ],
+      buttonText: "14 Gün Ücretsiz Dene",
+      buttonHref: "/kayit?role=avukat&plan=max",
+      isPopular: true,
+      accent: true,
+    },
+    {
+      name: "Büro Planı",
+      tagline: "Hukuk büroları için tam paket",
+      price: "İletişime Geç",
+      period: "ozel",
+      credits: "Sınırsız / Esnek",
+      features: [
+        "Avukat Max'in tüm özellikleri",
+        "Çoklu kullanıcı (5 hesaba kadar)",
+        "Ortak çalışma alanı",
+        "Sınırsız / Esnek sorgu kotası",
+        "Kurumsal onboarding & eğitim",
+        "Özel SLA & öncelikli destek",
+        "Emsal içtihat veri tabanı entegrasyonu",
+        "Raporlama & performans paneli",
+      ],
+      buttonText: "Bizimle İletişime Geçin",
+      buttonHref: "/iletisim",
+      isPopular: false,
+      accent: false,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#0f1729] text-white overflow-x-hidden selection:bg-[#c9a84c] selection:text-white">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1e293b] via-[#0f1729] to-[#0f1729] pointer-events-none z-0" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-[radial-gradient(50%_50%_at_50%_50%,_var(--tw-gradient-stops))] from-[#c9a84c]/5 to-transparent pointer-events-none z-0" />
+
+      {/* Header */}
+      <header className="relative z-10 border-b border-white/5 bg-[#0f1729]/80 backdrop-blur-md sticky top-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c9a84c] to-[#e5c060] flex items-center justify-center">
+              <Scale className="w-4 h-4 text-[#0f1729]" />
+            </div>
+            <span className="font-heading text-lg font-bold tracking-tight text-white">Mizanım</span>
+          </Link>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="text-sm text-gray-400 hover:text-white transition-colors">Ana Sayfa</Link>
+            <Link href="/fiyatlandirma" className="text-sm text-[#c9a84c] font-semibold">Fiyatlandırma</Link>
+            <Link href="/giris" className="text-sm text-gray-300 hover:text-white transition-colors">Giriş Yap</Link>
+            <Link
+              href="/kayit"
+              className="px-4 py-2 rounded-lg bg-[#c9a84c] hover:bg-[#b08f3b] text-[#0f1729] text-xs font-bold transition-all duration-300 shadow-[0_0_20px_rgba(201,168,76,0.15)] hover:shadow-[0_0_20px_rgba(201,168,76,0.3)]"
+            >
+              Ücretsiz Dene
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-1.5 bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-full px-4 py-1.5 mb-4 text-[#c9a84c] text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Esnek ve Şeffaf Fiyatlandırma</span>
+          </div>
+          <h1 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight mb-4">
+            Bütçenize ve İhtiyacınıza Uygun <span className="text-[#c9a84c] bg-gradient-to-r from-[#c9a84c] to-[#f4d682] bg-clip-text text-transparent">Hukuk Paketleri</span>
+          </h1>
+          <p className="font-body text-gray-400 text-base sm:text-lg leading-relaxed">
+            Vatandaşlar için kolaylaştırılmış hızlı çözümler, hukuk profesyonelleri için tam donanımlı baro entegrasyonları ve AI destekli araçlar.
+          </p>
+
+          {/* Toggle Monthly / Yearly */}
+          <div className="flex items-center justify-center gap-4 mt-10">
+            <span className={`text-sm ${billingCycle === "monthly" ? "text-white font-semibold" : "text-gray-400"}`}>Aylık Ödeme</span>
+            <button
+              onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
+              className="relative w-12 h-6 bg-white/10 rounded-full p-1 transition-all duration-300 focus:outline-none"
+            >
+              <div
+                className={`w-4 h-4 bg-[#c9a84c] rounded-full transition-all duration-300 ${
+                  billingCycle === "yearly" ? "translate-x-6" : "translate-x-0"
+                }`}
+              />
+            </button>
+            <span className={`text-sm flex items-center gap-1.5 ${billingCycle === "yearly" ? "text-[#c9a84c] font-semibold" : "text-gray-400"}`}>
+              Yıllık Ödeme
+              <span className="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                %20 İndirim
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`relative rounded-3xl p-6 flex flex-col transition-all duration-300 ${
+                plan.isPopular
+                  ? "bg-gradient-to-b from-[#1a2744] to-[#0f1729] border-2 border-[#c9a84c] shadow-[0_0_30px_rgba(201,168,76,0.08)] scale-105 z-10"
+                  : "bg-white/5 border border-white/5 hover:border-white/10"
+              }`}
+            >
+              {plan.isPopular && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  <span className="inline-flex items-center gap-1 bg-[#c9a84c] text-[#0f1729] text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full shadow">
+                    <Star className="w-3 h-3 fill-current" />
+                    En Popüler
+                  </span>
+                </div>
+              )}
+
+              {/* Title & Tagline */}
+              <div className="mb-6">
+                <h3 className="font-heading text-xl font-bold text-white mb-1">{plan.name}</h3>
+                <p className="text-xs text-gray-400 line-clamp-2 min-h-[32px]">{plan.tagline}</p>
+              </div>
+
+              {/* Price Area */}
+              <div className="mb-6 flex flex-col justify-end">
+                <div className="flex items-baseline gap-1">
+                  <span className="font-heading text-3xl sm:text-4xl font-extrabold text-white">
+                    {plan.price}
+                  </span>
+                  {plan.period === "ay" && (
+                    <span className="text-xs text-gray-400 font-medium">/ ay</span>
+                  )}
+                  {plan.period === "tek_seferlik" && (
+                    <span className="text-xs text-[#c9a84c] font-semibold bg-[#c9a84c]/10 border border-[#c9a84c]/20 px-2 py-0.5 rounded ml-2">
+                      {plan.credits}
+                    </span>
+                  )}
+                  {plan.period === "ozel" && (
+                    <span className="text-xs text-gray-400 font-medium">esnek model</span>
+                  )}
+                </div>
+                {plan.period === "ay" && (
+                  <p className="text-[10px] text-gray-500 mt-1 font-medium">
+                    {plan.credits} dahil
+                  </p>
+                )}
+                {plan.period === "tek_seferlik" && (
+                  <p className="text-[10px] text-[#c9a84c] mt-1 font-medium">
+                    Ek krediler sonradan alınabilir
+                  </p>
+                )}
+                {plan.period === "ozel" && (
+                  <p className="text-[10px] text-gray-500 mt-1 font-medium">
+                    Sınırsız sorgu ve özel sunucu
+                  </p>
+                )}
+              </div>
+
+              {/* CTA Button */}
+              <Link
+                href={plan.buttonHref}
+                className={`w-full py-3 px-4 rounded-xl font-bold text-xs text-center transition-all duration-300 mb-6 flex items-center justify-center gap-1.5 ${
+                  plan.accent
+                    ? "bg-[#c9a84c] text-[#0f1729] hover:bg-[#b08f3b]"
+                    : "bg-white/10 text-white hover:bg-white/15 border border-white/5"
+                }`}
+              >
+                <span>{plan.buttonText}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+
+              {/* Features List */}
+              <div className="flex-1">
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-3">Paket İçeriği</p>
+                <ul className="space-y-2.5 text-xs text-gray-300">
+                  {plan.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2 leading-tight">
+                      <Check className={`w-3.5 h-3.5 flex-shrink-0 mt-0.5 ${plan.accent ? "text-[#c9a84c]" : "text-green-500"}`} />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Info & FAQ Notice */}
+        <div className="mt-20 border-t border-white/5 pt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 text-[#c9a84c]" />
+            </div>
+            <div>
+              <h4 className="font-heading text-sm font-bold text-white mb-1">Güvenli Altyapı ve Ödemeler</h4>
+              <p className="font-body text-xs text-gray-400 leading-relaxed">
+                Tüm verileriniz 256-bit SSL şifrelemeyle korunur. Ödemeleriniz iyzico aracılığıyla %100 güvence altındadır.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+              <Scale className="w-5 h-5 text-[#c9a84c]" />
+            </div>
+            <div>
+              <h4 className="font-heading text-sm font-bold text-white mb-1">Sınırsız Arama Özelliği</h4>
+              <p className="font-body text-xs text-gray-400 leading-relaxed">
+                Avukat paketlerimizde karar arama ve mevzuat incelemeleri kotanızdan düşmez. Sadece AI asistanı sorguları kotayı etkiler.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
+              <Mail className="w-5 h-5 text-[#c9a84c]" />
+            </div>
+            <div>
+              <h4 className="font-heading text-sm font-bold text-white mb-1">Sorularınız mı var?</h4>
+              <p className="font-body text-xs text-gray-400 leading-relaxed">
+                Aklınıza takılan sorular veya kurumsal entegrasyon talepleriniz için bize ulaşın:{" "}
+                <a href="mailto:destek@mizanim.com" className="text-[#c9a84c] underline hover:text-white transition-colors">destek@mizanim.com</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-white/5 bg-[#080d1a] py-8 text-center text-xs text-gray-500">
+        <p>© 2026 Mizanım AI Hukuk Teknolojileri. Tüm hakları saklıdır. Bu platform hukuki tavsiye sunmaz.</p>
+      </footer>
+    </div>
+  );
+}
