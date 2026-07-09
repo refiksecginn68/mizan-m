@@ -11,6 +11,20 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Sorgu kotası harcaması
+  const serviceSupabase = createServiceClient() as Any;
+  const { data: spent } = await serviceSupabase.rpc("spend_queries", {
+    p_user_id: user.id,
+    p_amount: 1,
+  });
+
+  if (!spent) {
+    return Response.json(
+      { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
+      { status: 402 }
+    );
+  }
+
   const body = await request.json() as {
     konu: string;
     tur?: string;
@@ -24,7 +38,6 @@ export async function POST(request: Request) {
     return Response.json({ error: "Dilekçe konusu gereklidir" }, { status: 400 });
   }
 
-  const serviceSupabase = createServiceClient() as Any;
   const { data: profile } = await serviceSupabase
     .from("profiles")
     .select("full_name")

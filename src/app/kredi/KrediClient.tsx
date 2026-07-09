@@ -35,15 +35,25 @@ interface KrediClientProps {
   currentBalance: number;
   transactions: CreditTransaction[];
   hasIyzicoKey: boolean;
+  isAvukat?: boolean;
+  totalQueries?: number;
 }
 
 const CREDIT_COSTS = [
-  { label: "Basit soru", cost: 1 },
-  { label: "Emsal araştırma", cost: 3 },
-  { label: "Belge analizi", cost: 5 },
-  { label: "Dilekçe üretimi", cost: 8 },
-  { label: "Savunma / Sözleşme", cost: 10 },
-  { label: "Medya analizi", cost: 7 },
+  { label: "Basit soru", cost: "1 kredi" },
+  { label: "Emsal araştırma", cost: "3 kredi" },
+  { label: "Belge analizi", cost: "5 kredi" },
+  { label: "Dilekçe üretimi", cost: "8 kredi" },
+  { label: "Savunma / Sözleşme", cost: "10 kredi" },
+  { label: "Medya analizi", cost: "7 kredi" },
+];
+
+const LAWYER_COSTS = [
+  { label: "MizanAI Hukuki Sohbet", cost: "1 sorgu" },
+  { label: "Belge & Evrak Analizi", cost: "1 sorgu" },
+  { label: "Dilekçe Üretimi / Düzenleme", cost: "1 sorgu" },
+  { label: "Delil & Medya Analizi", cost: "1 sorgu" },
+  { label: "Emsal / Mevzuat Arama", cost: "Sınırsız / Ücretsiz" },
 ];
 
 function transactionIcon(type: string) {
@@ -78,6 +88,8 @@ export default function KrediClient({
   currentBalance,
   transactions,
   hasIyzicoKey,
+  isAvukat = false,
+  totalQueries = 0,
 }: KrediClientProps) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -125,23 +137,35 @@ export default function KrediClient({
 
   return (
     <div className="space-y-8">
-      {/* Kredi Bakiyesi */}
+      {/* Kredi / Sorgu Bakiyesi */}
       <div className="card gradient-primary text-white p-6 md:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-body text-white/70 text-sm">Mevcut Krediniz</p>
+            <p className="font-body text-white/70 text-sm">
+              {isAvukat ? "Kalan Yapay Zeka Sorgu Kotanız" : "Mevcut Krediniz"}
+            </p>
             <div className="flex items-end gap-2 mt-1">
               <span className="font-heading text-5xl font-bold text-accent">
                 {currentBalance}
               </span>
-              <span className="font-body text-white/80 text-lg mb-1">kredi</span>
+              <span className="font-body text-white/80 text-lg mb-1">
+                {isAvukat ? `/ ${totalQueries} sorgu` : "kredi"}
+              </span>
             </div>
           </div>
           <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
             <Coins className="w-8 h-8 text-accent" />
           </div>
         </div>
-        {currentBalance < 5 && (
+        {isAvukat && currentBalance < 20 && (
+          <div className="mt-4 bg-white/10 border border-white/20 rounded-lg px-4 py-2 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-accent flex-shrink-0" />
+            <p className="font-body text-sm text-white/90">
+              Sorgu kotanız azalıyor. İşlem yapmaya devam edebilmek için ek sorgu paketi satın alın.
+            </p>
+          </div>
+        )}
+        {!isAvukat && currentBalance < 5 && (
           <div className="mt-4 bg-white/10 border border-white/20 rounded-lg px-4 py-2 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-accent flex-shrink-0" />
             <p className="font-body text-sm text-white/90">
@@ -174,10 +198,10 @@ export default function KrediClient({
         </div>
       )}
 
-      {/* Kredi Paketleri */}
+      {/* Kredi / Sorgu Paketleri */}
       <section>
         <h2 className="font-heading text-xl font-bold text-primary mb-4">
-          Kredi Satın Al
+          {isAvukat ? "Ek Sorgu Paketi (Kontör) Satın Al" : "Kredi Satın Al"}
         </h2>
         <div className="grid sm:grid-cols-3 gap-4">
           {packages.map((pkg) => (
@@ -206,14 +230,14 @@ export default function KrediClient({
                     {pkg.credits}
                   </span>
                   <span className="font-body text-muted-foreground text-sm mb-1">
-                    kredi
+                    {isAvukat ? "sorgu" : "kredi"}
                   </span>
                 </div>
                 <p className="font-heading text-2xl font-bold text-primary mt-1">
                   {pkg.price_try.toLocaleString("tr-TR")} ₺
                 </p>
                 <p className="font-body text-xs text-muted-foreground mt-1">
-                  ≈ {(pkg.price_try / pkg.credits).toFixed(2)} ₺ / kredi
+                  ≈ {(pkg.price_try / pkg.credits).toFixed(2)} ₺ / {isAvukat ? "sorgu" : "kredi"}
                 </p>
               </div>
               <button
@@ -258,20 +282,20 @@ export default function KrediClient({
         </div>
       </section>
 
-      {/* Kredi Harcama Tablosu */}
+      {/* Kredi / Sorgu Harcama Tablosu */}
       <section>
         <h2 className="font-heading text-xl font-bold text-primary mb-4">
-          Kredi Harcama Rehberi
+          {isAvukat ? "Sorgu Harcama Rehberi" : "Kredi Harcama Rehberi"}
         </h2>
         <div className="card p-0 overflow-hidden">
           <div className="divide-y divide-border">
-            {CREDIT_COSTS.map((item) => (
+            {(isAvukat ? LAWYER_COSTS : CREDIT_COSTS).map((item) => (
               <div
                 key={item.label}
                 className="flex items-center justify-between px-5 py-3"
               >
                 <span className="font-body text-sm text-foreground">{item.label}</span>
-                <span className="legal-citation text-xs">{item.cost} kredi</span>
+                <span className="legal-citation text-xs">{item.cost}</span>
               </div>
             ))}
           </div>
@@ -314,7 +338,7 @@ export default function KrediClient({
                   <span
                     className={`font-body text-sm font-bold flex-shrink-0 ml-3 ${transactionColor(tx.type)}`}
                   >
-                    {transactionSign(tx.amount)} kredi
+                    {transactionSign(tx.amount)} {isAvukat ? "sorgu" : "kredi"}
                   </span>
                 </div>
               ))}
@@ -329,7 +353,7 @@ export default function KrediClient({
           <CheckCircle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
           <p className="font-body text-xs text-muted-foreground">
             Ödemeler iyzico altyapısıyla güvenli şekilde işlenir. Satın alınan
-            krediler iade edilemez. Teknik sorunlar için{" "}
+            paketler iade edilemez. Teknik sorunlar için{" "}
             <a
               href="mailto:destek@mizanim.com"
               className="underline hover:text-primary transition-colors"

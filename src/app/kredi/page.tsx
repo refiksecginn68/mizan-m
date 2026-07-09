@@ -7,10 +7,14 @@ import { Scale, CreditCard, User, LogOut, ArrowLeft } from "lucide-react";
 import KrediClient from "./KrediClient";
 import type { Database } from "@/types/database";
 
-type Profile = Pick<
-  Database["public"]["Tables"]["profiles"]["Row"],
-  "full_name" | "user_type" | "credit_balance"
->;
+interface Profile {
+  full_name: string | null;
+  user_type: string;
+  credit_balance: number | null;
+  monthly_query_limit?: number;
+  monthly_query_count?: number;
+  additional_queries?: number;
+}
 type CreditPackage = Database["public"]["Tables"]["credit_packages"]["Row"];
 type CreditTransaction = Database["public"]["Tables"]["credit_transactions"]["Row"];
 
@@ -32,19 +36,22 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
   // Profil ve kredi bakiyesi
   const profileResult = await (serviceClient
     .from("profiles")
-    .select("full_name, user_type, credit_balance")
+    .select("full_name, user_type, credit_balance, monthly_query_limit, monthly_query_count, additional_queries")
     .eq("id", user.id)
     .single() as any) as Promise<{ data: Profile | null; error: any }>;
 
   const { data: profile } = await profileResult;
 
-  if (!profile || profile.user_type !== "vatandas") redirect("/buro");
+  if (!profile) redirect("/giris");
 
-  // Kredi paketleri
+  const isAvukat = profile.user_type === "avukat";
+
+  // Kredi / Sorgu paketleri
   const packagesResult = await (serviceClient
     .from("credit_packages")
     .select("*")
     .eq("is_active", true)
+    .eq("package_type" as any, isAvukat ? "query" : "credit")
     .order("is_popular", { ascending: false })
     .order("credits", { ascending: true }) as any) as Promise<{
     data: CreditPackage[] | null;
@@ -65,6 +72,9 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
 
   const hasIyzicoKey = !!process.env.IYZICO_API_KEY;
 
+  const totalQueries = (profile.monthly_query_limit ?? 0) + (profile.additional_queries ?? 0);
+  const remainingQueries = Math.max(0, totalQueries - (profile.monthly_query_count ?? 0));
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Bar */}
@@ -77,11 +87,11 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
             <span className="font-heading text-lg font-bold text-white">Mizanım</span>
           </div>
           <div className="flex items-center gap-4">
-            {/* Kredi Bakiyesi */}
+            {/* Kredi / Sorgu Bakiyesi */}
             <div className="flex items-center gap-2 bg-accent/20 border border-accent/40 rounded-lg px-3 py-1.5">
               <CreditCard className="w-4 h-4 text-accent" />
               <span className="font-body text-sm font-bold text-accent">
-                {profile.credit_balance} kredi
+                {isAvukat ? `${remainingQueries} / ${totalQueries} sorgu` : `${profile.credit_balance} kredi`}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -107,17 +117,19 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
         {/* Geri + Başlık */}
         <div className="flex items-center gap-3 mb-6">
           <Link
-            href="/panel"
+            href={isAvukat ? "/buro" : "/panel"}
             className="text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
             <h1 className="font-heading text-2xl font-bold text-primary">
-              Kredi Yönetimi
+              {isAvukat ? "Sorgu Kotası Yönetimi" : "Kredi Yönetimi"}
             </h1>
             <p className="font-body text-sm text-muted-foreground">
-              Kredi satın alın, bakiyenizi ve işlem geçmişinizi görüntüleyin.
+              {isAvukat 
+                ? "Ek sorgu paketleri satın alın, kalan kotanızı ve işlem geçmişinizi görüntüleyin."
+                : "Kredi satın alın, bakiyenizi ve işlem geçmişinizi görüntüleyin."}
             </p>
           </div>
         </div>
@@ -133,7 +145,7 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
                 Ödeme başarıyla tamamlandı!
               </p>
               <p className="font-body text-xs text-green-700">
-                Kredileriniz hesabınıza eklendi.
+                {isAvukat ? "Ek sorgu haklarınız hesabınıza eklendi." : "Kredileriniz hesabınıza eklendi."}
               </p>
             </div>
           </div>
@@ -158,7 +170,7 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
 
         <KrediClient
           packages={packages || []}
-          currentBalance={profile.credit_balance}
+          currentBalance={isAvukat ? remainingQueries : (profile.credit_balance ?? 0)}
           transactions={
             (transactions || []) as {
               id: string;
@@ -169,6 +181,8 @@ export default async function KrediPage({ searchParams }: KrediPageProps) {
             }[]
           }
           hasIyzicoKey={hasIyzicoKey}
+          isAvukat={isAvukat}
+          totalQueries={totalQueries}
         />
       </main>
     </div>

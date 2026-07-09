@@ -83,6 +83,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Bu özellik sadece avukatlar içindir" }, { status: 403 });
     }
 
+    // Sorgu kotası harcaması
+    const { data: spent } = await serviceSupabase.rpc("spend_queries", {
+      p_user_id: user.id,
+      p_amount: 1,
+    });
+
+    if (!spent) {
+      return NextResponse.json(
+        { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
+        { status: 402 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const analysisType = formData.get("analysisType") as string;

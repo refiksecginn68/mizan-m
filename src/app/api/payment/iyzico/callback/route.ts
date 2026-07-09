@@ -111,13 +111,25 @@ export async function POST(req: NextRequest) {
 
     const payment = paymentInsertResult.data;
 
-    // Kredileri ekle (atomik fonksiyon)
-    const { error: creditError } = await (serviceClient as any).rpc("add_credits", {
-      p_user_id: userId,
-      p_amount: pkg.credits,
-      p_description: `${pkg.name} paketi satın alındı (${pkg.credits} kredi)`,
-      p_reference_id: payment?.id,
-    });
+    // Kredileri veya sorguları ekle (atomik fonksiyon)
+    let creditError: any = null;
+    if ((pkg as any).package_type === "query") {
+      const { error } = await (serviceClient as any).rpc("add_queries", {
+        p_user_id: userId,
+        p_amount: pkg.credits,
+        p_description: `${pkg.name} satın alındı (${pkg.credits} ek sorgu)`,
+        p_reference_id: payment?.id,
+      });
+      creditError = error;
+    } else {
+      const { error } = await (serviceClient as any).rpc("add_credits", {
+        p_user_id: userId,
+        p_amount: pkg.credits,
+        p_description: `${pkg.name} paketi satın alındı (${pkg.credits} kredi)`,
+        p_reference_id: payment?.id,
+      });
+      creditError = error;
+    }
 
     if (creditError) {
       console.error("Kredi ekleme hatası:", creditError);

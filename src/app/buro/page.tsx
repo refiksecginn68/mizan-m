@@ -66,11 +66,17 @@ export default async function BuroPage() {
   // Profile: session-based client (layout ile aynı yöntem — service role bypass sorununu önler)
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, user_type")
+    .select("full_name, user_type, monthly_query_limit, monthly_query_count, additional_queries")
     .eq("id", user.id)
     .single();
 
   if (!profile || profile.user_type !== "avukat") redirect("/panel");
+
+  const monthlyQueryLimit = profile.monthly_query_limit ?? 0;
+  const monthlyQueryCount = profile.monthly_query_count ?? 0;
+  const additionalQueries = profile.additional_queries ?? 0;
+  const totalQueries = monthlyQueryLimit + additionalQueries;
+  const remainingQueries = Math.max(0, totalQueries - monthlyQueryCount);
 
   const now = new Date();
 
@@ -206,6 +212,25 @@ export default async function BuroPage() {
       <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
         {/* Sol + Orta */}
         <div className="flex-1 min-w-0 space-y-6">
+
+          {/* Kota Durum Kartı */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">Yapay Zeka Sorgu Kotası</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">
+                Kalan Sorgu: <span className="text-[#c9a84c]">{remainingQueries}</span> / {totalQueries}
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Mevzuat ve karar aramaları kotanızdan düşmez. MizanAI sohbeti ve AI analizleri dahildir.
+              </p>
+            </div>
+            <Link 
+              href="/kredi" 
+              className="px-4 py-2 bg-[#1a2744] hover:bg-[#0f1729] text-white text-xs font-bold rounded-xl transition-all duration-300 flex-shrink-0"
+            >
+              Ek Paket Satın Al
+            </Link>
+          </div>
 
           {/* Yaklaşan ödeme hatırlatmaları */}
           {odemeHatirlatmalari.length > 0 && (

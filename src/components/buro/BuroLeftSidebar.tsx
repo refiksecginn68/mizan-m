@@ -26,6 +26,9 @@ import { logoutAction } from "@/lib/actions/auth";
 
 interface Props {
   lawyerName: string;
+  monthlyQueryLimit?: number;
+  monthlyQueryCount?: number;
+  additionalQueries?: number;
 }
 
 const ANA_MENU = [
@@ -49,9 +52,17 @@ const ORGANIZASYON_MENU = [
   { href: "/buro/takvim", label: "Takvim & Görevler", icon: Calendar },
 ];
 
-export default function BuroLeftSidebar({ lawyerName }: Props) {
+export default function BuroLeftSidebar({ 
+  lawyerName, 
+  monthlyQueryLimit = 0, 
+  monthlyQueryCount = 0, 
+  additionalQueries = 0 
+}: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+
+  const totalQueries = monthlyQueryLimit + additionalQueries;
+  const remainingQueries = Math.max(0, totalQueries - monthlyQueryCount);
 
   function isActive(item: { href: string; exact?: boolean }) {
     if (item.exact) return pathname === item.href;
@@ -204,7 +215,9 @@ export default function BuroLeftSidebar({ lawyerName }: Props) {
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-white truncate">Av. {lawyerName}</p>
-              <p className="text-[10px] text-white/30">Profili görüntüle</p>
+              <p className="text-[10px] text-accent font-semibold mt-0.5">
+                Sorgu: {remainingQueries} / {totalQueries}
+              </p>
             </div>
           )}
         </Link>

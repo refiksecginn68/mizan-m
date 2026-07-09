@@ -60,6 +60,19 @@ export async function POST(request: Request) {
           { status: 402, headers: { "Content-Type": "application/json" } }
         );
       }
+    } else if (userType === "avukat") {
+      // Avukat sorgu kotası düşüşü
+      const { data: spent } = await serviceSupabase.rpc("spend_queries", {
+        p_user_id: user.id,
+        p_amount: 1,
+      });
+
+      if (!spent) {
+        return new Response(
+          JSON.stringify({ error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." }),
+          { status: 402, headers: { "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Session oluştur

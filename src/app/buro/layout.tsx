@@ -16,7 +16,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, user_type, onboarding_completed, specializations, bar_city")
+    .select("full_name, user_type, onboarding_completed, specializations, bar_city, monthly_query_limit, monthly_query_count, additional_queries")
     .eq("id", user.id)
     .single();
 
@@ -25,7 +25,12 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">
-      <BuroLeftSidebar lawyerName={profile.full_name} />
+      <BuroLeftSidebar 
+        lawyerName={profile.full_name}
+        monthlyQueryLimit={profile.monthly_query_limit}
+        monthlyQueryCount={profile.monthly_query_count}
+        additionalQueries={profile.additional_queries}
+      />
       <main className="flex-1 overflow-y-auto min-w-0 pb-14 lg:pb-0">
         <BuroContentHeader />
         {children}
