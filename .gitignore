@@ -49,3 +49,8 @@ eval/bedesten_api_cache.json
 server.log
 scratchpad/
 awesome-claude-skills/
+
+# Raporlar ve yerel sirlar
+RAPOR*.md
+.env.local
+.cron-secret-yeni.tmp
