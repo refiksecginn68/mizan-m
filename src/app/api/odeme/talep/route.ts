@@ -29,6 +29,31 @@ export async function POST(request: Request) {
     if (!pkg) return NextResponse.json({ error: "Geçersiz paket" }, { status: 400 });
 
     const amountTry = Math.round(Number(pkg.price_try));
+
+    // Mükerrer talep engeli: aynı kullanıcı + paket için bekleyen talep varsa
+    // yenisini (ve yeni admin mailini) oluşturma, mevcut bilgileri döndür
+    const { data: bekleyen } = await svc
+      .from("payment_requests")
+      .select("reference_code, amount_try")
+      .eq("user_id", user.id)
+      .eq("package_code", pkg.code)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (bekleyen && bekleyen.length > 0) {
+      const { iban, hesapAdi } = getIbanBilgi();
+      return NextResponse.json({
+        referenceCode: bekleyen[0].reference_code,
+        amountTry: bekleyen[0].amount_try,
+        packageName: pkg.name,
+        queryQuota: pkg.query_quota,
+        iban,
+        hesapAdi,
+        adminNotified: true,
+        existing: true,
+      });
+    }
     const req = await createPaymentRequest(svc, user.id, pkg.code, amountTry);
     if (!req) return NextResponse.json({ error: "Talep oluşturulamadı. Lütfen tekrar deneyin." }, { status: 500 });
 

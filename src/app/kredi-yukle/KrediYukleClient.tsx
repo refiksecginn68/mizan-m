@@ -19,6 +19,7 @@ interface TalepSonuc {
   queryQuota: number;
   iban: string;
   hesapAdi: string;
+  existing?: boolean;
 }
 
 interface Props {
@@ -90,6 +91,15 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-border shadow-card p-6 sm:p-8">
+            {talep.existing && (
+              <div className="mb-4 bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
+                <p className="font-body text-xs text-sky-800 leading-relaxed">
+                  Bu paket için zaten bekleyen bir talebiniz var:{" "}
+                  <strong>{talep.referenceCode}</strong>. Aşağıdaki bilgilerle havalenizi
+                  yapabilirsiniz; yeni bir talep oluşturulmadı.
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-[#0f1729] flex items-center justify-center">
                 <Landmark className="w-5 h-5 text-[#c9a84c]" />
