@@ -44,19 +44,19 @@ export default async function UyapAyarlarPage() {
 
   const adimlar = [
     {
-      ikon: Download,
-      baslik: "Eklentiyi indirin",
-      metin: "Aşağıdaki bağlantıdan mizanim-uyap-uets-v1.1.0 eklenti dosyasını indirin.",
-    },
-    {
       ikon: Globe,
-      baslik: "Chrome'a yükleyin",
-      metin: "chrome://extensions adresini açın, sağ üstten \"Geliştirici modu\"nu açın ve indirdiğiniz klasörü \"Paketlenmemiş öğe yükle\" ile seçin.",
+      baslik: "Chrome'a ekleyin",
+      metin: "Aşağıdaki \"Chrome'a Ekle\" düğmesiyle eklentiyi Chrome Web Store'dan tek tıkla kurun.",
     },
     {
       ikon: KeyRound,
       baslik: "Bağlantı kodu ile eşleştirin",
       metin: "Aşağıdan bağlantı kodu üretin ve eklentinin ayarlar ekranına yapıştırın. Kod, hesabınızı eklentiyle güvenli şekilde eşleştirir.",
+    },
+    {
+      ikon: Download,
+      baslik: "UYAP'a girin ve aktarın",
+      metin: "UYAP Avukat Portal'a e-imzanızla girin, eklentide \"Sayfayı Tara\" → \"Mizanım'a Aktar\" deyin. Dosyalar Davalar sayfanıza işlenir.",
     },
   ];
 
@@ -91,9 +91,14 @@ export default async function UyapAyarlarPage() {
             </li>
           ))}
         </ol>
-        <a href="/api/extension/download" className="btn-outline w-full mt-6 flex items-center justify-center gap-2 text-sm">
-          <Download className="w-4 h-4" />
-          Eklentiyi İndir (v1.1.0)
+        <a
+          href="https://chromewebstore.google.com/detail/ancbdklmehchmpefmjcachkidbgjapfm"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary w-full mt-6 flex items-center justify-center gap-2 text-sm"
+        >
+          <Globe className="w-4 h-4" />
+          Chrome&apos;a Ekle — Web Store
         </a>
       </div>
 

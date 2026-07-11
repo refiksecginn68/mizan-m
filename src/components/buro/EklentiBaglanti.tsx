@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Puzzle, Copy, Check, Loader2, KeyRound, Download, MousePointerClick, ShieldCheck, Globe } from "lucide-react";
+import { Puzzle, Copy, Check, Loader2, KeyRound, Download, ShieldCheck, Globe, ChevronDown } from "lucide-react";
+
+const STORE_URL = "https://chromewebstore.google.com/detail/ancbdklmehchmpefmjcachkidbgjapfm";
 
 // UYAP Chrome eklentisi: indirme + kurulum + bağlantı kodu kartları
 export default function EklentiBaglanti() {
@@ -49,38 +51,47 @@ export default function EklentiBaglanti() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* Auth korumalı indirme — sadece giriş yapmış avukatlar */}
-        <a href="/api/extension/download" className="btn-primary flex items-center gap-2 text-sm no-underline">
-          <Download className="w-4 h-4" />
-          Eklentiyi İndir (.zip)
+        <a
+          href={STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-primary flex items-center gap-2 text-sm no-underline"
+        >
+          <Globe className="w-4 h-4" />
+          Chrome&apos;a Ekle
         </a>
-        {/* Chrome Web Store yayını sonrası bu yer tutucu mağaza linkine çevrilecek */}
-        <span className="font-body text-xs text-muted-foreground border border-dashed border-border rounded-lg px-3 py-2">
-          Yakında: Chrome Web Store&apos;dan tek tıkla &quot;Chrome&apos;a Ekle&quot;
+        <span className="font-body text-xs text-muted-foreground">
+          Chrome Web Store&apos;da yayında — tek tıkla kurulur
         </span>
       </div>
 
-      <h3 className="font-heading text-sm font-bold text-primary mb-2">Kurulum (2 dakika)</h3>
+      <h3 className="font-heading text-sm font-bold text-primary mb-2">Kurulum ve Kullanım</h3>
       <ol className="font-body text-xs text-muted-foreground space-y-1.5 mb-4 list-decimal pl-4">
-        <li>İndirdiğiniz zip dosyasını bir klasöre çıkarın (sağ tık → Tümünü Ayıkla)</li>
-        <li>Chrome&apos;da adres çubuğuna <code className="bg-primary/5 px-1 rounded">chrome://extensions</code> yazıp Enter&apos;a basın</li>
-        <li>Sağ üstteki <strong>Geliştirici modu</strong> anahtarını açın</li>
-        <li><strong>Paketlenmemiş öğe yükle</strong> düğmesine tıklayıp çıkardığınız klasörü seçin</li>
-        <li>Eklenti simgesi araç çubuğunda görünür — kurulum tamam
-          <span className="text-muted-foreground/70"> (mağaza yayınından sonra bu adımlara gerek kalmayacak)</span>
-        </li>
+        <li><strong>Chrome&apos;a Ekle</strong>&apos;ye tıklayın, mağazadan eklentiyi kurun</li>
+        <li>Aşağıdaki karttan <strong>Bağlantı Kodu Oluşturun</strong>, eklentiye yapıştırıp <strong>Bağlan</strong> deyin</li>
+        <li>UYAP Avukat Portal&apos;a <strong>kendi e-imzanızla</strong> girin, dosya sorgulama listenizi açın</li>
+        <li>Eklentide <strong>Sayfayı Tara</strong> → <strong>Mizanım&apos;a Aktar</strong> — dosyalar Davalar sayfanıza işlenir (aynı esas no varsa güncellenir)</li>
       </ol>
 
-      <h3 className="font-heading text-sm font-bold text-primary mb-2 flex items-center gap-1.5">
-        <MousePointerClick className="w-4 h-4" /> Kullanım
-      </h3>
-      <ol className="font-body text-xs text-muted-foreground space-y-1.5 mb-4 list-decimal pl-4">
-        <li>Aşağıdaki karttan <strong>Bağlantı Kodu Oluştur</strong> deyin, kodu kopyalayın</li>
-        <li>Eklenti simgesine tıklayın, kodu yapıştırıp <strong>Bağlan</strong> deyin</li>
-        <li>UYAP Avukat Portal&apos;a <strong>kendi e-imzanızla</strong> giriş yapın, dosya sorgulama listenizi açın</li>
-        <li>Eklentide <strong>Sayfayı Tara</strong> → bulunan dosyaları görün → <strong>Mizanım&apos;a Aktar</strong></li>
-        <li>Dosyalarınız Davalar sayfanıza işlenir: aynı esas numarası varsa güncellenir, yoksa yeni dava açılır</li>
-      </ol>
+      <details className="mb-4 group">
+        <summary className="font-body text-xs text-muted-foreground cursor-pointer flex items-center gap-1.5 select-none">
+          <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+          Gelişmiş / manuel kurulum (zip ile)
+        </summary>
+        <div className="mt-3 pl-5">
+          {/* Auth korumalı indirme — sadece giriş yapmış avukatlar */}
+          <a href="/api/extension/download" className="btn-outline inline-flex items-center gap-2 text-xs no-underline mb-3">
+            <Download className="w-3.5 h-3.5" />
+            Eklentiyi İndir (.zip)
+          </a>
+          <ol className="font-body text-xs text-muted-foreground space-y-1.5 list-decimal pl-4">
+            <li>İndirdiğiniz zip dosyasını bir klasöre çıkarın (sağ tık → Tümünü Ayıkla)</li>
+            <li>Chrome&apos;da adres çubuğuna <code className="bg-primary/5 px-1 rounded">chrome://extensions</code> yazıp Enter&apos;a basın</li>
+            <li>Sağ üstteki <strong>Geliştirici modu</strong> anahtarını açın</li>
+            <li><strong>Paketlenmemiş öğe yükle</strong> düğmesine tıklayıp çıkardığınız klasörü seçin</li>
+          </ol>
+        </div>
+      </details>
 
       <p className="font-body text-[11px] text-muted-foreground flex items-start gap-1.5 bg-primary/5 rounded-lg px-3 py-2">
         <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-primary" />
