@@ -1,40 +1,45 @@
 import { createServiceClient } from "@/lib/supabase/server";
+import { validatePendingRequest, readTokenFromPost } from "@/lib/odeme";
 import { sendUserRejectedEmail } from "@/lib/email/odeme";
-import { odemeSonucSayfasi, htmlResponse } from "@/lib/odeme-sayfa";
+import { odemeSonucSayfasi, odemeOnayFormSayfasi, htmlResponse } from "@/lib/odeme-sayfa";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
-// Admin mailindeki "Talebi Reddet" linki
+// GET: maildeki "Reddet" linki buraya gelir. HİÇBİR ŞEY DEĞİŞTİRMEZ —
+// onay/red butonlu aynı özet sayfasını gösterir (Safe Links güvenli).
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("token");
-  if (!token) {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false, baslik: "Geçersiz Bağlantı", mesaj: "Bağlantı eksik veya hatalı.",
-    }), 400);
-  }
-
   const svc = createServiceClient() as Any;
 
-  const { data: req } = await svc
-    .from("payment_requests")
-    .select("id, user_id, package_code, reference_code, status")
-    .eq("approval_token", token)
-    .single();
-
-  if (!req) {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false, baslik: "Geçersiz Bağlantı", mesaj: "Bu bağlantı sistemde bulunamadı.",
-    }), 400);
+  const { req, hata } = await validatePendingRequest(svc, token);
+  if (hata) {
+    return htmlResponse(odemeSonucSayfasi({ basarili: false, ...hata }), 400);
   }
 
-  if (req.status !== "pending") {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false,
-      baslik: "Bağlantı Kullanılmış",
-      mesaj: `Bu talep daha önce işlenmiş (${req.status === "approved" ? "onaylandı" : "reddedildi"}).`,
-      detay: `Referans: ${req.reference_code}`,
-    }), 400);
+  const [{ data: pkg }, { data: profile }] = await Promise.all([
+    svc.from("credit_packages").select("name, query_quota").eq("code", req.package_code).single(),
+    svc.from("profiles").select("full_name, email").eq("id", req.user_id).single(),
+  ]);
+
+  return htmlResponse(odemeOnayFormSayfasi({
+    token: req.approval_token,
+    kullanici: `${profile?.full_name ?? "Bilinmiyor"} (${profile?.email ?? "-"})`,
+    paket: pkg?.name ?? req.package_code,
+    tutarTry: req.amount_try,
+    referansKodu: req.reference_code,
+    kota: pkg?.query_quota ?? 0,
+  }), 200);
+}
+
+// POST: asıl red işlemi — yalnız sayfadaki Reddet butonundan tetiklenir
+export async function POST(request: Request) {
+  const token = await readTokenFromPost(request);
+  const svc = createServiceClient() as Any;
+
+  const { req, hata } = await validatePendingRequest(svc, token);
+  if (hata) {
+    return htmlResponse(odemeSonucSayfasi({ basarili: false, ...hata }), 400);
   }
 
   const { data: updated } = await svc

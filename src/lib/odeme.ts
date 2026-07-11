@@ -3,8 +3,8 @@ import { randomBytes, randomInt } from "crypto";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
-// Onay linki geçerlilik süresi (gün)
-export const APPROVAL_TOKEN_TTL_DAYS = 7;
+// Onay linki geçerlilik süresi (gün) — env ile ayarlanabilir
+export const APPROVAL_TOKEN_TTL_DAYS = Number(process.env.APPROVAL_TOKEN_TTL_DAYS ?? 7);
 
 // Karışabilen karakterler (0/O, 1/I) hariç
 const REF_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -54,4 +54,72 @@ export async function createPaymentRequest(
     }
   }
   return null;
+}
+
+export interface TokenHata {
+  baslik: string;
+  mesaj: string;
+  detay?: string;
+}
+
+// Token'ı doğrular: bulunamadı / işlenmiş / süresi dolmuş durumlarını ayırt eder.
+// Hiçbir şey DEĞİŞTİRMEZ — hem GET (sayfa) hem POST (işlem) bunu kullanır.
+export async function validatePendingRequest(
+  svc: Any,
+  token: string | null
+): Promise<{ req: PaymentRequestRow; hata: null } | { req: null; hata: TokenHata }> {
+  if (!token) {
+    return { req: null, hata: { baslik: "Geçersiz Bağlantı", mesaj: "Bağlantı eksik veya hatalı." } };
+  }
+
+  const { data: req } = await svc
+    .from("payment_requests")
+    .select("id, user_id, package_code, amount_try, reference_code, approval_token, status, created_at")
+    .eq("approval_token", token)
+    .single();
+
+  if (!req) {
+    return { req: null, hata: { baslik: "Geçersiz Bağlantı", mesaj: "Bu bağlantı sistemde bulunamadı." } };
+  }
+
+  if (req.status !== "pending") {
+    return {
+      req: null,
+      hata: {
+        baslik: "Bağlantı Kullanılmış",
+        mesaj: `Bu talep daha önce işlenmiş (${req.status === "approved" ? "onaylandı" : "reddedildi"}).`,
+        detay: `Referans: ${req.reference_code}`,
+      },
+    };
+  }
+
+  const yasMs = Date.now() - new Date(req.created_at).getTime();
+  if (yasMs > APPROVAL_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000) {
+    return {
+      req: null,
+      hata: {
+        baslik: "Bağlantı Süresi Dolmuş",
+        mesaj: `Onay bağlantıları ${APPROVAL_TOKEN_TTL_DAYS} gün geçerlidir. Kullanıcıdan yeni talep oluşturmasını isteyin.`,
+        detay: `Referans: ${req.reference_code}`,
+      },
+    };
+  }
+
+  return { req: req as PaymentRequestRow, hata: null };
+}
+
+// POST body'den token okur (form veya JSON)
+export async function readTokenFromPost(request: Request): Promise<string | null> {
+  const contentType = request.headers.get("content-type") ?? "";
+  try {
+    if (contentType.includes("application/json")) {
+      const body = await request.json() as { token?: string };
+      return body.token ?? null;
+    }
+    const form = await request.formData();
+    const token = form.get("token");
+    return typeof token === "string" ? token : null;
+  } catch {
+    return null;
+  }
 }

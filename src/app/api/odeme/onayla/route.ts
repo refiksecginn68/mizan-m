@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
-import { APPROVAL_TOKEN_TTL_DAYS } from "@/lib/odeme";
+import { validatePendingRequest, readTokenFromPost } from "@/lib/odeme";
 import { sendUserApprovedEmail } from "@/lib/email/odeme";
-import { odemeSonucSayfasi, htmlResponse } from "@/lib/odeme-sayfa";
+import { odemeSonucSayfasi, odemeOnayFormSayfasi, htmlResponse } from "@/lib/odeme-sayfa";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -9,46 +9,41 @@ type Any = any;
 // Aylık paketler onayda hatırlatma oluşturur; kontörler oluşturmaz
 const AYLIK_PAKETLER = ["vatandas", "pro", "max"];
 
-// Admin mailindeki tek tık ONAYLA linki
+// GET: maildeki link buraya gelir. HİÇBİR ŞEY DEĞİŞTİRMEZ — yalnız onay
+// sayfası gösterir. (Hotmail/Defender Safe Links linkleri otomatik ziyaret
+// eder; mutasyon GET'te olsaydı talep kendiliğinden onaylanırdı.)
 export async function GET(request: Request) {
   const token = new URL(request.url).searchParams.get("token");
-  if (!token) {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false, baslik: "Geçersiz Bağlantı", mesaj: "Onay bağlantısı eksik veya hatalı.",
-    }), 400);
-  }
-
   const svc = createServiceClient() as Any;
 
-  const { data: req } = await svc
-    .from("payment_requests")
-    .select("id, user_id, package_code, amount_try, reference_code, status, created_at")
-    .eq("approval_token", token)
-    .single();
-
-  if (!req) {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false, baslik: "Geçersiz Bağlantı", mesaj: "Bu onay bağlantısı sistemde bulunamadı.",
-    }), 400);
+  const { req, hata } = await validatePendingRequest(svc, token);
+  if (hata) {
+    return htmlResponse(odemeSonucSayfasi({ basarili: false, ...hata }), 400);
   }
 
-  if (req.status !== "pending") {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false,
-      baslik: "Bağlantı Kullanılmış",
-      mesaj: `Bu talep daha önce "${req.status === "approved" ? "onaylandı" : "reddedildi"}" olarak işlenmiş.`,
-      detay: `Referans: ${req.reference_code}`,
-    }), 400);
-  }
+  const [{ data: pkg }, { data: profile }] = await Promise.all([
+    svc.from("credit_packages").select("name, query_quota").eq("code", req.package_code).single(),
+    svc.from("profiles").select("full_name, email").eq("id", req.user_id).single(),
+  ]);
 
-  const yasMs = Date.now() - new Date(req.created_at).getTime();
-  if (yasMs > APPROVAL_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000) {
-    return htmlResponse(odemeSonucSayfasi({
-      basarili: false,
-      baslik: "Bağlantı Süresi Dolmuş",
-      mesaj: `Onay bağlantıları ${APPROVAL_TOKEN_TTL_DAYS} gün geçerlidir. Kullanıcıdan yeni talep oluşturmasını isteyin.`,
-      detay: `Referans: ${req.reference_code}`,
-    }), 400);
+  return htmlResponse(odemeOnayFormSayfasi({
+    token: req.approval_token,
+    kullanici: `${profile?.full_name ?? "Bilinmiyor"} (${profile?.email ?? "-"})`,
+    paket: pkg?.name ?? req.package_code,
+    tutarTry: req.amount_try,
+    referansKodu: req.reference_code,
+    kota: pkg?.query_quota ?? 0,
+  }), 200);
+}
+
+// POST: asıl onay işlemi — yalnız sayfadaki ONAYLA butonundan tetiklenir
+export async function POST(request: Request) {
+  const token = await readTokenFromPost(request);
+  const svc = createServiceClient() as Any;
+
+  const { req, hata } = await validatePendingRequest(svc, token);
+  if (hata) {
+    return htmlResponse(odemeSonucSayfasi({ basarili: false, ...hata }), 400);
   }
 
   // Tek kullanımlık: status=pending şartıyla güncelle (yarış durumuna karşı)

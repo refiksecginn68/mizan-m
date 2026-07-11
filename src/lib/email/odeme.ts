@@ -80,7 +80,8 @@ export async function sendAdminPaymentRequestEmail(params: {
   const body = `
     <p style="margin:0 0 8px;font-size:16px;color:#0f1729;font-weight:600;">Yeni Havale/EFT Talebi</p>
     <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
-      Aşağıdaki kullanıcı bir paket için ödeme talebi oluşturdu. Havale hesaba düştüğünde onaylayın.
+      Aşağıdaki kullanıcı bir paket için ödeme talebi oluşturdu. Havale hesaba düştüğünde
+      aşağıdaki bağlantıdan onay sayfasını açıp işlemi tamamlayın.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f3f4f6;border-radius:10px;margin:0 0 24px;">
       ${infoRow("Kullanıcı", `${params.userName} (${params.userEmail})`)}
@@ -91,11 +92,11 @@ export async function sendAdminPaymentRequestEmail(params: {
     <div style="text-align:center;margin:24px 0;">
       <a href="${onaylaUrl}"
          style="display:inline-block;background:#c9a84c;color:#ffffff;font-weight:700;font-size:15px;padding:14px 44px;border-radius:10px;text-decoration:none;letter-spacing:0.3px;">
-        ONAYLA
+        Onay Sayfasını Aç
       </a>
     </div>
     <p style="margin:0;text-align:center;font-size:13px;color:#9ca3af;">
-      Ödeme gelmezse: <a href="${reddetUrl}" style="color:#dc2626;text-decoration:underline;">Talebi Reddet</a>
+      Ödeme gelmezse: <a href="${reddetUrl}" style="color:#dc2626;text-decoration:underline;">Red Sayfasını Aç</a>
     </p>`;
   return sendEmail(
     ADMIN_EMAIL,
