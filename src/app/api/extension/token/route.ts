@@ -12,12 +12,20 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("user_type, full_name")
+    .select("user_type, full_name, uyap_uets_active")
     .eq("id", user.id)
     .single();
 
   if (!profile || profile.user_type !== "avukat") {
     return Response.json({ error: "Bu özellik sadece avukatlara açıktır" }, { status: 403 });
+  }
+
+  // UYAP/UETS eklentisi yalnızca Max paketinde aktiftir
+  if (!profile.uyap_uets_active) {
+    return Response.json(
+      { error: "UYAP/UETS eklentisi için Avukat Max paketi gereklidir.", code: "max_required", cta: { label: "Paketleri Gör", href: "/kredi-yukle" } },
+      { status: 403 }
+    );
   }
 
   if (!process.env.INTERNAL_API_SECRET) {
