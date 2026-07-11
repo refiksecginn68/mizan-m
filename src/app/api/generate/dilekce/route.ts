@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
@@ -181,17 +182,12 @@ export async function POST(request: Request) {
       return Response.json({ error: "Geçersiz istek" }, { status: 400 });
     }
 
-    // Kredi harcama
+    // Sorgu kotası harcaması (AI çağrısı = 1 kota)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const serviceClient = createServiceClient() as any;
-    const { data: spent } = await serviceClient.rpc("spend_credits", {
-      p_user_id: user.id,
-      p_amount: 8,
-      p_description: `Dilekçe üretimi: ${body.type}`,
-    });
-
-    if (!spent) {
-      return Response.json({ error: "Yetersiz kredi. En az 8 kredi gerekiyor." }, { status: 402 });
+    const hasQuota = await checkAndConsumeQuota(user.id);
+    if (!hasQuota) {
+      return Response.json(QUOTA_EXHAUSTED_BODY, { status: 402 });
     }
 
     const docType = DILEKCE_PROMPTS[body.type] ?? "resmi dilekçe";
@@ -223,6 +219,8 @@ KURALLAR:
     const dilekceText = response.content[0].type === "text" ? response.content[0].text : "";
 
     if (!dilekceText) {
+      // Başarısız çağrı kotadan yemez
+      await refundQuota(user.id);
       return Response.json({ error: "Dilekçe oluşturulamadı" }, { status: 500 });
     }
 

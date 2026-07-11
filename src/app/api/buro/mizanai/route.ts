@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -322,17 +323,10 @@ export async function POST(request: Request) {
       return Response.json({ error: "Bu özellik sadece avukatlara açıktır" }, { status: 403 });
     }
 
-    // Sorgu kotası harcaması
-    const { data: spent } = await svc.rpc("spend_queries", {
-      p_user_id: user.id,
-      p_amount: 1,
-    });
-
-    if (!spent) {
-      return Response.json(
-        { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
-        { status: 402 }
-      );
+    // Sorgu kotası harcaması (AI çağrısı = 1 kota)
+    const hasQuota = await checkAndConsumeQuota(user.id);
+    if (!hasQuota) {
+      return Response.json(QUOTA_EXHAUSTED_BODY, { status: 402 });
     }
 
     let activeSessionId = body.sessionId;
@@ -454,6 +448,8 @@ export async function POST(request: Request) {
           controller.close();
         } catch (err) {
           console.error("MizanAI stream error:", err);
+          // Başarısız çağrı kotadan yemez
+          await refundQuota(user.id);
           send({ error: "AI yanıt üretirken hata oluştu" });
           controller.close();
         }

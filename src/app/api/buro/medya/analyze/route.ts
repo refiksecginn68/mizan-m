@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import Anthropic from "@anthropic-ai/sdk";
 import { fal } from "@fal-ai/client";
 
@@ -65,6 +66,7 @@ ${UZMAN_CERCEVE}`,
 };
 
 export async function POST(req: NextRequest) {
+  let quotaUserId: string | null = null;
   try {
     const supabase = createClient() as AnyClient;
     const { data: { user } } = await supabase.auth.getUser();
@@ -81,19 +83,6 @@ export async function POST(req: NextRequest) {
 
     if (!profile || profile.user_type !== "avukat") {
       return NextResponse.json({ error: "Bu özellik sadece avukatlar içindir" }, { status: 403 });
-    }
-
-    // Sorgu kotası harcaması
-    const { data: spent } = await serviceSupabase.rpc("spend_queries", {
-      p_user_id: user.id,
-      p_amount: 1,
-    });
-
-    if (!spent) {
-      return NextResponse.json(
-        { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
-        { status: 402 }
-      );
     }
 
     const formData = await req.formData();
@@ -134,6 +123,14 @@ export async function POST(req: NextRequest) {
         caseId: caseId || null,
       });
     }
+
+    // Sorgu kotası harcaması (AI çağrısı = 1 kota) — doğrulamalardan sonra,
+    // gerçek AI çalışmasından hemen önce düşülür
+    const hasQuota = await checkAndConsumeQuota(user.id);
+    if (!hasQuota) {
+      return NextResponse.json(QUOTA_EXHAUSTED_BODY, { status: 402 });
+    }
+    quotaUserId = user.id;
 
     if (hasFalKey && (analysisType === "ses" || analysisType === "video" || analysisType === "ses_karsilastirma")) {
       fal.config({ credentials: process.env.FAL_KEY });
@@ -210,6 +207,8 @@ export async function POST(req: NextRequest) {
     const isImage = supportedImageTypes.includes(mimeType);
 
     if (!isImage && !isPdf) {
+      // Desteklenmeyen format AI'a gitmedi — kota iade
+      await refundQuota(user.id);
       return NextResponse.json({
         error: `Bu dosya türü (${mimeType}) Claude ile analiz edilemiyor. Desteklenen formatlar: JPEG, PNG, GIF, WEBP, PDF`,
       }, { status: 400 });
@@ -287,6 +286,8 @@ Yanıtlarını Markdown formatında yaz.`,
     });
   } catch (err) {
     console.error("Medya analiz error:", err);
+    // Başarısız çağrı kotadan yemez
+    if (quotaUserId) await refundQuota(quotaUserId);
     return NextResponse.json({ error: "Analiz sırasında hata oluştu" }, { status: 500 });
   }
 }

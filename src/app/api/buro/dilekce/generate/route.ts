@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -11,18 +12,11 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Sorgu kotası harcaması
+  // Sorgu kotası harcaması (AI çağrısı = 1 kota)
   const serviceSupabase = createServiceClient() as Any;
-  const { data: spent } = await serviceSupabase.rpc("spend_queries", {
-    p_user_id: user.id,
-    p_amount: 1,
-  });
-
-  if (!spent) {
-    return Response.json(
-      { error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." },
-      { status: 402 }
-    );
+  const hasQuota = await checkAndConsumeQuota(user.id);
+  if (!hasQuota) {
+    return Response.json(QUOTA_EXHAUSTED_BODY, { status: 402 });
   }
 
   const body = await request.json() as {
@@ -133,6 +127,8 @@ SONUÇ VE İSTEM     : [Net talepler]
           content: fullText,
         }).then(() => {}).catch(() => {});
       } catch (err) {
+        // Başarısız çağrı kotadan yemez
+        await refundQuota(user.id);
         const msg = err instanceof Error ? err.message : "Hata";
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg })}\n\n`));
         controller.close();

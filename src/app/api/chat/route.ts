@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { getSystemPrompt, SYSTEM_PROMPT_MEVZUAT_OZET } from "@/lib/ai/prompts";
-import { classifyQuery, CREDIT_COSTS } from "@/lib/ai/classify";
+import { classifyQuery } from "@/lib/ai/classify";
+import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import { fetchRAGContext, buildContextString } from "@/lib/ai/rag";
 import type { UserType } from "@/types/database";
 
@@ -44,35 +45,14 @@ export async function POST(request: Request) {
     }
 
     const queryType = classifyQuery(message);
-    const cost = CREDIT_COSTS[queryType];
 
-    // Vatandaş kredi kontrolü ve harcama (onaysız — direkt)
-    if (userType === "vatandas") {
-      const { data: spent } = await serviceSupabase.rpc("spend_credits", {
-        p_user_id: user.id,
-        p_amount: cost,
-        p_description: `AI Soru: ${message.slice(0, 50)}`,
+    // Her AI çağrısı = 1 kota (vatandaş + avukat ortak)
+    const hasQuota = await checkAndConsumeQuota(user.id);
+    if (!hasQuota) {
+      return new Response(JSON.stringify(QUOTA_EXHAUSTED_BODY), {
+        status: 402,
+        headers: { "Content-Type": "application/json" },
       });
-
-      if (!spent) {
-        return new Response(
-          JSON.stringify({ error: `Yetersiz kredi. Bu işlem ${cost} kredi gerektirir. Lütfen kredi satın alın.` }),
-          { status: 402, headers: { "Content-Type": "application/json" } }
-        );
-      }
-    } else if (userType === "avukat") {
-      // Avukat sorgu kotası düşüşü
-      const { data: spent } = await serviceSupabase.rpc("spend_queries", {
-        p_user_id: user.id,
-        p_amount: 1,
-      });
-
-      if (!spent) {
-        return new Response(
-          JSON.stringify({ error: "Sorgu kotanız tükenmiştir. Lütfen ek sorgu paketi (kontör) satın alın." }),
-          { status: 402, headers: { "Content-Type": "application/json" } }
-        );
-      }
     }
 
     // Session oluştur
@@ -122,7 +102,7 @@ export async function POST(request: Request) {
           });
 
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ sessionId: activeSessionId, creditCost: cost })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ sessionId: activeSessionId, creditCost: 1 })}\n\n`)
           );
 
           for await (const chunk of claudeStream) {
@@ -146,7 +126,7 @@ export async function POST(request: Request) {
               role: "assistant",
               content: fullResponse,
               sources: ragContext.sources.length > 0 ? ragContext.sources : null,
-              credit_cost: userType === "vatandas" ? cost : null,
+              credit_cost: userType === "vatandas" ? 1 : null,
             });
 
             await serviceSupabase
@@ -162,6 +142,8 @@ export async function POST(request: Request) {
           );
           controller.close();
         } catch {
+          // Başarısız çağrı kotadan yemez
+          await refundQuota(user.id);
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ error: "AI yanıt üretirken hata oluştu" })}\n\n`)
           );
