@@ -1,27 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Check, Star, Mail, ArrowRight, ShieldCheck, Scale, Sparkles } from "lucide-react";
+import { Check, Star, Mail, ArrowRight, ShieldCheck, Scale, Sparkles, Landmark } from "lucide-react";
 
 export default function FiyatlandirmaPage() {
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
-
   const plans = [
     {
       name: "Vatandaş",
       tagline: "Hukuki rehberlik herkes için",
-      price: "49₺",
-      period: "tek_seferlik",
-      credits: "50 kredi",
+      price: "299₺",
+      period: "ay",
+      credits: "50 AI sorgu / ay",
       features: [
-        "Kayıtta 20 kredi hediye",
-        "AI hukuk asistanı",
+        "AI soru-cevap asistanı",
         "Belge analizi",
         "Dilekçe üretimi",
-        "Emsal arama",
+        "Sınırsız emsal + mevzuat arama",
       ],
-      buttonText: "Ücretsiz Başla",
+      buttonText: "Hemen Başla",
       buttonHref: "/kayit",
       isPopular: false,
       accent: false,
@@ -29,62 +25,63 @@ export default function FiyatlandirmaPage() {
     {
       name: "Avukat Pro",
       tagline: "Profesyonel hukuk pratiği için",
-      price: billingCycle === "monthly" ? "1.499₺" : "1.199₺",
+      price: "1.990₺",
       period: "ay",
-      credits: "1.000 AI sorgu / ay",
+      credits: "750 AI sorgu / ay",
       features: [
-        "1.000 AI sorgu/ay",
-        "Tüm AI özellikleri (sohbet, AI özet, belge analizi, dilekçe)",
+        "Tüm AI modülleri (sohbet, AI özet, belge analizi, dilekçe)",
         "Sınırsız emsal + mevzuat arama",
         "CRM müvekkil yönetimi",
         "Dava dosya takibi",
         "Akıllı takvim & alarm",
         "Finans takibi",
       ],
-      buttonText: "14 Gün Ücretsiz Dene",
+      buttonText: "Pro'ya Başla",
       buttonHref: "/kayit?role=avukat",
-      isPopular: false,
-      accent: false,
-    },
-    {
-      name: "Avukat Max",
-      tagline: "Tam donanımlı profesyonel",
-      price: billingCycle === "monthly" ? "2.999₺" : "2.399₺",
-      period: "ay",
-      credits: "3.000 AI sorgu / ay",
-      features: [
-        "Avukat Pro'nun tüm özellikleri",
-        "3.000 AI sorgu/ay",
-        "UYAP entegrasyonu & duruşma sorgulama",
-        "UETS e-tebligat entegrasyonu",
-        "Öncelikli işlemci & hız",
-      ],
-      buttonText: "14 Gün Ücretsiz Dene",
-      buttonHref: "/kayit?role=avukat&plan=max",
       isPopular: true,
       accent: true,
     },
     {
+      name: "Avukat Max",
+      tagline: "Tam donanımlı profesyonel",
+      price: "3.990₺",
+      period: "ay",
+      credits: "2.000 AI sorgu / ay",
+      features: [
+        "Avukat Pro'nun tüm özellikleri",
+        "UYAP/UETS Chrome eklentisi aktivasyonu",
+        "UETS e-tebligat entegrasyonu",
+        "Öncelikli destek",
+      ],
+      buttonText: "Max'e Başla",
+      buttonHref: "/kayit?role=avukat&plan=max",
+      isPopular: false,
+      accent: false,
+    },
+    {
       name: "Büro Planı",
       tagline: "Hukuk büroları için tam paket",
-      price: "İletişime Geç",
+      price: "Fiyat Alınız",
       period: "ozel",
-      credits: "Sınırsız / Esnek",
+      credits: "Havuz kota / Esnek",
       features: [
         "Avukat Max'in tüm özellikleri",
-        "Çoklu kullanıcı (5 hesaba kadar)",
-        "Ortak çalışma alanı",
-        "Sınırsız / Esnek sorgu kotası",
+        "+5 ortak kullanıcı",
+        "Ortak dosya & CRM havuzu",
+        "Büroya özel kota",
         "Kurumsal onboarding & eğitim",
         "Özel SLA & öncelikli destek",
-        "Emsal içtihat veri tabanı entegrasyonu",
-        "Raporlama & performans paneli",
       ],
       buttonText: "Bizimle İletişime Geçin",
       buttonHref: "/iletisim",
       isPopular: false,
       accent: false,
     },
+  ];
+
+  const kontorler = [
+    { name: "100 Sorgu Kontör", price: "300₺", detail: "+100 AI sorgusu" },
+    { name: "500 Sorgu Kontör", price: "1.300₺", detail: "+500 AI sorgusu" },
   ];
 
   return (
@@ -130,25 +127,9 @@ export default function FiyatlandirmaPage() {
             Vatandaşlar için kolaylaştırılmış hızlı çözümler, hukuk profesyonelleri için tam donanımlı baro entegrasyonları ve AI destekli araçlar.
           </p>
 
-          {/* Toggle Monthly / Yearly */}
-          <div className="flex items-center justify-center gap-4 mt-10">
-            <span className={`text-sm ${billingCycle === "monthly" ? "text-white font-semibold" : "text-gray-400"}`}>Aylık Ödeme</span>
-            <button
-              onClick={() => setBillingCycle(billingCycle === "monthly" ? "yearly" : "monthly")}
-              className="relative w-12 h-6 bg-white/10 rounded-full p-1 transition-all duration-300 focus:outline-none"
-            >
-              <div
-                className={`w-4 h-4 bg-[#c9a84c] rounded-full transition-all duration-300 ${
-                  billingCycle === "yearly" ? "translate-x-6" : "translate-x-0"
-                }`}
-              />
-            </button>
-            <span className={`text-sm flex items-center gap-1.5 ${billingCycle === "yearly" ? "text-[#c9a84c] font-semibold" : "text-gray-400"}`}>
-              Yıllık Ödeme
-              <span className="bg-green-500/10 border border-green-500/20 text-green-400 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                %20 İndirim
-              </span>
-            </span>
+          <div className="inline-flex items-center gap-2 mt-8 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-xs text-gray-300">
+            <Landmark className="w-3.5 h-3.5 text-[#c9a84c]" />
+            <span>Aylık havale/EFT ile ödeme — kredi kartı desteği yakında</span>
           </div>
         </div>
 
@@ -187,11 +168,6 @@ export default function FiyatlandirmaPage() {
                   {plan.period === "ay" && (
                     <span className="text-xs text-gray-400 font-medium">/ ay</span>
                   )}
-                  {plan.period === "tek_seferlik" && (
-                    <span className="text-xs text-[#c9a84c] font-semibold bg-[#c9a84c]/10 border border-[#c9a84c]/20 px-2 py-0.5 rounded ml-2">
-                      {plan.credits}
-                    </span>
-                  )}
                   {plan.period === "ozel" && (
                     <span className="text-xs text-gray-400 font-medium">esnek model</span>
                   )}
@@ -201,14 +177,9 @@ export default function FiyatlandirmaPage() {
                     {plan.credits} dahil
                   </p>
                 )}
-                {plan.period === "tek_seferlik" && (
-                  <p className="text-[10px] text-[#c9a84c] mt-1 font-medium">
-                    Ek krediler sonradan alınabilir
-                  </p>
-                )}
                 {plan.period === "ozel" && (
                   <p className="text-[10px] text-gray-500 mt-1 font-medium">
-                    Sınırsız sorgu ve özel sunucu
+                    Büronuza özel havuz kota ve çoklu kullanıcı
                   </p>
                 )}
               </div>
@@ -242,6 +213,34 @@ export default function FiyatlandirmaPage() {
           ))}
         </div>
 
+        {/* Kontör Paketleri */}
+        <div className="mt-20 max-w-3xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight mb-2">
+              Kontör <span className="text-[#c9a84c]">(Ek Sorgu)</span> Paketleri
+            </h2>
+            <p className="font-body text-sm text-gray-400">
+              Aylık kotanız bitti mi? Ek sorgu yükleyin — kontörler süresiz geçerlidir, ay sonunda silinmez.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {kontorler.map((k) => (
+              <div key={k.name} className="bg-white/5 border border-white/5 hover:border-[#c9a84c]/30 rounded-3xl p-6 flex items-center justify-between transition-all duration-300">
+                <div>
+                  <h3 className="font-heading text-base font-bold text-white">{k.name}</h3>
+                  <p className="text-xs text-[#c9a84c] font-semibold mt-0.5">{k.detail}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-heading text-2xl font-extrabold text-white">{k.price}</p>
+                  <Link href="/kredi-yukle" className="text-[10px] text-[#c9a84c] font-bold uppercase tracking-wider hover:text-white transition-colors">
+                    Satın Al →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Info & FAQ Notice */}
         <div className="mt-20 border-t border-white/5 pt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex gap-4">
@@ -251,7 +250,8 @@ export default function FiyatlandirmaPage() {
             <div>
               <h4 className="font-heading text-sm font-bold text-white mb-1">Güvenli Altyapı ve Ödemeler</h4>
               <p className="font-body text-xs text-gray-400 leading-relaxed">
-                Tüm verileriniz 256-bit SSL şifrelemeyle korunur. Ödemeleriniz iyzico aracılığıyla %100 güvence altındadır.
+                Tüm verileriniz 256-bit SSL şifrelemeyle korunur. Ödemeler şimdilik aylık havale/EFT ile alınır;
+                kredi kartı desteği yakında eklenecektir.
               </p>
             </div>
           </div>
