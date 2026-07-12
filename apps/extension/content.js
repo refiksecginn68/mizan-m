@@ -20,9 +20,12 @@
     const davalar = [];
     const seen = new Set();
 
-    const rows = document.querySelectorAll("table tr, [role='row']");
+    const rows = document.querySelectorAll("table tr, [role='row'], mat-row, .mat-row, .cdk-row");
     rows.forEach((row) => {
-      const cellEls = row.querySelectorAll("td, [role='gridcell']");
+      // Klasik tablo hücreleri + SPA (Angular/Material) hücre desenleri
+      let cellEls = row.querySelectorAll("td, [role='gridcell'], [role='cell'], mat-cell, .mat-cell, .cdk-cell");
+      // Hücre bulunamadıysa (div tabanlı grid) doğrudan alt öğeleri hücre say
+      if (cellEls.length < 2 && !row.closest("table")) cellEls = row.children;
       if (cellEls.length < 2) return;
       const cells = Array.from(cellEls).map((c) => clean(c.textContent));
       const rowText = cells.join(" | ");
@@ -100,6 +103,9 @@
     }
     return true;
   });
+
+  // İzole dünyada test/teşhis kancası (sayfa JS'i göremez)
+  try { window.__MIZANIM_SCAN = collect; } catch (_) { /* yoksay */ }
 
   // Sayfa yüklendiğinde arka plana özet bildir (rozet için)
   try {

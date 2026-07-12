@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
     client_id?: string;
     location?: string;
     description?: string;
+    urgency?: string;
+    reminder_offsets_minutes?: number[];
   };
 
   try {
@@ -100,6 +102,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Başlangıç tarihi zorunludur" }, { status: 400 });
   }
 
+  const VALID_URGENCY = ["dusuk", "orta", "yuksek", "acil"];
+  const VALID_OFFSETS = [60, 1440, 4320]; // 1 saat, 1 gün, 3 gün (dakika)
+  const urgency = VALID_URGENCY.includes(body.urgency ?? "") ? body.urgency : "orta";
+  const reminderOffsets = Array.isArray(body.reminder_offsets_minutes)
+    ? body.reminder_offsets_minutes.filter((m) => VALID_OFFSETS.includes(m))
+    : [];
+
   const { data, error: dbError } = await serviceSupabase
     .from("calendar_events")
     .insert({
@@ -112,6 +121,8 @@ export async function POST(request: NextRequest) {
       client_id: body.client_id || null,
       location: body.location?.trim() || null,
       description: body.description?.trim() || null,
+      urgency,
+      reminder_offsets_minutes: reminderOffsets,
     })
     .select(`
       *,

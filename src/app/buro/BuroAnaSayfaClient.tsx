@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, CheckSquare, Square, Trash2, Clock } from "lucide-react";
 
 interface Todo {
@@ -9,12 +9,6 @@ interface Todo {
   done: boolean;
   dueAt?: string; // ISO datetime string
 }
-
-const DEMO_TODOS: Todo[] = [
-  { id: "1", text: "2024/1234 dosyasını hazırla", done: false, dueAt: new Date(Date.now() + 86400000).toISOString() },
-  { id: "2", text: "Yeni müvekkil sözleşmesi imzalat", done: true },
-  { id: "3", text: "Temyiz dilekçesini tamamla", done: false, dueAt: new Date(Date.now() + 3600000 * 3).toISOString() },
-];
 
 function formatDue(iso: string): string {
   const d = new Date(iso);
@@ -28,10 +22,25 @@ function formatDue(iso: string): string {
 }
 
 export default function BuroAnaSayfaClient() {
-  const [todos, setTodos] = useState<Todo[]>(DEMO_TODOS);
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/buro/gorevler")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.todos)) {
+          setTodos(d.todos.map((t: { id: string; text: string; done: boolean; due_at: string | null }) => ({
+            id: t.id, text: t.text, done: t.done, dueAt: t.due_at || undefined,
+          })));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const sorted = [...todos].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
@@ -41,25 +50,38 @@ export default function BuroAnaSayfaClient() {
     return 0;
   });
 
-  function add() {
-    if (!input.trim()) return;
-    setTodos((t) => [...t, {
-      id: Date.now().toString(),
-      text: input.trim(),
-      done: false,
-      dueAt: dueAt || undefined,
-    }]);
+  async function add() {
+    const text = input.trim();
+    if (!text) return;
+    const dueIso = dueAt ? new Date(dueAt).toISOString() : undefined;
     setInput("");
     setDueAt("");
     setShowDatePicker(false);
+    const res = await fetch("/api/buro/gorevler", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, due_at: dueIso }),
+    });
+    const d = await res.json().catch(() => null);
+    if (d?.todo) {
+      setTodos((t) => [...t, { id: d.todo.id, text: d.todo.text, done: d.todo.done, dueAt: d.todo.due_at || undefined }]);
+    }
   }
 
   function toggle(id: string) {
-    setTodos((t) => t.map((todo) => todo.id === id ? { ...todo, done: !todo.done } : todo));
+    const todo = todos.find((t) => t.id === id);
+    if (!todo) return;
+    setTodos((t) => t.map((x) => x.id === id ? { ...x, done: !x.done } : x));
+    fetch("/api/buro/gorevler", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, done: !todo.done }),
+    }).catch(() => {});
   }
 
   function remove(id: string) {
     setTodos((t) => t.filter((todo) => todo.id !== id));
+    fetch(`/api/buro/gorevler?id=${id}`, { method: "DELETE" }).catch(() => {});
   }
 
   const minDatetime = new Date().toISOString().slice(0, 16);
@@ -121,7 +143,7 @@ export default function BuroAnaSayfaClient() {
       {/* Liste */}
       <div className="p-2 space-y-0.5 max-h-52 overflow-y-auto">
         {sorted.length === 0 && (
-          <p className="text-xs text-gray-400 text-center py-4">Görev yok</p>
+          <p className="text-xs text-gray-400 text-center py-4">{loading ? "Yükleniyor..." : "Görev yok"}</p>
         )}
         {sorted.map((todo) => (
           <div key={todo.id} className="flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 group transition-colors">

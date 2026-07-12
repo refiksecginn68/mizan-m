@@ -5,6 +5,7 @@ import MizanAIFloating from "@/components/buro/MizanAIFloating";
 import BuroMobileNav from "@/components/buro/BuroMobileNav";
 import BuroContentHeader from "@/components/buro/BuroContentHeader";
 import OnboardingModal from "@/components/buro/OnboardingModal";
+import NotificationBell from "@/components/buro/NotificationBell";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -35,6 +36,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
         <BuroContentHeader />
         {children}
       </main>
+      <NotificationBell />
       <MizanAIFloating lawyerName={profile.full_name} />
       <BuroMobileNav />
       {!profile.onboarding_completed && <OnboardingModal />}

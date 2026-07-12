@@ -22,13 +22,40 @@ async function verify() {
   return false;
 }
 
+// Tüm çerçevelere (iframe dahil) mesaj gönderip yanıtları birleştirir —
+// SPA portallar içeriği iframe içinde render edebilir
+async function scanAllFrames(tabId, msgType, listKey, dedupeKey) {
+  let frames = [{ frameId: 0 }];
+  try {
+    const all = await chrome.webNavigation.getAllFrames({ tabId });
+    if (all && all.length) frames = all;
+  } catch (_) { /* izin yoksa üst çerçeveyle devam */ }
+
+  const merged = [];
+  const seen = new Set();
+  for (const f of frames) {
+    try {
+      const res = await chrome.tabs.sendMessage(tabId, { type: msgType }, { frameId: f.frameId });
+      if (res && res.ok && Array.isArray(res[listKey])) {
+        res[listKey].forEach((item) => {
+          const key = item[dedupeKey] || JSON.stringify(item);
+          if (seen.has(key)) return;
+          seen.add(key);
+          merged.push(item);
+        });
+      }
+    } catch (_) { /* bu çerçevede içerik betiği yok */ }
+  }
+  return merged;
+}
+
 async function scan() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = (tab && tab.url) || "";
 
   // Sekmeye göre mod: UYAP dosyaları veya UETS tebligatları
   if (url.includes("uyap.gov.tr")) mode = "uyap";
-  else if (url.includes("etebligat.gov.tr") || url.includes("uets.ptt.gov.tr")) mode = "uets";
+  else if (url.includes("etebligat.gov.tr")) mode = "uets";
   else {
     setStatus($("transferStatus"), "Bu sekme UYAP veya UETS sayfası değil. Portalı açıp tekrar deneyin.", "err");
     $("count").textContent = "0";
@@ -38,9 +65,7 @@ async function scan() {
 
   try {
     if (mode === "uyap") {
-      const res = await chrome.tabs.sendMessage(tab.id, { type: "MIZANIM_SCAN" });
-      if (!res || !res.ok) throw new Error("okunamadı");
-      davalar = res.davalar || [];
+      davalar = await scanAllFrames(tab.id, "MIZANIM_SCAN", "davalar", "esasNo");
       $("count").textContent = String(davalar.length);
       const list = $("list");
       list.innerHTML = "";
@@ -52,14 +77,19 @@ async function scan() {
       });
       $("transfer").disabled = davalar.length === 0;
       if (davalar.length === 0) {
-        setStatus($("transferStatus"), "Bu sayfada dosya bulunamadı. Dosya sorgulama listesini açıp tekrar tarayın.", "info");
+        const vatandas = url.includes("vatandas.uyap.gov.tr");
+        setStatus(
+          $("transferStatus"),
+          vatandas
+            ? "Dosya bulunamadı. Bu eklenti öncelikle UYAP Avukat Portalı için tasarlanmıştır. Vatandaş Portalı'nda Dosya Sorgulama sonuç tablosu ekranda TAM görünürken 'Sayfayı Tara'ya basın; yine bulunamazsa dosyalarınızı Mizanım'a elle ekleyebilirsiniz."
+            : "Bu sayfada dosya bulunamadı. Dosya sorgulama listesini açıp tekrar tarayın.",
+          "info"
+        );
       } else {
         $("transferStatus").className = "status";
       }
     } else {
-      const res = await chrome.tabs.sendMessage(tab.id, { type: "MIZANIM_SCAN_UETS" });
-      if (!res || !res.ok) throw new Error("okunamadı");
-      tebligatlar = res.tebligatlar || [];
+      tebligatlar = await scanAllFrames(tab.id, "MIZANIM_SCAN_UETS", "tebligatlar", "barkod");
       $("count").textContent = String(tebligatlar.length);
       const list = $("list");
       list.innerHTML = "";

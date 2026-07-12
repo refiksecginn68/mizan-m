@@ -26,6 +26,8 @@ interface CalendarEvent {
   location: string | null;
   description: string | null;
   is_reminder_sent: boolean;
+  urgency?: "dusuk" | "orta" | "yuksek" | "acil";
+  reminder_offsets_minutes?: number[];
   cases: { id: string; title: string; case_number: string | null } | null;
   clients: { id: string; full_name: string } | null;
 }
@@ -46,6 +48,8 @@ interface FormData {
   client_id: string;
   location: string;
   description: string;
+  urgency: string;
+  reminder_offsets_minutes: number[];
 }
 
 const EMPTY_FORM: FormData = {
@@ -57,7 +61,22 @@ const EMPTY_FORM: FormData = {
   client_id: "",
   location: "",
   description: "",
+  urgency: "orta",
+  reminder_offsets_minutes: [],
 };
+
+const URGENCY_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  dusuk: { label: "Düşük", color: "bg-green-100 text-green-800 border-green-200", dot: "bg-green-500" },
+  orta: { label: "Orta", color: "bg-yellow-100 text-yellow-800 border-yellow-200", dot: "bg-yellow-500" },
+  yuksek: { label: "Yüksek", color: "bg-orange-100 text-orange-800 border-orange-200", dot: "bg-orange-500" },
+  acil: { label: "Acil", color: "bg-red-100 text-red-800 border-red-200", dot: "bg-red-500" },
+};
+
+const REMINDER_OPTIONS: Array<{ minutes: number; label: string }> = [
+  { minutes: 60, label: "1 saat kala" },
+  { minutes: 1440, label: "1 gün kala" },
+  { minutes: 4320, label: "3 gün kala" },
+];
 
 const EVENT_TYPE_CONFIG: Record<string, { label: string; color: string; dot: string; icon: React.ElementType }> = {
   durusma: { label: "Duruşma", color: "bg-red-100 text-red-800 border-red-200", dot: "bg-red-400", icon: Scale },
@@ -381,6 +400,12 @@ export default function TakvimClient({ initialEvents, cases, clients, googleConn
                                 )}
                               </div>
                               <div className="flex items-center gap-1.5 flex-shrink-0">
+                                {ev.urgency && ev.urgency !== "orta" && (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-body border flex items-center gap-1 ${URGENCY_CONFIG[ev.urgency]?.color ?? ""}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${URGENCY_CONFIG[ev.urgency]?.dot ?? ""}`} />
+                                    {URGENCY_CONFIG[ev.urgency]?.label}
+                                  </span>
+                                )}
                                 <span className={`px-2 py-0.5 rounded-full text-xs font-body border ${typeConfig.color}`}>
                                   {typeConfig.label}
                                 </span>
@@ -505,6 +530,53 @@ export default function TakvimClient({ initialEvents, cases, clients, googleConn
                     value={formData.ends_at}
                     onChange={(e) => setFormData((p) => ({ ...p, ends_at: e.target.value }))} />
                 </div>
+              </div>
+
+              <div>
+                <label className="font-body text-sm font-medium text-foreground mb-1.5 block">Aciliyet</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(URGENCY_CONFIG).map(([key, cfg]) => (
+                    <button key={key} type="button"
+                      onClick={() => setFormData((p) => ({ ...p, urgency: key }))}
+                      className={`flex items-center justify-center gap-1.5 p-2 rounded-lg border transition-all text-xs font-body ${
+                        formData.urgency === key
+                          ? cfg.color + " font-semibold"
+                          : "border-border text-muted-foreground hover:border-primary/50"
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${cfg.dot}`} /> {cfg.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-body text-sm font-medium text-foreground mb-1.5 block">Hatırlatıcı</label>
+                <div className="flex gap-2">
+                  {REMINDER_OPTIONS.map((opt) => {
+                    const active = formData.reminder_offsets_minutes.includes(opt.minutes);
+                    return (
+                      <button key={opt.minutes} type="button"
+                        onClick={() => setFormData((p) => ({
+                          ...p,
+                          reminder_offsets_minutes: active
+                            ? p.reminder_offsets_minutes.filter((m) => m !== opt.minutes)
+                            : [...p.reminder_offsets_minutes, opt.minutes],
+                        }))}
+                        className={`flex-1 p-2 rounded-lg border text-xs font-body transition-all ${
+                          active
+                            ? "border-primary bg-primary/10 text-primary font-semibold"
+                            : "border-border text-muted-foreground hover:border-primary/50"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="font-body text-[10px] text-muted-foreground mt-1">
+                  Seçilen zamanlarda uygulama içi bildirim alırsınız.
+                </p>
               </div>
 
               <div>

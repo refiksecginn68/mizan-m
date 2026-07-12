@@ -263,9 +263,11 @@ function toResult(item: BedestenEmsalItem): EmsalResult {
 }
 
 // İlk sayfa sonuçlarını karar tam metniyle zenginleştir: gerçek özet + gerçek skor.
-// Düşük eşzamanlılık + batch arası bekleme: Bedesten art arda çok istekte throttle ediyor.
+// Hız koruması bedesten.ts'teki global limiter'da (istek başlangıçları ≥250ms aralıklı,
+// 429'da soğuma) — burada ekstra serileştirme yapmak toplam süreyi katlıyordu.
 async function enrich(results: EmsalResult[], f: Filters): Promise<EmsalResult[]> {
-  const CONCURRENCY = 2;
+  // 5 denendi: Bedesten 429 soğuması tetiklenip özetler eksik kalıyor; 3 dengeli
+  const CONCURRENCY = 3;
   const out = [...results];
   for (let i = 0; i < out.length; i += CONCURRENCY) {
     const batch = out.slice(i, i + CONCURRENCY);
@@ -282,7 +284,6 @@ async function enrich(results: EmsalResult[], f: Filters): Promise<EmsalResult[]
         };
       })
     );
-    if (i + CONCURRENCY < out.length) await new Promise((res) => setTimeout(res, 120));
   }
   return out;
 }
