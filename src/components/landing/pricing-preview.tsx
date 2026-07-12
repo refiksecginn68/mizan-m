@@ -16,32 +16,34 @@ interface Plan {
   popular?: boolean;
 }
 
+// Fiyatlar /fiyatlandirma sayfasındaki güncel planlarla hizalıdır
 const PLANS: Plan[] = [
   {
     name: "Vatandaş",
-    price: "49₺",
-    quota: "50 kredi",
+    price: "299₺",
+    period: "/ay",
+    quota: "50 AI sorgu / ay",
     highlights: ["Hukuki soru-cevap", "Belge analizi", "Dilekçe taslağı"],
-    ctaLabel: "Ücretsiz Başla",
-    ctaHref: "/kayit?tip=vatandas",
+    ctaLabel: "Hemen Başla",
+    ctaHref: "/kayit",
   },
   {
     name: "Avukat Pro",
-    price: "1.499₺",
+    price: "1.990₺",
     period: "/ay",
-    quota: "1.000 sorgu",
+    quota: "750 AI sorgu / ay",
     highlights: ["MizanAI asistan", "Sınırsız emsal arama", "CRM + takvim"],
     ctaLabel: "14 Gün Ücretsiz Dene",
-    ctaHref: "/kayit?tip=avukat&plan=profesyonel",
+    ctaHref: "/kayit?role=avukat",
   },
   {
     name: "Avukat Max",
-    price: "2.999₺",
+    price: "3.990₺",
     period: "/ay",
-    quota: "3.000 sorgu + UYAP/UETS",
+    quota: "2.000 sorgu + UYAP/UETS",
     highlights: ["Pro'daki her şey", "UYAP entegrasyonu", "UETS e-tebligat takibi"],
     ctaLabel: "14 Gün Ücretsiz Dene",
-    ctaHref: "/kayit?tip=avukat&plan=max",
+    ctaHref: "/kayit?role=avukat&plan=max",
     popular: true,
   },
   {

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Check, Star, Mail, ArrowRight, ShieldCheck, Scale, Sparkles, Landmark } from "lucide-react";
 
+// NOT: Header ve footer (site) layout'undan gelir; bu sayfa yalnız içerik üretir.
+
 export default function FiyatlandirmaPage() {
   const plans = [
     {
@@ -85,36 +87,9 @@ export default function FiyatlandirmaPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0f1729] text-white overflow-x-hidden selection:bg-[#c9a84c] selection:text-white">
-      {/* Background patterns */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1e293b] via-[#0f1729] to-[#0f1729] pointer-events-none z-0" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[500px] bg-[radial-gradient(50%_50%_at_50%_50%,_var(--tw-gradient-stops))] from-[#c9a84c]/5 to-transparent pointer-events-none z-0" />
-
-      {/* Header */}
-      <header className="relative z-10 border-b border-white/5 bg-[#0f1729]/80 backdrop-blur-md sticky top-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c9a84c] to-[#e5c060] flex items-center justify-center">
-              <Scale className="w-4 h-4 text-[#0f1729]" />
-            </div>
-            <span className="font-heading text-lg font-bold tracking-tight text-white">Mizanım</span>
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/" className="text-sm text-gray-400 hover:text-white transition-colors">Ana Sayfa</Link>
-            <Link href="/fiyatlandirma" className="text-sm text-[#c9a84c] font-semibold">Fiyatlandırma</Link>
-            <Link href="/giris" className="text-sm text-gray-300 hover:text-white transition-colors">Giriş Yap</Link>
-            <Link
-              href="/kayit"
-              className="px-4 py-2 rounded-lg bg-[#c9a84c] hover:bg-[#b08f3b] text-[#0f1729] text-xs font-bold transition-all duration-300 shadow-[0_0_20px_rgba(201,168,76,0.15)] hover:shadow-[0_0_20px_rgba(201,168,76,0.3)]"
-            >
-              Ücretsiz Dene
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+    <div className="bg-navy-950 text-white overflow-x-hidden selection:bg-[#c9a84c] selection:text-white">
+      {/* İçerik */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 md:pt-40 pb-16 md:pb-24">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-1.5 bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-full px-4 py-1.5 mb-4 text-[#c9a84c] text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
@@ -279,12 +254,7 @@ export default function FiyatlandirmaPage() {
             </div>
           </div>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/5 bg-[#080d1a] py-8 text-center text-xs text-gray-500">
-        <p>© 2026 Mizanım AI Hukuk Teknolojileri. Tüm hakları saklıdır. Bu platform hukuki tavsiye sunmaz.</p>
-      </footer>
+      </div>
     </div>
   );
 }
