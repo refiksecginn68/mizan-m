@@ -10,6 +10,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Landing / kurumsal sayfa paleti (marka sistemi)
+        navy: {
+          950: "#0a1220", // en koyu zemin
+          900: "#0f1729", // ana zemin
+          800: "#1a2942", // kart yüzeyi
+          700: "#243553", // border / hover
+        },
+        gold: {
+          500: "#c9a84c", // ana vurgu
+          400: "#d4b96a", // hover
+          300: "#e3cd8f", // metin vurgu
+          100: "#f0e4c4", // en açık
+        },
+        cream: "#f5f3ee",
         primary: {
           DEFAULT: "#1a2744",
           foreground: "#ffffff",
@@ -61,6 +75,8 @@ const config: Config = {
         },
       },
       fontFamily: {
+        // Landing gövde fontu (@fontsource/inter, (site) layout'unda yüklenir)
+        inter: ["Inter", "system-ui", "-apple-system", "sans-serif"],
         heading: ["var(--font-playfair)", "Georgia", "serif"],
         body: ["var(--font-source-serif)", "Georgia", "serif"],
         mono: ["var(--font-jetbrains)", "Courier New", "monospace"],
