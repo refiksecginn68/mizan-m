@@ -14,6 +14,13 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
   return (
     <LenisProvider>
       <div className="bg-navy-950 min-h-screen font-inter">
+        {/* Klavye kullanıcıları için içeriğe atlama bağlantısı */}
+        <a
+          href="#icerik"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-md focus:bg-gold-500 focus:text-navy-950 focus:font-semibold"
+        >
+          İçeriğe atla
+        </a>
         <SiteHeader />
         <main id="icerik">{children}</main>
         <SiteFooter />

@@ -104,7 +104,7 @@ export default function IletisimPage() {
                   <Phone aria-hidden className="w-4 h-4 text-gold-500" />
                 </span>
                 <span>
-                  <span className="block font-inter text-xs text-cream/40">Telefon</span>
+                  <span className="block font-inter text-xs text-cream/55">Telefon</span>
                   <span className="block font-inter text-sm font-semibold text-cream group-hover:text-gold-300 transition-colors">
                     0530 113 90 21
                   </span>
@@ -116,7 +116,7 @@ export default function IletisimPage() {
                   <Mail aria-hidden className="w-4 h-4 text-gold-500" />
                 </span>
                 <span>
-                  <span className="block font-inter text-xs text-cream/40">E-posta</span>
+                  <span className="block font-inter text-xs text-cream/55">E-posta</span>
                   <span className="block font-inter text-sm font-semibold text-cream group-hover:text-gold-300 transition-colors break-all">
                     refiksecginn@hotmail.com
                   </span>
@@ -128,7 +128,7 @@ export default function IletisimPage() {
                   <Clock aria-hidden className="w-4 h-4 text-gold-500" />
                 </span>
                 <span>
-                  <span className="block font-inter text-xs text-cream/40">Çalışma Saatleri</span>
+                  <span className="block font-inter text-xs text-cream/55">Çalışma Saatleri</span>
                   <span className="block font-inter text-sm font-semibold text-cream">Hafta içi 09:00–18:00</span>
                 </span>
               </div>
@@ -270,7 +270,7 @@ export default function IletisimPage() {
                 )}
               </button>
 
-              <p className="font-inter text-[11px] text-cream/40 pt-1">
+              <p className="font-inter text-[11px] text-cream/55 pt-1">
                 İletişim bilgileriniz yalnızca talebinizi yanıtlamak için kullanılır, üçüncü
                 taraflarla paylaşılmaz.{" "}
                 <Link href="/gizlilik" className="text-gold-300 hover:text-gold-100 underline underline-offset-2">

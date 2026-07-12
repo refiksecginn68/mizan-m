@@ -130,7 +130,7 @@ export default function KvkkModal({ open, onOpenChange }: KvkkModalProps) {
               </Link>
             </div>
 
-            <p className="font-inter text-[11px] text-cream/40 text-center mt-4">
+            <p className="font-inter text-[11px] text-cream/55 text-center mt-4">
               Detaylı bilgi:{" "}
               <Link href="/kvkk" onClick={() => onOpenChange(false)} className="text-gold-300 hover:text-gold-100 underline underline-offset-2">
                 KVKK Aydınlatma Metni

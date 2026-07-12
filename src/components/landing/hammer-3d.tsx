@@ -102,9 +102,9 @@ function HammerRig({ strikeSignal }: HammerRigProps) {
   }, [strikeSignal]);
 
   useFrame((state, delta) => {
-    // Idle: yavaş y-ekseni dönüşü
+    // Idle: yavaş y-ekseni salınımı — çekiç hep kameraya dönük kalır
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.25;
+      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.55 - 0.35;
     }
 
     if (!hammerRef.current) return;
@@ -144,7 +144,7 @@ function HammerRig({ strikeSignal }: HammerRigProps) {
   });
 
   return (
-    <group ref={groupRef} position={[0, 0.1, 0]}>
+    <group ref={groupRef} position={[0, 0.18, 0]} scale={1.15}>
       {/* Kaide (ses bloğu) */}
       <mesh position={[0, -0.72, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.55, 0.65, 0.22, 48]} />
@@ -213,13 +213,14 @@ export default function Hammer3D() {
       aria-label="Üç boyutlu tokmak animasyonu — fareyi hareket ettirince tokmak vurur"
     >
       <Canvas
-        camera={{ position: [0, 0.6, 3.4], fov: 42 }}
+        camera={{ position: [0, 0.55, 3.1], fov: 45 }}
         dpr={[1, 1.75]}
         gl={{ antialias: true, alpha: true }}
       >
-        <ambientLight intensity={0.35} />
-        <directionalLight position={[3, 4, 2]} intensity={1.1} castShadow color="#fff7e0" />
-        <pointLight position={[-2, 1, -1]} intensity={0.4} color={GOLD} />
+        <ambientLight intensity={0.65} />
+        <directionalLight position={[3, 4, 2]} intensity={1.6} castShadow color="#fff7e0" />
+        <directionalLight position={[-3, 2, -2]} intensity={0.5} color="#d4b96a" />
+        <pointLight position={[0, 1.5, 2]} intensity={0.6} color={GOLD} />
         <HammerRig strikeSignal={strikeSignal} />
         <ContactShadows position={[0, -0.85, 0]} opacity={0.5} scale={5} blur={2.4} far={2} color={BASE_NAVY} />
         <Environment preset="city" />

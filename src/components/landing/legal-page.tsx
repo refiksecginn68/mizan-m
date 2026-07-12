@@ -27,7 +27,7 @@ export default function LegalPage({ title, updatedAt, sections }: LegalPageProps
         <h1 className="font-heading font-bold text-cream leading-tight [font-size:clamp(2rem,4vw,3rem)]">
           {title}
         </h1>
-        <p className="font-inter text-sm text-cream/45 mt-3">Son güncelleme: {updatedAt}</p>
+        <p className="font-inter text-sm text-cream/55 mt-3">Son güncelleme: {updatedAt}</p>
       </header>
 
       {/* İçindekiler */}

@@ -120,7 +120,7 @@ export default function PricingPreview() {
         </ul>
 
         <div className="flex flex-col items-center gap-4 mt-10">
-          <p className="font-inter text-xs text-cream/45">
+          <p className="font-inter text-xs text-cream/55">
             Tüm planlar KDV dahildir. Yıllık ödemede %20 indirim.
           </p>
           <Link

@@ -56,7 +56,7 @@ export default function HammerScene() {
             güncel mevzuatı ve dosyanızın bağlamını aynı terazide tartar — siz karara
             odaklanın, araştırmayı ve taslağı biz hazırlayalım.
           </p>
-          <p className="font-inter text-sm text-cream/40 mt-4 border-l-2 border-gold-500/60 pl-3">
+          <p className="font-inter text-sm text-cream/55 mt-4 border-l-2 border-gold-500/60 pl-3">
             İpucu: Fareyi sahnenin üzerinde gezdirin, tokmak karar versin.
           </p>
         </motion.div>

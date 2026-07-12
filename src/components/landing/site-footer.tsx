@@ -109,7 +109,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-14 pt-8 border-t border-navy-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="font-inter text-xs text-cream/40">
+          <p className="font-inter text-xs text-cream/55">
             © 2026 Mizanım. Tüm hakları saklıdır.
           </p>
           <div className="flex items-center gap-2">
