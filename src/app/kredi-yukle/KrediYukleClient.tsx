@@ -233,7 +233,17 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
       </p>
       <div className="grid sm:grid-cols-2 gap-4">
         {kontorPaketler.map((p) => (
-          <div key={p.code} className="bg-white rounded-2xl border border-border shadow-card p-6 flex items-center justify-between">
+          <div
+            key={p.code}
+            className={`bg-white rounded-2xl shadow-card p-6 flex items-center justify-between relative ${
+              p.is_popular ? "border-2 border-[#c9a84c]" : "border border-border"
+            }`}
+          >
+            {p.is_popular && (
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#c9a84c] text-white font-body text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap">
+                <Star className="w-3 h-3" /> En Avantajlı
+              </span>
+            )}
             <div>
               <h3 className="font-heading text-base font-bold text-primary">{p.name}</h3>
               <p className="font-body text-sm text-accent font-semibold">
@@ -241,6 +251,9 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
               </p>
               <p className="font-heading text-xl font-extrabold text-primary mt-1">
                 ₺{p.price_try.toLocaleString("tr-TR")}
+                <span className="font-body text-xs font-normal text-muted-foreground ml-1.5">
+                  (₺{(p.price_try / p.query_quota).toLocaleString("tr-TR", { maximumFractionDigits: 2 })}/sorgu)
+                </span>
               </p>
             </div>
             <button

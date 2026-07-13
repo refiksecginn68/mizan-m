@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import HeroVideo from "@/components/landing/hero-video";
-import HammerScene from "@/components/landing/hammer-scene";
 import TrustBar from "@/components/landing/trust-bar";
-import FeaturesGrid from "@/components/landing/features-grid";
-import HowItWorks from "@/components/landing/how-it-works";
+import ProductShowcase from "@/components/landing/product-showcase";
+import FeatureShowcase from "@/components/landing/feature-showcase";
 import StatsBand from "@/components/landing/stats-band";
 import PricingPreview from "@/components/landing/pricing-preview";
 import FaqAccordion from "@/components/landing/faq-accordion";
@@ -20,9 +19,8 @@ export default function LandingClient() {
     <>
       <HeroVideo onAvukatGiris={() => setKvkkOpen(true)} />
       <TrustBar />
-      <HammerScene />
-      <FeaturesGrid />
-      <HowItWorks />
+      <ProductShowcase onAvukatGiris={() => setKvkkOpen(true)} />
+      <FeatureShowcase />
       <StatsBand />
       <PricingPreview />
       <FaqAccordion />

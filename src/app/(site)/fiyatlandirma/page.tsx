@@ -1,16 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Check, Star, Mail, ArrowRight, ShieldCheck, Scale, Sparkles, Landmark } from "lucide-react";
 
 // NOT: Header ve footer (site) layout'undan gelir; bu sayfa yalnız içerik üretir.
 
+const YILLIK_INDIRIM = 0.1;
+
+function fiyatTL(n: number) {
+  return `${n.toLocaleString("tr-TR")}₺`;
+}
+
 export default function FiyatlandirmaPage() {
+  // Aylık/Yıllık seçimi — Pro ve Max kartlarında geçerli, tek state ile tutarlı
+  const [yillik, setYillik] = useState(false);
+
   const plans = [
     {
       name: "Vatandaş",
       tagline: "Hukuki rehberlik herkes için",
-      price: "299₺",
+      monthlyPrice: 299,
+      hasYearly: false,
       period: "ay",
       credits: "50 AI sorgu / ay",
       features: [
@@ -27,7 +38,8 @@ export default function FiyatlandirmaPage() {
     {
       name: "Avukat Pro",
       tagline: "Profesyonel hukuk pratiği için",
-      price: "1.990₺",
+      monthlyPrice: 1990,
+      hasYearly: true,
       period: "ay",
       credits: "750 AI sorgu / ay",
       features: [
@@ -39,14 +51,15 @@ export default function FiyatlandirmaPage() {
         "Finans takibi",
       ],
       buttonText: "Pro'ya Başla",
-      buttonHref: "/kayit?role=avukat",
+      buttonHref: "/kayit?role=avukat&plan=pro",
       isPopular: true,
       accent: true,
     },
     {
       name: "Avukat Max",
       tagline: "Tam donanımlı profesyonel",
-      price: "3.990₺",
+      monthlyPrice: 3990,
+      hasYearly: true,
       period: "ay",
       credits: "2.000 AI sorgu / ay",
       features: [
@@ -63,7 +76,8 @@ export default function FiyatlandirmaPage() {
     {
       name: "Büro Planı",
       tagline: "Hukuk büroları için tam paket",
-      price: "Fiyat Alınız",
+      monthlyPrice: 0,
+      hasYearly: false,
       period: "ozel",
       credits: "Havuz kota / Esnek",
       features: [
@@ -82,8 +96,8 @@ export default function FiyatlandirmaPage() {
   ];
 
   const kontorler = [
-    { name: "100 Sorgu Kontör", price: "300₺", detail: "+100 AI sorgusu" },
-    { name: "500 Sorgu Kontör", price: "1.300₺", detail: "+500 AI sorgusu" },
+    { name: "1.000 Sorgu Kontör", price: "1.999₺", detail: "+1.000 AI sorgusu", avantajli: false },
+    { name: "2.300 Sorgu Kontör", price: "3.199₺", detail: "+2.300 AI sorgusu", avantajli: true },
   ];
 
   return (
@@ -104,7 +118,34 @@ export default function FiyatlandirmaPage() {
 
           <div className="inline-flex items-center gap-2 mt-8 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-xs text-gray-300">
             <Landmark className="w-3.5 h-3.5 text-[#c9a84c]" />
-            <span>Aylık havale/EFT ile ödeme — kredi kartı desteği yakında</span>
+            <span>Havale/EFT ile ödeme — kredi kartı desteği yakında</span>
+          </div>
+
+          {/* Aylık / Yıllık geçişi (Pro ve Max için) */}
+          <div className="flex items-center justify-center gap-3 mt-8">
+            <span className={`text-sm font-semibold transition-colors ${yillik ? "text-gray-500" : "text-white"}`}>
+              Aylık
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={yillik}
+              aria-label="Yıllık faturalandırma"
+              onClick={() => setYillik((v) => !v)}
+              className="relative w-12 h-6 rounded-full bg-white/10 border border-white/15 transition-colors hover:border-[#c9a84c]/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c9a84c]"
+            >
+              <span
+                className={`absolute top-0.5 w-5 h-5 rounded-full bg-[#c9a84c] transition-all ${
+                  yillik ? "left-[26px]" : "left-0.5"
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-semibold transition-colors ${yillik ? "text-white" : "text-gray-500"}`}>
+              Yıllık
+              <span className="ml-1.5 text-[10px] font-bold text-[#c9a84c] bg-[#c9a84c]/10 border border-[#c9a84c]/20 rounded-full px-2 py-0.5">
+                %10 indirim
+              </span>
+            </span>
           </div>
         </div>
 
@@ -138,7 +179,11 @@ export default function FiyatlandirmaPage() {
               <div className="mb-6 flex flex-col justify-end">
                 <div className="flex items-baseline gap-1">
                   <span className="font-heading text-3xl sm:text-4xl font-extrabold text-white">
-                    {plan.price}
+                    {plan.period === "ozel"
+                      ? "Fiyat Alınız"
+                      : plan.hasYearly && yillik
+                        ? fiyatTL(Math.round(plan.monthlyPrice * (1 - YILLIK_INDIRIM)))
+                        : fiyatTL(plan.monthlyPrice)}
                   </span>
                   {plan.period === "ay" && (
                     <span className="text-xs text-gray-400 font-medium">/ ay</span>
@@ -147,9 +192,18 @@ export default function FiyatlandirmaPage() {
                     <span className="text-xs text-gray-400 font-medium">esnek model</span>
                   )}
                 </div>
+                {plan.hasYearly && yillik && (
+                  <p className="text-[10px] text-[#c9a84c] mt-1 font-semibold">
+                    Yıllık {fiyatTL(Math.round(plan.monthlyPrice * 12 * (1 - YILLIK_INDIRIM)))} — %10 indirimli
+                    <span className="text-gray-500 font-medium ml-1 line-through">
+                      {fiyatTL(plan.monthlyPrice * 12)}
+                    </span>
+                  </p>
+                )}
                 {plan.period === "ay" && (
                   <p className="text-[10px] text-gray-500 mt-1 font-medium">
                     {plan.credits} dahil
+                    {plan.hasYearly && !yillik ? " · aylık faturalandırma" : ""}
                   </p>
                 )}
                 {plan.period === "ozel" && (
@@ -161,7 +215,11 @@ export default function FiyatlandirmaPage() {
 
               {/* CTA Button */}
               <Link
-                href={plan.buttonHref}
+                href={
+                  plan.hasYearly
+                    ? `${plan.buttonHref}&period=${yillik ? "yillik" : "aylik"}`
+                    : plan.buttonHref
+                }
                 className={`w-full py-3 px-4 rounded-xl font-bold text-xs text-center transition-all duration-300 mb-6 flex items-center justify-center gap-1.5 ${
                   plan.accent
                     ? "bg-[#c9a84c] text-[#0f1729] hover:bg-[#b08f3b]"
@@ -200,7 +258,22 @@ export default function FiyatlandirmaPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {kontorler.map((k) => (
-              <div key={k.name} className="bg-white/5 border border-white/5 hover:border-[#c9a84c]/30 rounded-3xl p-6 flex items-center justify-between transition-all duration-300">
+              <div
+                key={k.name}
+                className={`relative bg-white/5 rounded-3xl p-6 flex items-center justify-between transition-all duration-300 ${
+                  k.avantajli
+                    ? "border-2 border-[#c9a84c] shadow-[0_0_30px_rgba(201,168,76,0.08)]"
+                    : "border border-white/5 hover:border-[#c9a84c]/30"
+                }`}
+              >
+                {k.avantajli && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                    <span className="inline-flex items-center gap-1 bg-[#c9a84c] text-[#0f1729] text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full shadow whitespace-nowrap">
+                      <Star className="w-3 h-3 fill-current" />
+                      En Avantajlı
+                    </span>
+                  </div>
+                )}
                 <div>
                   <h3 className="font-heading text-base font-bold text-white">{k.name}</h3>
                   <p className="text-xs text-[#c9a84c] font-semibold mt-0.5">{k.detail}</p>
