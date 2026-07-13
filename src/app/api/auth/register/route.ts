@@ -36,6 +36,36 @@ export async function POST(request: Request) {
       );
     }
 
+    // Admin'e yeni kayıt bildirimi (ikincil — başarısız olsa da kayıt başarılı sayılır)
+    try {
+      const RESEND_API_KEY = process.env.RESEND_API_KEY;
+      const notifyTo = process.env.CONTACT_NOTIFY_EMAIL ?? "refiksecginn@gmail.com";
+      if (RESEND_API_KEY) {
+        const tarih = new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
+        const notifyRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>",
+            to: [notifyTo],
+            subject: `Yeni kayıt: ${full_name}`,
+            text: `Yeni kayıt: ${full_name} — ${email} — ${tarih}\nKullanıcı tipi: ${user_type}`,
+          }),
+        });
+        if (notifyRes.ok) {
+          const d = await notifyRes.json().catch(() => null) as { id?: string } | null;
+          console.log("[register] Admin bildirim maili gönderildi:", d?.id ?? "id yok");
+        } else {
+          console.error("[register] Admin bildirim maili gönderilemedi:", notifyRes.status, await notifyRes.text().catch(() => ""));
+        }
+      }
+    } catch (e) {
+      console.error("Yeni kayıt bildirim maili gönderilemedi:", e);
+    }
+
     // Resend ile markalı doğrulama e-postası gönder
     let emailSent = false;
     const APP_URL = process.env.NEXT_PUBLIC_APP_URL;

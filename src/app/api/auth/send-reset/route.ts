@@ -97,9 +97,7 @@ function resetEmailHtml(actionLink: string): string {
           <tr>
             <td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #f3f4f6;">
               <p style="margin:0;font-size:11px;color:#9ca3af;">
-                <a href="https://mizanim.com" style="color:#c9a84c;text-decoration:none;">mizanim.com</a>
-                &nbsp;|&nbsp;
-                <a href="mailto:info@mizanim.com" style="color:#c9a84c;text-decoration:none;">info@mizanim.com</a>
+                <a href="https://xn--mizanm-t9a.com" style="color:#c9a84c;text-decoration:none;">mizanım.com</a>
               </p>
             </td>
           </tr>
