@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 
 interface HeroVideoProps {
@@ -26,7 +26,16 @@ const itemVariants = {
 // Mobil ve prefers-reduced-motion durumunda video yerine poster görsel kullanılır.
 export default function HeroVideo({ onAvukatGiris }: HeroVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  // Parallax: hero kayarken içerik yavaşça yukarı süzülür ve solar.
+  // Hero sayfanın en üstünde olduğu için doğrudan pencere scrollY'si kullanılır.
+  const { scrollY } = useScroll();
+  const contentY = useTransform(scrollY, [0, 700], [0, reducedMotion ? 0 : -120]);
+  const contentOpacity = useTransform(scrollY, [0, 500], [1, reducedMotion ? 1 : 0.15]);
+  const bgY = useTransform(scrollY, [0, 700], [0, reducedMotion ? 0 : 90]);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -35,8 +44,9 @@ export default function HeroVideo({ onAvukatGiris }: HeroVideoProps) {
   }, []);
 
   return (
-    <section className="relative h-screen min-h-[640px] flex items-center justify-center overflow-hidden bg-navy-950">
-      {/* Arka plan: video (masaüstü) veya poster (mobil / azaltılmış hareket) */}
+    <section ref={sectionRef} className="relative h-screen min-h-[640px] flex items-center justify-center overflow-hidden bg-navy-950">
+      {/* Arka plan: video (masaüstü) veya poster (mobil / azaltılmış hareket) — hafif parallax */}
+      <motion.div aria-hidden className="absolute inset-0" style={{ y: bgY }}>
       {showVideo ? (
         <video
           ref={videoRef}
@@ -64,6 +74,7 @@ export default function HeroVideo({ onAvukatGiris }: HeroVideoProps) {
           className="object-cover"
         />
       )}
+      </motion.div>
 
       {/* Koyu overlay + üstten alta koyulaşan gradyan */}
       <div aria-hidden className="absolute inset-0 bg-navy-950/[0.78]" />
@@ -78,6 +89,7 @@ export default function HeroVideo({ onAvukatGiris }: HeroVideoProps) {
       {/* İçerik */}
       <motion.div
         className="relative z-10 flex flex-col items-center text-center px-5 max-w-4xl mx-auto"
+        style={{ y: contentY, opacity: contentOpacity }}
         variants={containerVariants}
         initial="hidden"
         animate="visible"
