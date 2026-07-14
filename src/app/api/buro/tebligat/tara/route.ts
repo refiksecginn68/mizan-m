@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sendPushNotification } from "@/lib/push";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -73,7 +74,7 @@ export async function POST() {
 
       if (existing) continue;
 
-      const { error } = await serviceSupabase
+      const { data: insertedRec, error } = await serviceSupabase
         .from("tebligat_records")
         .insert({
           lawyer_id: user.id,
@@ -84,9 +85,36 @@ export async function POST() {
           deadline_at: deadlineAt,
           status: "beklemede",
           is_read: false,
+        })
+        .select("id")
+        .single();
+
+      if (!error) {
+        yeni.push({ sender: demo.sender, subject: demo.subject });
+        
+        const bodyText = `${demo.sender}: ${demo.subject}`;
+        await serviceSupabase.from("notifications").insert({
+          user_id: user.id,
+          type: "tebligat",
+          title: "Yeni Tebligat Alındı",
+          body: bodyText,
+          reference_id: insertedRec?.id || null,
         });
 
-      if (!error) yeni.push({ sender: demo.sender, subject: demo.subject });
+        const { data: profile } = await serviceSupabase
+          .from("profiles")
+          .select("notify_tebligat")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.notify_tebligat !== false) {
+          await sendPushNotification(user.id, {
+            title: "Yeni Tebligat Alındı",
+            body: bodyText,
+            url: "/buro/tebligat",
+          });
+        }
+      }
     }
 
     return NextResponse.json({

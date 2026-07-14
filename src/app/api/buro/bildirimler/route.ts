@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sendPushNotification } from "@/lib/push";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -35,18 +37,96 @@ async function materializeReminders(svc: AnyClient, userId: string) {
     });
     const labels: Record<number, string> = { 60: "1 saatten", 1440: "1 günden", 4320: "3 günden" };
     for (const m of due) {
+      const bodyText = `${startsStr} tarihli etkinliğinize ${labels[m] ?? `${m} dakikadan`} az kaldı.`;
+      
       await svc.from("notifications").insert({
         user_id: userId,
         type: ev.event_type === "durusma" ? "durusma" : "sure",
         title: `Hatırlatma: ${ev.title}`,
-        body: `${startsStr} tarihli etkinliğinize ${labels[m] ?? `${m} dakikadan`} az kaldı.`,
+        body: bodyText,
         reference_id: ev.id,
       });
+
+      // Profil ayarlarından takvim/görev bildirim tercihlerini kontrol et
+      const { data: profile } = await svc
+        .from("profiles")
+        .select("notify_tasks")
+        .eq("id", userId)
+        .single();
+
+      if (profile?.notify_tasks !== false) {
+        await sendPushNotification(userId, {
+          title: `Hatırlatma: ${ev.title}`,
+          body: bodyText,
+          url: "/buro/takvim",
+        });
+      }
     }
+    
     await svc
       .from("calendar_events")
       .update({ reminders_sent_minutes: [...sent, ...due] })
       .eq("id", ev.id);
+  }
+}
+
+// Yaklaşan ödeme/taksit (≤ 2 gün) hatırlatıcılarını bildirime dönüştürür.
+async function materializePaymentReminders(svc: AnyClient, userId: string) {
+  const now = new Date();
+  
+  // Status = 'pending' olanlar ödenmemiş taksit/ödemeleri gösterir
+  const { data: pendingPayments } = await svc
+    .from("payments")
+    .select("id, amount, description, metadata")
+    .eq("user_id", userId)
+    .eq("status", "pending");
+
+  const approaching = (pendingPayments ?? []).filter((p: any) => {
+    if (!p.metadata?.due_date) return false;
+    const dueDate = new Date(p.metadata.due_date);
+    const timeDiff = dueDate.getTime() - now.getTime();
+    const daysDiff = timeDiff / (1000 * 3600 * 24);
+    // Vadesine 2 günden az kalan veya vadesi dünü/bugünü içeren ödemeler
+    return daysDiff >= -1 && daysDiff <= 2.1;
+  });
+
+  for (const pay of approaching) {
+    // Aynı ödeme için zaten bildirim oluşturulmuş mu kontrol et
+    const { data: existingNotif } = await svc
+      .from("notifications")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("reference_id", pay.id)
+      .maybeSingle();
+
+    if (existingNotif) continue;
+
+    const formattedAmount = new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(pay.amount);
+    const desc = pay.description ?? "Ödeme";
+    const bodyText = `${desc} tutarı: ${formattedAmount}, son ödeme tarihi: ${pay.metadata.due_date}.`;
+
+    await svc.from("notifications").insert({
+      user_id: userId,
+      type: "kredi",
+      title: "Yaklaşan Ödeme/Taksit Hatırlatması",
+      body: bodyText,
+      reference_id: pay.id,
+    });
+
+    // Profil ayarlarından ödeme bildirim tercihlerini kontrol et
+    const { data: profile } = await svc
+      .from("profiles")
+      .select("notify_payments")
+      .eq("id", userId)
+      .single();
+
+    if (profile?.notify_payments !== false) {
+      await sendPushNotification(userId, {
+        title: "Yaklaşan Ödeme/Taksit Hatırlatması",
+        body: bodyText,
+        url: "/buro/finans",
+      });
+    }
   }
 }
 
@@ -55,7 +135,10 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Oturum gerekiyor" }, { status: 401 });
 
   const svc = createServiceClient() as AnyClient;
+  
+  // Bildirimleri güncelle/materyalize et
   await materializeReminders(svc, user.id);
+  await materializePaymentReminders(svc, user.id);
 
   const { data, error } = await svc
     .from("notifications")

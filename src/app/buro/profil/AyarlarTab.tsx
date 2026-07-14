@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -26,12 +27,38 @@ function Bolum({ baslik, ikon: Ikon, children }: { baslik: string; ikon: React.E
   );
 }
 
-export default function AyarlarTab({ emailBildirim }: { emailBildirim: boolean }) {
+export default function AyarlarTab({
+  emailBildirim,
+  pushEnabledInit,
+  notifyTasksInit,
+  notifyPaymentsInit,
+  notifyTebligatInit,
+}: {
+  emailBildirim: boolean;
+  pushEnabledInit: boolean;
+  notifyTasksInit: boolean;
+  notifyPaymentsInit: boolean;
+  notifyTebligatInit: boolean;
+}) {
   const router = useRouter();
   const [tema, setTema] = useState<Tema>("light");
   const [font, setFont] = useState("normal");
   const [zoom, setZoom] = useState(100);
   const [bildirim, setBildirim] = useState(emailBildirim);
+  const [pushEnabled, setPushEnabled] = useState(pushEnabledInit);
+  const [notifyTasks, setNotifyTasks] = useState(notifyTasksInit);
+  const [notifyPayments, setNotifyPayments] = useState(notifyPaymentsInit);
+  const [notifyTebligat, setNotifyTebligat] = useState(notifyTebligatInit);
+
+  // PWA ve Cihaz durumları
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermissionState, setPushPermissionState] = useState<NotificationPermission>("default");
+
+  const [testPushLoading, setTestPushLoading] = useState(false);
+  const [testPushResult, setTestPushResult] = useState<{ tip: "ok" | "hata"; mesaj: string } | null>(null);
+
   const [bildirimKayit, setBildirimKayit] = useState(false);
 
   const [yeniSifre, setYeniSifre] = useState("");
@@ -47,7 +74,143 @@ export default function AyarlarTab({ emailBildirim }: { emailBildirim: boolean }
     setTema((localStorage.getItem("mizanim-tema") as Tema) ?? "light");
     setFont(localStorage.getItem("mizanim-font") ?? "normal");
     setZoom(Math.round(parseFloat(localStorage.getItem("mizanim-zoom") ?? "1") * 100));
+
+    // PWA & Push desteği tespiti
+    const ua = navigator.userAgent;
+    const ios = /iphone|ipad|ipod/i.test(ua);
+    setIsIOS(ios);
+
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || (navigator as any).standalone;
+    setIsStandalone(!!standalone);
+
+    const supported = "serviceWorker" in navigator && "PushManager" in window;
+    setPushSupported(supported);
+
+    if (supported) {
+      setPushPermissionState(Notification.permission);
+    }
   }, []);
+
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  async function handlePushToggle(active: boolean) {
+    setBildirimKayit(true);
+    try {
+      const resDb = await fetch("/api/ayarlar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ push_enabled: active }),
+      });
+      if (!resDb.ok) throw new Error("DB güncellenemedi");
+      
+      setPushEnabled(active);
+
+      if (active) {
+        const permission = await Notification.requestPermission();
+        setPushPermissionState(permission);
+
+        if (permission !== "granted") {
+          alert("Bildirim izni verilmedi. Tarayıcı ayarlarından izni etkinleştirmeniz gerekir.");
+          await fetch("/api/ayarlar", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ push_enabled: false }),
+          });
+          setPushEnabled(false);
+          setBildirimKayit(false);
+          return;
+        }
+
+        const keyRes = await fetch("/api/ayarlar/vapid-key");
+        if (!keyRes.ok) throw new Error("VAPID anahtarı alınamadı");
+        const { publicKey } = await keyRes.json();
+
+        const registration = await navigator.serviceWorker.ready;
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (!subscription) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+        }
+
+        const subRes = await fetch("/api/ayarlar/push-subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subscription }),
+        });
+
+        if (!subRes.ok) throw new Error("Abonelik kaydedilemedi");
+
+      } else {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+          await fetch("/api/ayarlar/push-unsubscribe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: subscription.endpoint }),
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Push toggle error:", err);
+      alert("Push bildirim işlemi sırasında bir hata oluştu.");
+      setPushEnabled(!active);
+    } finally {
+      setBildirimKayit(false);
+    }
+  }
+
+  async function handlePrefChange(key: "notify_tasks" | "notify_payments" | "notify_tebligat", val: boolean) {
+    setBildirimKayit(true);
+    try {
+      const res = await fetch("/api/ayarlar", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: val }),
+      });
+      if (res.ok) {
+        if (key === "notify_tasks") setNotifyTasks(val);
+        if (key === "notify_payments") setNotifyPayments(val);
+        if (key === "notify_tebligat") setNotifyTebligat(val);
+      } else {
+        alert("Tercih kaydedilemedi.");
+      }
+    } catch {
+      alert("Ağ hatası.");
+    } finally {
+      setBildirimKayit(false);
+    }
+  }
+
+  async function sendTestPush() {
+    setTestPushLoading(true);
+    setTestPushResult(null);
+    try {
+      const res = await fetch("/api/ayarlar/test-push", { method: "POST" });
+      if (res.ok) {
+        setTestPushResult({ tip: "ok", mesaj: "Test bildirimi gönderildi! Cihazınızı kontrol edin." });
+      } else {
+        setTestPushResult({ tip: "hata", mesaj: "Test bildirimi gönderilemedi." });
+      }
+    } catch {
+      setTestPushResult({ tip: "hata", mesaj: "Bağlantı hatası." });
+    } finally {
+      setTestPushLoading(false);
+    }
+  }
 
   function temaDegistir(t: Tema) {
     setTema(t);
@@ -179,23 +342,124 @@ export default function AyarlarTab({ emailBildirim }: { emailBildirim: boolean }
       </Bolum>
 
       <Bolum baslik="Bildirimler" ikon={Bell}>
-        <label className="flex items-center justify-between cursor-pointer">
-          <span className="font-body text-sm text-primary">
-            E-posta bildirimleri
-            <span className="block font-body text-xs text-muted-foreground mt-0.5">
-              Ödeme onayları ve hatırlatmalar e-posta ile gönderilsin
+        <div className="space-y-4">
+          <label className="flex items-center justify-between cursor-pointer">
+            <span className="font-body text-sm text-primary">
+              E-posta bildirimleri
+              <span className="block font-body text-xs text-muted-foreground mt-0.5">
+                Ödeme onayları ve hatırlatmalar e-posta ile gönderilsin
+              </span>
             </span>
-          </span>
-          <span className="flex items-center gap-2">
-            {bildirimKayit && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-            <input
-              type="checkbox"
-              checked={bildirim}
-              onChange={(e) => bildirimDegistir(e.target.checked)}
-              className="w-5 h-5 accent-[#c9a84c]"
-            />
-          </span>
-        </label>
+            <span className="flex items-center gap-2">
+              {bildirimKayit && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+              <input
+                type="checkbox"
+                checked={bildirim}
+                onChange={(e) => bildirimDegistir(e.target.checked)}
+                className="w-5 h-5 accent-[#c9a84c]"
+              />
+            </span>
+          </label>
+
+          {!pushSupported ? (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs text-muted-foreground">
+              Tarayıcınız veya cihazınız anlık (Push) bildirimleri desteklemiyor.
+            </div>
+          ) : isIOS && !isStandalone ? (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-700 leading-relaxed">
+              <strong className="block mb-1 text-amber-800">iOS / Safari Bildirim Ayarı:</strong>
+              iOS cihazlarda bildirim alabilmek için bu web sitesini ana ekranınıza eklemelisiniz. 
+              Safari&apos;de <strong className="text-amber-800 font-bold">Paylaş</strong> → <strong className="text-amber-800 font-bold">Ana Ekrana Ekle</strong> adımlarını takip edin ve uygulamayı oradan açıp buraya tekrar gelin.
+            </div>
+          ) : (
+            <div className="border-t border-gray-100 pt-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="font-body text-sm text-primary">
+                  Cihaz bildirimleri (Web Push)
+                  <span className="block font-body text-xs text-muted-foreground mt-0.5">
+                    Bu tarayıcıya özel push bildirimlerini etkinleştirin
+                  </span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={pushEnabled}
+                  onChange={(e) => handlePushToggle(e.target.checked)}
+                  className="w-5 h-5 accent-[#c9a84c]"
+                />
+              </label>
+
+              {pushEnabled && (
+                <div className="pl-6 space-y-3 mt-4 border-l-2 border-accent/20">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="font-body text-xs text-primary">
+                      Görev & Duruşma Hatırlatıcıları
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">
+                        Takvim etkinliklerine 1 saat ve 1 gün kala push bildirimi gider
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={notifyTasks}
+                      onChange={(e) => handlePrefChange("notify_tasks", e.target.checked)}
+                      className="w-4 h-4 accent-[#c9a84c]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="font-body text-xs text-primary">
+                      Finans & Ödeme Hatırlatıcıları
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">
+                        Yaklaşan ödeme ve taksitlere 2 gün kala bildirim gider
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={notifyPayments}
+                      onChange={(e) => handlePrefChange("notify_payments", e.target.checked)}
+                      className="w-4 h-4 accent-[#c9a84c]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="font-body text-xs text-primary">
+                      Yeni Tebligat Bildirimleri
+                      <span className="block text-[10px] text-muted-foreground mt-0.5">
+                        UETS sisteminden yeni tebligat okunduğunda anında uyarır
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={notifyTebligat}
+                      onChange={(e) => handlePrefChange("notify_tebligat", e.target.checked)}
+                      className="w-4 h-4 accent-[#c9a84c]"
+                    />
+                  </label>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={sendTestPush}
+                      disabled={testPushLoading}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent border border-accent/30 rounded-xl px-3 py-1.5 hover:bg-accent/5 transition-colors disabled:opacity-50"
+                    >
+                      {testPushLoading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Bell className="w-3.5 h-3.5" />
+                      )}
+                      Test Bildirimi Gönder
+                    </button>
+                    {testPushResult && (
+                      <p className={`font-body text-[11px] mt-1.5 ${testPushResult.tip === "ok" ? "text-green-700" : "text-red-600"}`}>
+                        {testPushResult.mesaj}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </Bolum>
 
       <Bolum baslik="Dil" ikon={Globe2}>

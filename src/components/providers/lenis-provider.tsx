@@ -19,6 +19,15 @@ export default function LenisProvider({ children }: LenisProviderProps) {
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
+    lenis.on("scroll", (e: { scroll: number }) => {
+      window.dispatchEvent(
+        new CustomEvent("lenis-scroll", {
+          detail: { scrollY: e.scroll },
+        })
+      );
+    });
+
+
     let rafId = 0;
     function raf(time: number) {
       lenis.raf(time);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -26,16 +26,59 @@ export default function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [kvkkOpen, setKvkkOpen] = useState(false);
+  const [visible, setVisible] = useState(true);
+  const [prefersReduced, setPrefersReduced] = useState(false);
   const pathname = usePathname();
 
+  const lastScrollY = useRef(0);
+  const isLenisActive = useRef(false);
+
   useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 50);
+    setPrefersReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+    function handleScroll(scrollY: number) {
+      const currentScrollY = scrollY;
+      const prevScrollY = lastScrollY.current;
+      const diff = currentScrollY - prevScrollY;
+
+      setScrolled(currentScrollY > 50);
+
+      // Sayfa tepesindeyken (scrollY < 80px) her zaman görünür
+      if (currentScrollY < 80) {
+        setVisible(true);
+      } else if (Math.abs(diff) > 10) {
+        // Aşağı kaydırırken gizle, yukarı kaydırırken anında göster
+        if (diff > 0) {
+          setVisible(false);
+        } else {
+          setVisible(true);
+        }
+      }
+      lastScrollY.current = currentScrollY;
     }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+
+    const onLenisScroll = (e: Event) => {
+      isLenisActive.current = true;
+      const customEvent = e as CustomEvent<{ scrollY: number }>;
+      handleScroll(customEvent.detail.scrollY);
+    };
+
+    const onNativeScroll = () => {
+      if (isLenisActive.current) return;
+      handleScroll(window.scrollY);
+    };
+
+    window.addEventListener("lenis-scroll", onLenisScroll);
+    window.addEventListener("scroll", onNativeScroll, { passive: true });
+
+    handleScroll(window.scrollY);
+
+    return () => {
+      window.removeEventListener("lenis-scroll", onLenisScroll);
+      window.removeEventListener("scroll", onNativeScroll);
+    };
   }, []);
+
 
   // Sayfa değişince mobil menüyü kapat
   useEffect(() => {
@@ -56,7 +99,15 @@ export default function SiteHeader() {
 
   return (
     <>
-      <header className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${headerBg}`}>
+      <header
+        style={{
+          transform: (visible || mobileOpen) ? "translateY(0)" : "translateY(-100%)",
+          transitionProperty: "transform, background-color, border-color",
+          transitionDuration: prefersReduced ? "0ms" : "250ms",
+          transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
+        }}
+        className={`fixed top-0 inset-x-0 z-50 ${headerBg}`}
+      >
         <div className="mx-auto max-w-7xl px-5 md:px-8 h-16 md:h-20 flex items-center justify-between gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group" aria-label="Mizanım ana sayfa">

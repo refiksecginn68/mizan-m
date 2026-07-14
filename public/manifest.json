@@ -1,5 +1,5 @@
 {
-  "name": "Mizanım — AI Destekli Hukuk",
+  "name": "Mizanım",
   "short_name": "Mizanım",
   "description": "Türkiye'nin AI destekli hukuk platformu. Avukatlar ve vatandaşlar için emsal arama, belge analizi ve dilekçe üretimi.",
   "start_url": "/",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#0f1729",
-  "theme_color": "#1a2744",
+  "theme_color": "#0f1729",
   "lang": "tr",
   "categories": ["legal", "productivity", "utilities"],
   "icons": [

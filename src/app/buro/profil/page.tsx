@@ -18,7 +18,7 @@ export default async function ProfilPage({ searchParams }: { searchParams?: { se
   const [{ data: profile }, { data: odemeler }, { data: paketler }] = await Promise.all([
     serviceSupabase
       .from("profiles")
-      .select("full_name, email, user_type, phone, avatar_url, bar_city, bar_number, university, specializations, achievements, hobbies, personal_notes, profile_documents, monthly_query_limit, monthly_query_count, additional_queries, trial_started_at, trial_ends_at, trial_queries_left, email_notifications")
+      .select("full_name, email, user_type, phone, avatar_url, bar_city, bar_number, university, specializations, achievements, hobbies, personal_notes, profile_documents, monthly_query_limit, monthly_query_count, additional_queries, trial_started_at, trial_ends_at, trial_queries_left, email_notifications, push_enabled, notify_tasks, notify_payments, notify_tebligat")
       .eq("id", user.id)
       .single(),
     serviceSupabase
@@ -71,7 +71,15 @@ export default async function ProfilPage({ searchParams }: { searchParams?: { se
               trial={getTrialDurum(profile)}
             />
           }
-          ayarlar={<AyarlarTab emailBildirim={profile.email_notifications ?? true} />}
+          ayarlar={
+            <AyarlarTab
+              emailBildirim={profile.email_notifications ?? true}
+              pushEnabledInit={profile.push_enabled ?? true}
+              notifyTasksInit={profile.notify_tasks ?? true}
+              notifyPaymentsInit={profile.notify_payments ?? true}
+              notifyTebligatInit={profile.notify_tebligat ?? true}
+            />
+          }
         />
       </main>
     </div>

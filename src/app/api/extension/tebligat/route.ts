@@ -1,5 +1,6 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifyExtensionToken } from "@/lib/extension-token";
+import { sendPushNotification } from "@/lib/push";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -82,7 +83,7 @@ export async function POST(request: Request) {
         "UETS eklenti modülünden aktarıldı.",
       ].filter(Boolean).join("\n");
 
-      const { error } = await svc.from("tebligat_records").insert({
+      const { data: insertedRec, error } = await svc.from("tebligat_records").insert({
         lawyer_id: verified.userId,
         case_id: caseId,
         uets_id: t.barkod ?? null,
@@ -91,9 +92,36 @@ export async function POST(request: Request) {
         received_at: t.tebligTarihi ? `${t.tebligTarihi}T09:00:00Z` : new Date().toISOString(),
         is_processed: t.okundu ?? false,
         notes,
-      });
-      if (error) hata++;
-      else eklendi++;
+      }).select("id").single();
+
+      if (error) {
+        hata++;
+      } else {
+        eklendi++;
+        
+        const bodyText = `${sender}: ${subject}`;
+        await svc.from("notifications").insert({
+          user_id: verified.userId,
+          type: "tebligat",
+          title: "Yeni Tebligat Alındı",
+          body: bodyText,
+          reference_id: insertedRec?.id || null,
+        });
+
+        const { data: profile } = await svc
+          .from("profiles")
+          .select("notify_tebligat")
+          .eq("id", verified.userId)
+          .single();
+
+        if (profile?.notify_tebligat !== false) {
+          await sendPushNotification(verified.userId, {
+            title: "Yeni Tebligat Alındı",
+            body: bodyText,
+            url: "/buro/tebligat",
+          });
+        }
+      }
     } catch {
       hata++;
     }
