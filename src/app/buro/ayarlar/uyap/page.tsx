@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Globe, Download, KeyRound, Lock, ShieldCheck } from "lucide-react";
 import EklentiBaglanti from "@/components/buro/EklentiBaglanti";
+import { getTrialDurum } from "@/lib/trial";
 
 export default async function UyapAyarlarPage() {
   const supabase = createClient();
@@ -13,14 +14,16 @@ export default async function UyapAyarlarPage() {
   const svc = createServiceClient() as any;
   const { data: profile } = await svc
     .from("profiles")
-    .select("user_type, uyap_uets_active")
+    .select("user_type, uyap_uets_active, trial_started_at, trial_ends_at, trial_queries_left")
     .eq("id", user.id)
     .single();
 
   if (!profile || profile.user_type !== "avukat") redirect("/panel");
 
-  // Max paketi olmayan avukata kilit ekranı
-  if (!profile.uyap_uets_active) {
+  const trial = getTrialDurum(profile);
+
+  // Max paketi veya aktif deneme olmayan avukata kilit ekranı
+  if (!profile.uyap_uets_active && !trial.aktif) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl border border-border shadow-card p-10 text-center">
@@ -69,7 +72,7 @@ export default async function UyapAyarlarPage() {
         <div>
           <h1 className="font-heading text-xl font-bold text-primary">UYAP/UETS Eklenti Kurulumu</h1>
           <p className="font-body text-sm text-muted-foreground">
-            mizanim-uyap-uets-v1.1.0 · Avukat Max paketinizde aktif
+            mizanim-uyap-uets-v1.1.0 · {profile.uyap_uets_active ? "Avukat Max paketinizde aktif" : `Deneme sürenizde aktif (${trial.kalanGun} gün kaldı)`}
           </p>
         </div>
       </div>

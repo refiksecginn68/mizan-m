@@ -6,6 +6,8 @@ import BuroMobileNav from "@/components/buro/BuroMobileNav";
 import BuroContentHeader from "@/components/buro/BuroContentHeader";
 import OnboardingModal from "@/components/buro/OnboardingModal";
 import NotificationBell from "@/components/buro/NotificationBell";
+import TrialBanner from "@/components/buro/TrialBanner";
+import { getTrialDurum } from "@/lib/trial";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -17,7 +19,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, user_type, onboarding_completed, specializations, bar_city, monthly_query_limit, monthly_query_count, additional_queries")
+    .select("full_name, user_type, onboarding_completed, specializations, bar_city, monthly_query_limit, monthly_query_count, additional_queries, trial_started_at, trial_ends_at, trial_queries_left")
     .eq("id", user.id)
     .single();
 
@@ -33,6 +35,10 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
         additionalQueries={profile.additional_queries}
       />
       <main className="flex-1 overflow-y-auto min-w-0 pb-14 lg:pb-0">
+        <TrialBanner
+          trial={getTrialDurum(profile)}
+          paketVar={(profile.monthly_query_limit ?? 0) > 0 || (profile.additional_queries ?? 0) > 0}
+        />
         <BuroContentHeader />
         {children}
       </main>

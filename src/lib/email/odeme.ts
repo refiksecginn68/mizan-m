@@ -1,24 +1,30 @@
 // Ödeme sistemi e-posta şablonları ve gönderim yardımcıları (Resend)
 
 const FROM = process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>";
-const ADMIN_EMAIL = process.env.MIZANIM_ADMIN_EMAIL ?? "refiksecginn@hotmail.com";
+// Admin bildirimleri iki adrese birden gider (teslimat yedekliliği)
+const ADMIN_EMAILS = Array.from(new Set([
+  process.env.MIZANIM_ADMIN_EMAIL ?? "refiksecginn@hotmail.com",
+  "refiksecginn@gmail.com",
+]));
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://xn--mizanm-t9a.com";
 
+// IBAN gizli değil; env bağımlılığı prod'da "IBAN tanımlanmadı" hatasına yol
+// açtığı için varsayılanlar kodda sabitlendi (env yine de öncelikli).
 export function getIbanBilgi() {
   return {
-    iban: process.env.NEXT_PUBLIC_MIZANIM_IBAN ?? "IBAN tanımlanmadı",
-    hesapAdi: process.env.NEXT_PUBLIC_MIZANIM_HESAP_ADI ?? "Mizanım",
+    iban: process.env.NEXT_PUBLIC_MIZANIM_IBAN ?? "TR85 0015 7000 0000 0102 7794 97",
+    hesapAdi: process.env.NEXT_PUBLIC_MIZANIM_HESAP_ADI ?? "REFİK SEÇGİN",
   };
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<string | null> {
+async function sendEmail(to: string | string[], subject: string, html: string): Promise<string | null> {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ from: FROM, to: [to], subject, html }),
+    body: JSON.stringify({ from: FROM, to: Array.isArray(to) ? to : [to], subject, html }),
   });
   if (!res.ok) {
     console.error("[email/odeme] Resend hatası:", res.status, await res.text().catch(() => ""));
@@ -64,7 +70,9 @@ function infoRow(label: string, value: string): string {
   </tr>`;
 }
 
-// Admin'e: yeni bekleyen havale talebi + tek tık ONAYLA / Reddet
+// Admin'e: kullanıcı ödeme bildirimi (dekont) gönderdi + Onay/Red sayfası linkleri.
+// Onay/Red mutasyonu GET'te DEĞİL — linkler yalnız form sayfası açar, işlem POST ile yapılır
+// (Safe Links / mail tarayıcı botlarına karşı).
 export async function sendAdminPaymentRequestEmail(params: {
   userEmail: string;
   userName: string;
@@ -72,20 +80,27 @@ export async function sendAdminPaymentRequestEmail(params: {
   amountTry: number;
   referenceCode: string;
   approvalToken: string;
+  receiptNo?: string | null;
+  payerNote?: string | null;
+  bildirimTarihi?: string;
 }): Promise<string | null> {
   const onaylaUrl = `${APP_URL}/api/odeme/onayla?token=${params.approvalToken}`;
   const reddetUrl = `${APP_URL}/api/odeme/reddet?token=${params.approvalToken}`;
   const body = `
-    <p style="margin:0 0 8px;font-size:16px;color:#0f1729;font-weight:600;">Yeni Havale/EFT Talebi</p>
+    <p style="margin:0 0 8px;font-size:16px;color:#0f1729;font-weight:600;">Yeni Ödeme Bildirimi</p>
     <p style="margin:0 0 20px;font-size:14px;color:#6b7280;line-height:1.7;">
-      Aşağıdaki kullanıcı bir paket için ödeme talebi oluşturdu. Havale hesaba düştüğünde
-      aşağıdaki bağlantıdan onay sayfasını açıp işlemi tamamlayın.
+      Aşağıdaki kullanıcı havale/EFT ödemesini yaptığını bildirdi. Ödemeyi hesabınızda
+      kontrol edip onay sayfasından işlemi tamamlayın.
     </p>
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f3f4f6;border-radius:10px;margin:0 0 24px;">
-      ${infoRow("Kullanıcı", `${params.userName} (${params.userEmail})`)}
+      ${infoRow("Ödeyen", params.userName)}
+      ${infoRow("E-posta", params.userEmail)}
       ${infoRow("Paket", params.packageName)}
       ${infoRow("Tutar", `₺${params.amountTry.toLocaleString("tr-TR")}`)}
+      ${infoRow("Dekont No", `<span style="color:#0f1729;">${params.receiptNo ?? "— (henüz bildirilmedi)"}</span>`)}
+      ${infoRow("Bildirim Tarihi", params.bildirimTarihi ?? "—")}
       ${infoRow("Referans Kodu", `<span style="color:#c9a84c;">${params.referenceCode}</span>`)}
+      ${params.payerNote ? infoRow("Açıklama", params.payerNote) : ""}
     </table>
     <div style="text-align:center;margin:24px 0;">
       <a href="${onaylaUrl}"
@@ -97,10 +112,28 @@ export async function sendAdminPaymentRequestEmail(params: {
       Ödeme gelmezse: <a href="${reddetUrl}" style="color:#dc2626;text-decoration:underline;">Red Sayfasını Aç</a>
     </p>`;
   return sendEmail(
-    ADMIN_EMAIL,
-    `Mizanım — Yeni Ödeme Talebi: ${params.referenceCode} (₺${params.amountTry.toLocaleString("tr-TR")})`,
-    wrap("Yeni Ödeme Talebi", body)
+    ADMIN_EMAILS,
+    `Mizanım — Ödeme Bildirimi: ${params.referenceCode}${params.receiptNo ? ` · Dekont ${params.receiptNo}` : ""} (₺${params.amountTry.toLocaleString("tr-TR")})`,
+    wrap("Ödeme Bildirimi", body)
   );
+}
+
+// Admin'e: yeni kullanıcı kaydı bildirimi
+export async function sendAdminNewUserEmail(params: {
+  fullName: string;
+  email: string;
+  userType: string;
+}): Promise<string | null> {
+  const tarih = new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" });
+  const body = `
+    <p style="margin:0 0 8px;font-size:16px;color:#0f1729;font-weight:600;">Yeni Kayıt</p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #f3f4f6;border-radius:10px;">
+      ${infoRow("Ad Soyad", params.fullName)}
+      ${infoRow("E-posta", params.email)}
+      ${infoRow("Kullanıcı Tipi", params.userType)}
+      ${infoRow("Tarih", tarih)}
+    </table>`;
+  return sendEmail(ADMIN_EMAILS, `Mizanım — Yeni kayıt: ${params.fullName}`, wrap("Yeni Kayıt", body));
 }
 
 // Kullanıcıya: kredi yüklendi (onay sonrası)

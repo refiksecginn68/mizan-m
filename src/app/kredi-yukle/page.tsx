@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { ArrowLeft } from "lucide-react";
 import KrediYukleClient from "./KrediYukleClient";
+import { getTrialDurum } from "@/lib/trial";
 
 interface PublicPackage {
   code: string;
@@ -25,7 +26,7 @@ export default async function KrediYuklePage() {
   const [{ data: profile }, { data: packages }, { data: reminders }] = await Promise.all([
     serviceClient
       .from("profiles")
-      .select("full_name, user_type, monthly_query_limit, monthly_query_count, additional_queries")
+      .select("full_name, user_type, monthly_query_limit, monthly_query_count, additional_queries, trial_started_at, trial_ends_at, trial_queries_left")
       .eq("id", user.id)
       .single(),
     serviceClient
@@ -52,10 +53,11 @@ export default async function KrediYuklePage() {
     p.code.startsWith("kontor_") || (isAvukat ? p.code === "pro" || p.code === "max" : p.code === "vatandas")
   );
 
+  const trial = getTrialDurum(profile);
   const kalanKota = Math.max(
     0,
     (profile.monthly_query_limit ?? 0) + (profile.additional_queries ?? 0) - (profile.monthly_query_count ?? 0)
-  );
+  ) + (trial.aktif ? trial.kalanKredi : 0);
 
   return (
     <div className="min-h-screen bg-background">

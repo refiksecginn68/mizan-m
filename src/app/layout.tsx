@@ -90,8 +90,15 @@ export default function RootLayout({
     <html
       lang="tr"
       className={`${playfair.variable} ${sourceSerif.variable} ${jetbrains.variable}`}
+      suppressHydrationWarning
     >
       <body className="antialiased">
+        {/* Görünüm ayarlarını ilk boyamadan önce uygula (FOUC önleme) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var d=document.documentElement,t=localStorage.getItem("mizanim-tema")||"light";if(t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches))d.classList.add("dark");var f=localStorage.getItem("mizanim-font");if(f)d.setAttribute("data-font",f);var z=localStorage.getItem("mizanim-zoom");if(z)d.style.setProperty("--app-zoom",z);}catch(e){}`,
+          }}
+        />
         {children}
         <ServiceWorkerRegister />
         <PWAInstallPrompt />

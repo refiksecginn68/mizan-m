@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { createPaymentRequest } from "@/lib/odeme";
-import { getIbanBilgi, sendAdminPaymentRequestEmail } from "@/lib/email/odeme";
+import { getIbanBilgi } from "@/lib/email/odeme";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -57,23 +57,9 @@ export async function POST(request: Request) {
     const req = await createPaymentRequest(svc, user.id, pkg.code, amountTry);
     if (!req) return NextResponse.json({ error: "Talep oluşturulamadı. Lütfen tekrar deneyin." }, { status: 500 });
 
-    const { data: profile } = await svc
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", user.id)
-      .single();
-
-    // Admin bildirimi — mail hatası talebi engellemez
-    const adminEmailId = await sendAdminPaymentRequestEmail({
-      userEmail: profile?.email ?? user.email ?? "",
-      userName: profile?.full_name ?? "Bilinmiyor",
-      packageName: pkg.name,
-      amountTry,
-      referenceCode: req.reference_code,
-      approvalToken: req.approval_token,
-    });
-
-    console.log(`[odeme/talep] ref=${req.reference_code} adminEmailId=${adminEmailId}`);
+    // Admin maili burada GİTMEZ — kullanıcı dekontla "Ödeme Bildirimi"
+    // gönderdiğinde /api/odeme/bildirim üzerinden gider.
+    console.log(`[odeme/talep] ref=${req.reference_code}`);
 
     const { iban, hesapAdi } = getIbanBilgi();
     return NextResponse.json({
@@ -83,7 +69,6 @@ export async function POST(request: Request) {
       queryQuota: pkg.query_quota,
       iban,
       hesapAdi,
-      adminNotified: adminEmailId !== null,
     });
   } catch {
     return NextResponse.json({ error: "Bir hata oluştu. Lütfen tekrar deneyin." }, { status: 500 });

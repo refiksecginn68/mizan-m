@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Landmark, Star, BellOff, CheckCircle2 } from "lucide-react";
+import { Check, Copy, Landmark, Star, BellOff, CheckCircle2, CreditCard } from "lucide-react";
 
 interface Paket {
   code: string;
@@ -32,7 +32,12 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
   const [loading, setLoading] = useState<string | null>(null);
   const [hata, setHata] = useState<string | null>(null);
   const [talep, setTalep] = useState<TalepSonuc | null>(null);
-  const [havaleYapildi, setHavaleYapildi] = useState(false);
+  // Bildirim akışı: havale bilgileri → dekont formu → teşekkür
+  const [adim, setAdim] = useState<"havale" | "form" | "tamam">("havale");
+  const [dekontNo, setDekontNo] = useState("");
+  const [aciklama, setAciklama] = useState("");
+  const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [bildirimHata, setBildirimHata] = useState<string | null>(null);
   const [kopyalandi, setKopyalandi] = useState<string | null>(null);
   const [hatirlatma, setHatirlatma] = useState(hatirlatmaAktif);
 
@@ -73,21 +78,102 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
     if (res.ok) setHatirlatma(false);
   }
 
+  async function bildirimGonder() {
+    if (!talep || !dekontNo.trim()) {
+      setBildirimHata("Dekont / işlem numarası zorunludur.");
+      return;
+    }
+    setGonderiliyor(true);
+    setBildirimHata(null);
+    try {
+      const res = await fetch("/api/odeme/bildirim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referenceCode: talep.referenceCode,
+          receiptNo: dekontNo.trim(),
+          note: aciklama.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setBildirimHata(data.error ?? "Bildirim gönderilemedi.");
+        return;
+      }
+      setAdim("tamam");
+    } catch {
+      setBildirimHata("Bağlantı hatası. Lütfen tekrar deneyin.");
+    } finally {
+      setGonderiliyor(false);
+    }
+  }
+
   // Havale ekranı (talep oluşturulduktan sonra)
   if (talep) {
     return (
       <div className="max-w-xl mx-auto animate-fade-in">
-        {havaleYapildi ? (
+        {adim === "tamam" ? (
           <div className="bg-white rounded-2xl border border-border shadow-card p-8 text-center">
             <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h2 className="font-heading text-xl font-bold text-primary mb-2">Teşekkürler!</h2>
+            <h2 className="font-heading text-xl font-bold text-primary mb-2">Bildiriminiz Alındı!</h2>
             <p className="font-body text-sm text-muted-foreground leading-relaxed">
-              Havaleniz kontrol edildikten sonra sorgu kotanız hesabınıza tanımlanacak ve
-              size e-posta ile bilgi verilecektir. Bu işlem genellikle aynı gün tamamlanır.
+              Ödeme bildiriminiz yöneticimize iletildi. Havaleniz kontrol edildikten sonra
+              sorgu kotanız hesabınıza tanımlanacak ve size e-posta ile bilgi verilecektir.
+              Bu işlem genellikle aynı gün tamamlanır.
             </p>
             <p className="font-body text-xs text-muted-foreground mt-4">
               Referans kodunuz: <span className="font-bold text-accent">{talep.referenceCode}</span>
             </p>
+          </div>
+        ) : adim === "form" ? (
+          <div className="bg-white rounded-2xl border border-border shadow-card p-6 sm:p-8">
+            <h2 className="font-heading text-lg font-bold text-primary mb-1">Ödeme Bildirimi</h2>
+            <p className="font-body text-xs text-muted-foreground mb-5">
+              {talep.packageName} · ₺{talep.amountTry.toLocaleString("tr-TR")} · Referans:{" "}
+              <span className="font-bold text-accent">{talep.referenceCode}</span>
+            </p>
+            <label className="block font-body text-xs font-semibold text-primary mb-1.5" htmlFor="dekont-no">
+              Dekont / İşlem Numarası <span className="text-danger">*</span>
+            </label>
+            <input
+              id="dekont-no"
+              type="text"
+              value={dekontNo}
+              onChange={(e) => setDekontNo(e.target.value)}
+              placeholder="Örn: 2026071412345"
+              maxLength={100}
+              className="w-full border border-border rounded-xl px-4 py-2.5 font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/40 mb-4"
+            />
+            <label className="block font-body text-xs font-semibold text-primary mb-1.5" htmlFor="dekont-aciklama">
+              Açıklama (isteğe bağlı)
+            </label>
+            <textarea
+              id="dekont-aciklama"
+              value={aciklama}
+              onChange={(e) => setAciklama(e.target.value)}
+              placeholder="Örn: Farklı bir isimden havale yaptım"
+              maxLength={500}
+              rows={3}
+              className="w-full border border-border rounded-xl px-4 py-2.5 font-body text-sm focus:outline-none focus:ring-2 focus:ring-accent/40"
+            />
+            {bildirimHata && (
+              <p className="font-body text-xs text-danger mt-3">{bildirimHata}</p>
+            )}
+            <button
+              type="button"
+              onClick={bildirimGonder}
+              disabled={gonderiliyor}
+              className="btn-primary w-full mt-5"
+            >
+              {gonderiliyor ? "Gönderiliyor..." : "Ödeme Bildirimini Gönder"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdim("havale")}
+              className="w-full mt-3 font-body text-xs text-muted-foreground hover:text-primary transition-colors"
+            >
+              ← Havale bilgilerine geri dön
+            </button>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-border shadow-card p-6 sm:p-8">
@@ -148,10 +234,10 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
 
             <button
               type="button"
-              onClick={() => setHavaleYapildi(true)}
+              onClick={() => setAdim("form")}
               className="btn-primary w-full mt-6"
             >
-              Havaleyi Yaptım
+              Havaleyi Yaptım — Ödeme Bildirimi Gönder
             </button>
           </div>
         )}
@@ -221,6 +307,14 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
               className="btn-primary w-full mt-6"
             >
               {loading === p.code ? "Hazırlanıyor..." : "Havale ile Öde"}
+            </button>
+            <button
+              type="button"
+              disabled
+              title="Kredi kartı ile ödeme yakında"
+              className="w-full mt-2 flex items-center justify-center gap-1.5 font-body text-xs text-muted-foreground border border-dashed border-border rounded-lg py-2 cursor-not-allowed opacity-70"
+            >
+              <CreditCard className="w-3.5 h-3.5" /> Kredi Kartı — Yakında
             </button>
           </div>
         ))}

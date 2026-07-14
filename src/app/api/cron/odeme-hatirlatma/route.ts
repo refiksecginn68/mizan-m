@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   for (const reminder of reminders ?? []) {
     try {
       const [{ data: profile }, { data: pkg }] = await Promise.all([
-        svc.from("profiles").select("full_name, email").eq("id", reminder.user_id).single(),
+        svc.from("profiles").select("full_name, email, email_notifications").eq("id", reminder.user_id).single(),
         svc.from("credit_packages").select("code, name, price_try").eq("code", reminder.package_code).single(),
       ]);
 
@@ -48,13 +48,16 @@ export async function GET(request: Request) {
         continue;
       }
 
-      const emailId = await sendReminderEmail({
-        userEmail: profile.email,
-        userName: profile.full_name ?? "Kullanıcı",
-        packageName: pkg.name,
-        amountTry,
-        referenceCode: req.reference_code,
-      });
+      // Kullanıcı e-posta bildirimlerini kapattıysa hatırlatma maili atlanır
+      const emailId = profile.email_notifications === false
+        ? null
+        : await sendReminderEmail({
+            userEmail: profile.email,
+            userName: profile.full_name ?? "Kullanıcı",
+            packageName: pkg.name,
+            amountTry,
+            referenceCode: req.reference_code,
+          });
 
       // Admin de onay linkini şimdiden alır (ödeme düşünce tek tık onay)
       await sendAdminPaymentRequestEmail({
