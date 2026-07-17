@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
+import { dilekceMetniTemizle } from "@/lib/services/dilekce-temizle";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
@@ -205,6 +206,7 @@ KURALLAR:
 - Hukuki dayanakları belirt (kanun maddeleri)
 - Sadece dilekçe metnini yaz, ek açıklama yapma
 - Profesyonel ve resmi Türkçe kullan
+- Markdown KULLANMA: #, ##, *, **, -, \`\`\`, | işaretleri YASAK — çıktı kağıda basılacak düz dilekçe metnidir; vurgu gerekiyorsa BÜYÜK HARF kullan
 - Dilekçenin sonuna şu uyarıyı ekle: "Bu dilekçe Mizanım AI tarafından üretilmiştir. Hukuki tavsiye niteliği taşımaz."`;
 
     const userMessage = `Aşağıdaki bilgilere göre ${docType} hazırla:\n\n${dataStr}`;
@@ -216,7 +218,7 @@ KURALLAR:
       messages: [{ role: "user", content: userMessage }],
     });
 
-    const dilekceText = response.content[0].type === "text" ? response.content[0].text : "";
+    const dilekceText = dilekceMetniTemizle(response.content[0].type === "text" ? response.content[0].text : "");
 
     if (!dilekceText) {
       // Başarısız çağrı kotadan yemez

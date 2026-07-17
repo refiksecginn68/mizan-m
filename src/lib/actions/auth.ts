@@ -2,10 +2,24 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies, headers } from "next/headers";
+import { cihazKaydet, cihazDusur, aktifCihazlar, CIHAZ_COOKIE } from "@/lib/services/oturum";
 
 export async function logoutAction() {
   const supabase = createClient();
-  await supabase.auth.signOut();
+  // Bu cihazın oturum kaydını da düşür
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const deviceId = cookies().get(CIHAZ_COOKIE)?.value;
+    if (user && deviceId) {
+      const cihazlar = await aktifCihazlar(user.id);
+      const bu = cihazlar.find((c) => c.device_id === deviceId);
+      if (bu) await cihazDusur(user.id, bu.id);
+    }
+  } catch { /* oturum kaydı düşmese de çıkış devam eder */ }
+  cookies().delete(CIHAZ_COOKIE);
+  // Yalnızca bu cihazın oturumu kapanır — diğer cihazlar cihaz limitiyle yönetilir
+  await supabase.auth.signOut({ scope: "local" });
   redirect("/");
 }
 
@@ -46,6 +60,19 @@ export async function loginAction(
 
   const userType: string = profile?.user_type ?? "vatandas";
   console.log("[loginAction] user:", data.user.email, "type:", userType);
+
+  // Eşzamanlı oturum limiti: cihazı kaydet, limit üstündeki eski cihazlar düşer
+  try {
+    const h = headers();
+    const ip = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || null;
+    const deviceId = await cihazKaydet(data.user.id, h.get("user-agent"), ip);
+    cookies().set(CIHAZ_COOKIE, deviceId, {
+      httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 30, path: "/",
+    });
+  } catch (e) {
+    console.error("[loginAction] cihaz kaydı başarısız:", e);
+  }
 
   let destination: string;
   if (redirectTo && userType === "avukat" && redirectTo.startsWith("/buro")) {

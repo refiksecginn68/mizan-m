@@ -7,6 +7,7 @@ import BuroContentHeader from "@/components/buro/BuroContentHeader";
 import OnboardingModal from "@/components/buro/OnboardingModal";
 import NotificationBell from "@/components/buro/NotificationBell";
 import TrialBanner from "@/components/buro/TrialBanner";
+import OturumBekci from "@/components/shared/OturumBekci";
 import { getTrialDurum } from "@/lib/trial";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,6 +43,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
         <BuroContentHeader />
         {children}
       </main>
+      <OturumBekci />
       <NotificationBell />
       <MizanAIFloating lawyerName={profile.full_name} />
       <BuroMobileNav />

@@ -24,6 +24,7 @@ interface CaseRow {
   opposing_party: string | null;
   created_at: string;
   clients: Client | null;
+  client_name?: string | null;
 }
 
 interface Props {
@@ -48,7 +49,7 @@ const YARG_TURLERI = [
 ];
 
 const EMPTY_FORM = {
-  title: "", client_id: "", case_number: "", court: "",
+  title: "", client_id: "", client_name: "", case_number: "", court: "",
   status: "aktif", description: "", opposing_party: "",
 };
 
@@ -92,7 +93,8 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
           !c.title.toLowerCase().includes(q) &&
           !(c.case_number ?? "").includes(q) &&
           !(c.court ?? "").toLowerCase().includes(q) &&
-          !(c.clients?.full_name ?? "").toLowerCase().includes(q)
+          !(c.clients?.full_name ?? "").toLowerCase().includes(q) &&
+          !(c.client_name ?? "").toLowerCase().includes(q)
         ) return false;
       }
       return true;
@@ -309,10 +311,10 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
 
                   {/* Müvekkil / Karşı Taraf */}
                   <div className="min-w-0">
-                    {c.clients && (
+                    {(c.clients || c.client_name) && (
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <User className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                        <span className="text-xs text-gray-700 truncate">{c.clients.full_name}</span>
+                        <span className="text-xs text-gray-700 truncate">{c.clients?.full_name ?? c.client_name}</span>
                       </div>
                     )}
                     {c.opposing_party && (
@@ -397,10 +399,10 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                         <span className="text-xs text-gray-500 truncate">{c.court}</span>
                       </div>
                     )}
-                    {c.clients && (
+                    {(c.clients || c.client_name) && (
                       <div className="flex items-center gap-1.5">
                         <User className="w-3 h-3 text-gray-300 flex-shrink-0" />
-                        <span className="text-xs text-gray-500 truncate">{c.clients.full_name}</span>
+                        <span className="text-xs text-gray-500 truncate">{c.clients?.full_name ?? c.client_name}</span>
                       </div>
                     )}
                   </div>
@@ -451,12 +453,21 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Müvekkil</label>
-                  <select value={formData.client_id} onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    Müvekkil <span className="text-gray-300">(isteğe bağlı)</span>
+                  </label>
+                  <select value={formData.client_id}
+                    onChange={(e) => setFormData({ ...formData, client_id: e.target.value, client_name: e.target.value ? "" : formData.client_name })}
                     className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#c9a84c] bg-white">
-                    <option value="">Seçin</option>
+                    <option value="">Seçin / Müvekkilsiz</option>
                     {clients.map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
                   </select>
+                  {!formData.client_id && (
+                    <input value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      placeholder="veya manuel isim-soyisim yazın"
+                      className="mt-2 w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#c9a84c]" />
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">Durum</label>

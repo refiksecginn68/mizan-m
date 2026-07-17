@@ -10,6 +10,7 @@ import { loginAction } from "@/lib/actions/auth";
 function GirisForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
+  const oturumDusuruldu = searchParams.get("neden") === "oturum-dusuruldu";
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -72,6 +73,16 @@ function GirisForm() {
           Hesabınıza giriş yapın
         </p>
       </div>
+
+      {oturumDusuruldu && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4">
+          <ShieldCheck className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="font-body text-sm text-amber-700">
+            Hesabınıza başka bir cihazdan giriş yapıldığı için bu oturum kapatıldı.
+            Devam etmek için tekrar giriş yapın.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}

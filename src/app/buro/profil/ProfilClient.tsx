@@ -5,6 +5,7 @@ import {
   User, Camera, Save, Loader2, FileUp, FileText, CheckCircle,
   GraduationCap, Scale, Award, Heart, StickyNote, Sparkles,
 } from "lucide-react";
+import AktifOturumlar from "@/components/shared/AktifOturumlar";
 
 // Uzmanlık/branş seçenekleri — çoklu seçim
 const HUKUK_ALANLARI = [
@@ -254,6 +255,9 @@ export default function ProfilClient({ initialProfile }: { initialProfile: Profi
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         Profili Kaydet
       </button>
+
+      {/* Güvenlik: aktif oturumlar */}
+      <AktifOturumlar />
     </div>
   );
 }

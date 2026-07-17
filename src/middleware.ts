@@ -11,6 +11,16 @@ const loginAttempts = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 dakika
 
+// Oturum bilgisi gerektirmeyen herkese açık sayfalar — bu yollarda middleware
+// Supabase auth ağ çağrısı YAPMAZ (her sayfa geçişine ~100-300ms ekliyordu).
+const PUBLIC_PATHS = new Set([
+  "/", "/giris", "/kayit", "/sifremi-unuttum", "/fiyatlandirma", "/ozellikler",
+  "/hakkimizda", "/iletisim", "/sss", "/gizlilik", "/gizlilik-politikasi",
+  "/kvkk", "/kullanim-sartlari", "/yasal-uyari", "/cerez-politikasi",
+  "/mesafeli-satis-sozlesmesi", "/eklenti-gizlilik", "/oturum-suresi-doldu",
+  "/dogrulama-bekliyor", "/offline", "/auth/hata",
+]);
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
@@ -37,6 +47,11 @@ export async function middleware(request: NextRequest) {
     } else {
       loginAttempts.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
     }
+  }
+
+  // Herkese açık sayfa: auth kontrolü gereksiz — Supabase'e gitmeden geç
+  if (PUBLIC_PATHS.has(pathname)) {
+    return supabaseResponse;
   }
 
   const supabase = createServerClient(

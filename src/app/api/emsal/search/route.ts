@@ -3,13 +3,13 @@ import { generateEmbedding } from "@/lib/ai/embed";
 import { createHash } from "crypto";
 import {
   searchEmsalRaw,
-  getEmsalDocumentText,
   scoreAndSnippet,
   extractTerms,
   daireToBirimAdi,
   EMSAL_COURT_TYPES,
   type BedestenEmsalItem,
 } from "@/lib/services/bedesten";
+import { topluKararMetni } from "@/lib/services/emsal-doc-cache";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -263,29 +263,17 @@ function toResult(item: BedestenEmsalItem): EmsalResult {
 }
 
 // İlk sayfa sonuçlarını karar tam metniyle zenginleştir: gerçek özet + gerçek skor.
-// Hız koruması bedesten.ts'teki global limiter'da (istek başlangıçları ≥250ms aralıklı,
-// 429'da soğuma) — burada ekstra serileştirme yapmak toplam süreyi katlıyordu.
+// Metinler önce Supabase kalıcı önbelleğinden TEK toplu sorguyla gelir;
+// yalnızca eksikler Bedesten'e gider (global limiter oradaki hızı korur).
 async function enrich(results: EmsalResult[], f: Filters): Promise<EmsalResult[]> {
-  // 5 denendi: Bedesten 429 soğuması tetiklenip özetler eksik kalıyor; 3 dengeli
-  const CONCURRENCY = 3;
-  const out = [...results];
-  for (let i = 0; i < out.length; i += CONCURRENCY) {
-    const batch = out.slice(i, i + CONCURRENCY);
-    await Promise.allSettled(
-      batch.map(async (r, j) => {
-        if (!r.documentId) return;
-        const text = await getEmsalDocumentText(r.documentId);
-        if (!text) return;
-        const { score, snippet } = scoreAndSnippet(text, f.q);
-        out[i + j] = {
-          ...r,
-          summary: snippet,
-          score: f.q ? score : undefined,
-        };
-      })
-    );
-  }
-  return out;
+  const ids = results.map((r) => r.documentId).filter((id): id is string => !!id);
+  const metinler = await topluKararMetni(ids);
+  return results.map((r) => {
+    const text = r.documentId ? metinler.get(r.documentId) : undefined;
+    if (!text) return r;
+    const { score, snippet } = scoreAndSnippet(text, f.q);
+    return { ...r, summary: snippet, score: f.q ? score : undefined };
+  });
 }
 
 async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; total: number } | null> {
@@ -345,8 +333,9 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
   }
 
   // Tam metin zenginleştirme: özet + gerçek alaka skoru.
-  // Yalnızca ilk 5 sonuç (rerank aktifse ilk 15 sonuç)
-  const enrichLimit = isRerankActive ? 15 : 5;
+  // Yalnızca ilk 5 sonuç (rerank aktifse ilk 10 sonuç — 15'ten indirildi:
+  // her belge Bedesten'den ≥250ms; 10 aday tam sayfayı karşılar, ~1.5sn kazanç)
+  const enrichLimit = isRerankActive ? 10 : 5;
   const head = await enrich(results.slice(0, enrichLimit), f);
   results = [...head, ...results.slice(enrichLimit)];
 

@@ -7,7 +7,7 @@ import {
   MessageSquare, Loader2, Send, ExternalLink,
   AlertCircle, ChevronRight,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 
 interface KararData {
   documentId?: string;
@@ -240,7 +240,7 @@ export default function KararIncelemeClient({ kararId }: { kararId: string }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#f4f5f7]">
+    <div className="flex flex-col min-h-screen bg-[#f4f5f7]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-5 py-3 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -291,11 +291,11 @@ export default function KararIncelemeClient({ kararId }: { kararId: string }) {
         </div>
       </div>
 
-      {/* Body — split panel */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Body — karar metni sayfa ile birlikte akar, AI paneli sabit kalır */}
+      <div className="flex-1 flex items-start">
         {/* SOL: Karar metni */}
-        <div className="flex-1 overflow-y-auto p-5">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 h-full">
+        <div className="flex-1 min-w-0 p-5">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6">
             {/* Meta */}
             <div className="grid grid-cols-2 gap-3 mb-6 pb-5 border-b border-gray-100">
               <div>
@@ -354,8 +354,8 @@ export default function KararIncelemeClient({ kararId }: { kararId: string }) {
           </div>
         </div>
 
-        {/* SAĞ: AI panel — her zaman açık */}
-        <div className="w-96 flex-shrink-0 border-l border-gray-200 flex flex-col bg-white">
+        {/* SAĞ: AI panel — her zaman açık, kaydırmada ekranda kalır */}
+        <div className="w-96 flex-shrink-0 border-l border-gray-200 flex flex-col bg-white sticky top-0 h-screen">
           {/* Sağ sekme başlığı */}
           <div className="flex border-b border-gray-100 flex-shrink-0">
             <button
@@ -416,8 +416,8 @@ export default function KararIncelemeClient({ kararId }: { kararId: string }) {
                       </button>
                     )}
                   </div>
-                  <div className="prose prose-xs max-w-none text-gray-700 leading-relaxed">
-                    <ReactMarkdown>{ozet}</ReactMarkdown>
+                  <div className="text-gray-700 leading-relaxed">
+                    <MarkdownRenderer content={ozet} />
                   </div>
                   {ozetLoading && !ozet && (
                     <div className="flex gap-1 mt-2">
@@ -462,7 +462,7 @@ export default function KararIncelemeClient({ kararId }: { kararId: string }) {
                     }`}>
                       {msg.role === "assistant" ? (
                         msg.content ? (
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <MarkdownRenderer content={msg.content} />
                         ) : (
                           <div className="flex gap-1">
                             {[0,1,2].map(j => (

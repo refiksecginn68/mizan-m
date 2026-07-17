@@ -8,11 +8,20 @@ import {
   FileCode2, Star, Trash2, MessageCircleQuestion, ArrowRight, ImageIcon,
 } from "lucide-react";
 
-import DilekceEditor from "@/components/dilekce/DilekceEditor";
+import dynamic from "next/dynamic";
 import { duzMetinHtml } from "@/lib/services/metin-html";
-import {
-  DILEKCE_SABLONLARI, SABLON_KATEGORILERI, type DilekceSablonu,
-} from "@/lib/data/dilekce-sablonlari";
+
+// TipTap tabanlı editör ağır (~100KB) — yalnızca belge üretilince yüklenir
+const DilekceEditor = dynamic(() => import("@/components/dilekce/DilekceEditor"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full text-gray-400">
+      <Loader2 className="w-6 h-6 animate-spin" />
+    </div>
+  ),
+});
+// Şablon korpusu ~190KB — sayfa bundle'ına gömülmez, sekme açılınca dinamik yüklenir
+import type { DilekceSablonu } from "@/lib/data/dilekce-sablonlari";
 
 type Tab = "ai" | "evrak" | "sablonar" | "ornekler";
 type Asama = "form" | "sorular";
@@ -70,7 +79,12 @@ export default function DilekceAvukatClient({
 
   // Şablondan-üretim
   const [secilenSablonId, setSecilenSablonId] = useState<string>("");
-  const secilenSablon = DILEKCE_SABLONLARI.find((s) => s.id === secilenSablonId);
+
+  // Örnek şablon korpusu — dinamik chunk (bundle'ı şişirmesin)
+  const [ornekSablonlar, setOrnekSablonlar] = useState<DilekceSablonu[]>([]);
+  const [sablonKategorileri, setSablonKategorileri] = useState<readonly string[]>([]);
+  const [sablonlarYuklendi, setSablonlarYuklendi] = useState(false);
+  const secilenSablon = ornekSablonlar.find((s) => s.id === secilenSablonId);
 
   // Soru-sor akışı
   const [asama, setAsama] = useState<Asama>("form");
@@ -303,6 +317,17 @@ export default function DilekceAvukatClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Şablon korpusunu ayrı chunk olarak, sekmeye girildiğinde yükle
+  useEffect(() => {
+    if (sablonlarYuklendi) return;
+    if (tab !== "ornekler" && !secilenSablonId) return;
+    import("@/lib/data/dilekce-sablonlari").then((m) => {
+      setOrnekSablonlar(m.DILEKCE_SABLONLARI);
+      setSablonKategorileri(m.SABLON_KATEGORILERI);
+      setSablonlarYuklendi(true);
+    }).catch(() => {});
+  }, [tab, secilenSablonId, sablonlarYuklendi]);
+
   async function generateFromEvrak() {
     if (!evrakMetin) return;
     setKonu("Yüklenen belgeleri inceleyerek uygun dilekçeye dönüştür");
@@ -407,7 +432,7 @@ export default function DilekceAvukatClient({
   const [ornekIndiriliyor, setOrnekIndiriliyor] = useState("");
   const [sadeceFavoriler, setSadeceFavoriler] = useState(false);
 
-  const filtreliOrnekler = DILEKCE_SABLONLARI.filter((s) => {
+  const filtreliOrnekler = ornekSablonlar.filter((s) => {
     if (sadeceFavoriler && !favoriler.includes(s.id)) return false;
     if (ornekKategori && s.kategori !== ornekKategori) return false;
     if (ornekArama.trim()) {
@@ -474,7 +499,7 @@ export default function DilekceAvukatClient({
                 }`}>
                 {t === "ai" && "AI ile Oluştur"}
                 {t === "evrak" && "Evrak Yükle & Düzenle"}
-                {t === "ornekler" && `Örnek Şablonlar (${DILEKCE_SABLONLARI.length})`}
+                {t === "ornekler" && `Örnek Şablonlar${sablonlarYuklendi ? ` (${ornekSablonlar.length})` : ""}`}
                 {t === "sablonar" && `Şablonlarım (${sablonar.length})`}
               </button>
             ))}
@@ -895,10 +920,10 @@ export default function DilekceAvukatClient({
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                       ornekKategori === "" ? "bg-[#0f1729] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                     }`}>
-                    Tümü ({DILEKCE_SABLONLARI.length})
+                    Tümü ({ornekSablonlar.length})
                   </button>
-                  {SABLON_KATEGORILERI.map((k) => {
-                    const n = DILEKCE_SABLONLARI.filter((s) => s.kategori === k).length;
+                  {sablonKategorileri.map((k) => {
+                    const n = ornekSablonlar.filter((s) => s.kategori === k).length;
                     if (!n) return null;
                     return (
                       <button key={k} onClick={() => setOrnekKategori(ornekKategori === k ? "" : k)}
@@ -912,7 +937,12 @@ export default function DilekceAvukatClient({
                 </div>
               </div>
 
-              {filtreliOrnekler.length === 0 ? (
+              {!sablonlarYuklendi ? (
+                <div className="flex items-center justify-center gap-2 py-16 text-gray-400">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Şablonlar yükleniyor...</span>
+                </div>
+              ) : filtreliOrnekler.length === 0 ? (
                 <div className="text-center py-16">
                   <FileText className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                   <p className="text-sm text-gray-400">Aramanızla eşleşen şablon bulunamadı</p>

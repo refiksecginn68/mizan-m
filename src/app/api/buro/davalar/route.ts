@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
   let body: {
     title: string;
     client_id?: string;
+    client_name?: string;
     case_number?: string;
     court?: string;
     status?: string;
@@ -99,6 +100,8 @@ export async function POST(request: NextRequest) {
       lawyer_id: user.id,
       title: body.title.trim(),
       client_id: body.client_id || null,
+      // Müvekkil kaydı olmadan manuel isim — dropdown seçiliyse manuel isim yok sayılır
+      client_name: body.client_id ? null : body.client_name?.trim() || null,
       case_number: body.case_number?.trim() || null,
       court: body.court?.trim() || null,
       status: body.status || "aktif",

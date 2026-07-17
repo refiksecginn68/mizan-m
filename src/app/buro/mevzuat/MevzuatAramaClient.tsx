@@ -248,7 +248,7 @@ export default function MevzuatAramaClient() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col min-h-screen">
       {/* Başlık + Arama */}
       <div className="bg-white border-b border-gray-200 px-6 py-5 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -357,15 +357,15 @@ export default function MevzuatAramaClient() {
         </div>
       </div>
 
-      {/* Ana içerik */}
-      <div className="flex-1 overflow-hidden flex">
+      {/* Ana içerik — iç scroll yok, sayfa bütün kayar */}
+      <div className="flex-1 flex items-stretch">
         {/* Sol: Sonuç listesi */}
         <div
           className={`${
             selected ? "w-96 flex-shrink-0 border-r border-gray-200" : "flex-1"
-          } bg-[#f8f9fa] flex flex-col overflow-hidden transition-all`}
+          } bg-[#f8f9fa] transition-all`}
         >
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="p-4">
             {/* Yükleniyor */}
             {loading && (
               <div className="space-y-3">
@@ -440,7 +440,7 @@ export default function MevzuatAramaClient() {
 
         {/* Sağ: Mevzuat detay paneli */}
         {selected && (
-          <div className="flex-1 flex flex-col overflow-hidden bg-white">
+          <div className="flex-1 flex flex-col bg-white min-w-0">
             {/* Panel başlık */}
             <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center gap-3 flex-shrink-0">
               <button
@@ -520,8 +520,8 @@ export default function MevzuatAramaClient() {
               })}
             </div>
 
-            {/* Panel içerik */}
-            <div className="flex-1 overflow-y-auto p-6">
+            {/* Panel içerik — sayfa ile birlikte akar */}
+            <div className="flex-1 p-6">
               {/* Genel Bilgi sekmesi */}
               {rightTab === "metin" && (
                 <div>

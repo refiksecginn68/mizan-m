@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
+import { MIZAN_ORTAK_KURALLAR } from "@/lib/ai/prompts";
+import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -200,12 +202,12 @@ ${contextData}
 7. Dilekçe/belge istenirse start_dilekce aracını kullan, ardından kısa taslak sun
 8. Yanıt formatı: Kısa başlık → madde/içtihat → prosedürel notlar → strateji. Gereksiz nezaket yok.
 9. Her hukuki iddiada KAYNAK göster: kanun no + madde, karar için daire + esas/karar no + tarih
-10. Biçim: sade ve okunabilir Markdown. Karşılaştırma/liste verisi için GFM tablo kullanabilirsin (| ile). Gereksiz emoji, süslü sembol, art arda boş satır kullanma.
+10. Biçim: DÜZ METİN. Markdown sembolü (*, **, #, |, ---) kullanma; başlıkları BÜYÜK HARFLE kendi satırında yaz. Tablo kurma; verileri satır satır yaz. Gereksiz emoji, süslü sembol, art arda boş satır kullanma.
 
 ## TEMEL MEVZUAT
 **Usul:** HMK 6100, CMK 5271, İYUK 2577, İİK 2004
 **Maddi:** TMK 4721, TBK 6098, TCK 5237, TTK 6102, İş K. 4857, TKHK 6502, KMK 634, KVKK 6698
-**Süreler:** İşe iade 1 ay | İş alacakları 5 yıl | İdari dava 60/30 gün | İcra şikayeti 7 gün | Tüketici hakem 2 yıl | Genel TBK m.146 10 yıl | Haksız eylem TBK m.72 2/10 yıl`;
+**Süreler:** İşe iade 1 ay | İş alacakları 5 yıl | İdari dava 60/30 gün | İcra şikayeti 7 gün | Tüketici hakem 2 yıl | Genel TBK m.146 10 yıl | Haksız eylem TBK m.72 2/10 yıl` + MIZAN_ORTAK_KURALLAR;
 }
 
 // ── Tool execution ────────────────────────────────────────────────────────────
@@ -400,7 +402,7 @@ export async function POST(request: Request) {
                 for (const word of words) {
                   send({ delta: word + " " });
                 }
-                const fullResponse = block.text;
+                const fullResponse = aiCiktiTemizle(block.text);
                 if (activeSessionId) {
                   await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: fullResponse }).then(() => {}).catch(() => {});
                 }
@@ -428,7 +430,7 @@ export async function POST(request: Request) {
           }
 
           if (activeSessionId) {
-            await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: fullResponse }).then(() => {}).catch(() => {});
+            await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: aiCiktiTemizle(fullResponse) }).then(() => {}).catch(() => {});
           }
 
           // dilekce_baslat aksiyonunu UI'ya bildir

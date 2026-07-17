@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import Anthropic from "@anthropic-ai/sdk";
 import { fal } from "@fal-ai/client";
+import { MIZAN_ORTAK_KURALLAR } from "@/lib/ai/prompts";
+import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -22,8 +24,8 @@ Ayrıca mutlaka değerlendir:
 - DELİL NİTELİĞİ: Hukuka uygun elde edilmiş mi olabilir (özel hayat, gizli kayıt, KVKK)? Kesin delil mi takdiri delil mi?
 - ÇELİŞKİ/TUTARLILIK: İçerikte kendi içinde veya bilinen olgularla çelişen unsurlar var mı? Tarih/saat/mekân tutarlı mı?
 
-Yanıtı Türkçe, profesyonel hukuk diliyle ve Markdown başlıklarıyla yaz:
-önce "## Özet", sonra "## Hukuki Değerlendirme" (uzman perspektifleri burada), en sonda "## Öneriler" (madde listesi).`;
+Yanıtı Türkçe, profesyonel hukuk diliyle ve DÜZ METİN olarak yaz (markdown sembolü kullanma):
+önce "ÖZET" başlığı, sonra "HUKUKİ DEĞERLENDİRME" (uzman perspektifleri burada), en sonda "ÖNERİLER" (numaralı liste). Başlıklar kendi satırında, büyük harfle.`;
 
 const ANALYSIS_PROMPTS: Record<string, string> = {
   ses: `Bu ses kaydını hukuki delil açısından analiz et:
@@ -166,13 +168,13 @@ export async function POST(req: NextRequest) {
             ? `${prompt}\n\nTranskript:\n${transkript}`
             : prompt,
         }],
-        system: `Sen Mizanım hukuk platformunun AI asistanısın. Türk hukuku uzmanısın. Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun. Yanıtlarını Markdown formatında yaz.`,
+        system: `Sen Mizanım hukuk platformunun AI asistanısın. Türk hukuku uzmanısın. Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun.` + MIZAN_ORTAK_KURALLAR,
       });
 
-      const analysisText = claudeRes.content
+      const analysisText = aiCiktiTemizle(claudeRes.content
         .filter((b) => b.type === "text")
         .map((b) => (b as { text: string }).text)
-        .join("\n");
+        .join("\n"));
 
       const sections = parseAnalysisText(analysisText);
 
@@ -257,14 +259,13 @@ export async function POST(req: NextRequest) {
       ],
       system: `Sen Mizanım hukuk platformunun AI asistanısın. Türk hukuku uzmanısın.
 Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun.
-Her analizde kaynakları belirt ve nesnel değerlendirme yap.
-Yanıtlarını Markdown formatında yaz.`,
+Her analizde kaynakları belirt ve nesnel değerlendirme yap.` + MIZAN_ORTAK_KURALLAR,
     });
 
-    const analysisText = response.content
+    const analysisText = aiCiktiTemizle(response.content
       .filter((block) => block.type === "text")
       .map((block) => (block as AnyClient).text)
-      .join("\n");
+      .join("\n"));
 
     // Analiz metnini yapılandır
     const sections = parseAnalysisText(analysisText);
@@ -297,40 +298,38 @@ function parseAnalysisText(text: string): {
   hukukiDegerlendirme?: string;
   oneriler?: string[];
 } {
-  const lines = text.split("\n").filter((l) => l.trim());
+  // Hem eski markdown ("## Özet") hem yeni düz metin ("ÖZET") başlıklarını tanır
+  const lines = text.split("\n");
   const oneriler: string[] = [];
-  let ozet = "";
-  let hukukiDegerlendirme = "";
+  const ozetSatirlari: string[] = [];
+  const degerlendirmeSatirlari: string[] = [];
 
-  let inOneriler = false;
+  let bolum: "ozet" | "degerlendirme" | "oneriler" | "" = "";
 
   for (const line of lines) {
     const trimmed = line.trim();
+    const baslik = trimmed.replace(/^#+\s*/, "").replace(/:$/, "");
 
-    if (trimmed.match(/^#+\s*(özet|içerik|ana konu)/i)) {
-      inOneriler = false;
-      continue;
-    }
+    if (/^(özet|ÖZET|içerik|ana konu)/i.test(baslik) && baslik.length < 30) { bolum = "ozet"; continue; }
+    if (/^(öner|ÖNER|dikkat|tavsiye|sonuç)/i.test(baslik) && baslik.length < 40) { bolum = "oneriler"; continue; }
+    if (/^(hukuki|HUKUKİ|değerlend|analiz)/i.test(baslik) && baslik.length < 40) { bolum = "degerlendirme"; continue; }
 
-    if (trimmed.match(/^#+\s*(öner|dikkat|tavsiye|sonuç)/i)) {
-      inOneriler = true;
-      continue;
-    }
-
-    if (trimmed.match(/^#+\s*(hukuki|değerlend|analiz)/i)) {
-      inOneriler = false;
-      continue;
-    }
-
-    if (inOneriler && (trimmed.startsWith("-") || trimmed.startsWith("•") || trimmed.match(/^\d+\./))) {
-      oneriler.push(trimmed.replace(/^[-•\d.]\s*/, "").trim());
-    } else if (!ozet && trimmed.length > 50 && !trimmed.startsWith("#")) {
-      ozet = trimmed;
-    } else if (ozet && !hukukiDegerlendirme && trimmed.length > 50 && !trimmed.startsWith("#")) {
-      hukukiDegerlendirme = trimmed;
+    if (!trimmed) continue;
+    if (bolum === "oneriler" && (trimmed.startsWith("-") || trimmed.startsWith("•") || /^\d+\./.test(trimmed))) {
+      oneriler.push(trimmed.replace(/^([-•]|\d+\.)\s*/, "").trim());
+    } else if (bolum === "ozet") {
+      ozetSatirlari.push(trimmed);
+    } else if (bolum === "degerlendirme" || bolum === "oneriler") {
+      degerlendirmeSatirlari.push(line.replace(/\s+$/, ""));
+    } else if (!ozetSatirlari.length && trimmed.length > 50) {
+      // Başlıksız yanıt — ilk uzun paragraf özet sayılır
+      ozetSatirlari.push(trimmed);
+      bolum = "degerlendirme";
     }
   }
 
+  const ozet = ozetSatirlari.join(" ").trim();
+  let hukukiDegerlendirme = degerlendirmeSatirlari.join("\n").trim();
   if (!hukukiDegerlendirme) hukukiDegerlendirme = text;
 
   return { ozet, hukukiDegerlendirme, oneriler };

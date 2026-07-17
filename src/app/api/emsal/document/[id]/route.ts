@@ -1,4 +1,5 @@
-import { getEmsalDocumentText, htmlToText } from "@/lib/services/bedesten";
+import { htmlToText } from "@/lib/services/bedesten";
+import { tekKararMetni } from "@/lib/services/emsal-doc-cache";
 
 const UYAP_BASE = "https://emsal.uyap.gov.tr";
 
@@ -9,10 +10,10 @@ export async function GET(
   const { id } = params;
   if (!id) return Response.json({ error: "ID gerekli" }, { status: 400 });
 
-  // 1) Bedesten getDocumentContent (birincil — base64 HTML)
+  // 1) Kalıcı önbellek → Bedesten getDocumentContent (birincil — base64 HTML)
   // essential=true: karar açma kullanıcı eylemi, 429 soğumasında bile denenir
   try {
-    const content = await getEmsalDocumentText(id, true);
+    const content = await tekKararMetni(id, true);
     if (content) {
       return Response.json({
         content,

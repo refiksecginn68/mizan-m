@@ -106,18 +106,20 @@ function getId(item: CaseLaw) {
   return item.documentId || item.id || "";
 }
 
-// Aranan ifade + tek tek terimler, göz yormayan şeffaf vurguyla işaretlenir
+// Aranan ifade + tek tek terimler, göz yormayan yumuşak vurguyla işaretlenir.
+// Türkçe İ/ı için toLocaleLowerCase("tr-TR") kullanılır.
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query || !text) return text;
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const kucult = (s: string) => s.toLocaleLowerCase("tr-TR");
   const terms = [query.trim(), ...query.trim().split(/\s+/).filter((t) => t.length >= 3)];
-  const uniq = Array.from(new Set(terms.map((t) => t.toLowerCase()))).sort((a, b) => b.length - a.length);
+  const uniq = Array.from(new Set(terms.map(kucult))).sort((a, b) => b.length - a.length);
   if (uniq.length === 0) return text;
   const re = new RegExp(`(${uniq.map(esc).join("|")})`, "gi");
   const parts = text.split(re);
   return parts.map((part, i) =>
-    uniq.includes(part.toLowerCase())
-      ? <mark key={i} className="bg-[#c9a84c]/20 text-inherit rounded-sm px-0.5">{part}</mark>
+    uniq.includes(kucult(part))
+      ? <mark key={i} className="bg-amber-100/80 text-inherit rounded-[3px] px-0.5 py-0 box-decoration-clone">{part}</mark>
       : part
   );
 }
@@ -1098,10 +1100,10 @@ export default function KararAramaClient({ cases }: Props) {
                         <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                           <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                             msg.role === "user"
-                              ? "bg-[#0f1729] text-white rounded-br-sm"
+                              ? "bg-[#0f1729] text-white rounded-br-sm whitespace-pre-wrap"
                               : "bg-[#f8f9fa] text-gray-800 rounded-bl-sm border border-gray-100"
                           }`}>
-                            {msg.content}
+                            {msg.role === "assistant" ? <MarkdownRenderer content={msg.content} /> : msg.content}
                             {msg.role === "assistant" && chatLoading && i === chatMessages.length - 1 && (
                               <span className="inline-block w-1 h-4 bg-gray-400 animate-pulse ml-0.5 align-middle" />
                             )}

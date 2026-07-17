@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { CreditCard, User, LogOut, MessageSquare, FileText, Search, BookOpen, Building2 } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 import Logo from "@/components/shared/Logo";
+import OturumBekci from "@/components/shared/OturumBekci";
 
 interface VatandasHeaderProps {
   fullName?: string;
@@ -28,6 +29,7 @@ export default function VatandasHeader({ fullName, userName, creditBalance, cred
 
   return (
     <header className="bg-primary shadow-elevated sticky top-0 z-50">
+      <OturumBekci />
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}

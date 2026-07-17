@@ -104,7 +104,9 @@ export default async function DavaDetayPage({
     `Dava: ${caseData.title}`,
     caseData.case_number ? `Dava No: ${caseData.case_number}` : "",
     caseData.court ? `Mahkeme: ${caseData.court}` : "",
-    caseData.clients?.full_name ? `Müvekkil: ${caseData.clients.full_name}` : "",
+    caseData.clients?.full_name || caseData.client_name
+      ? `Müvekkil: ${caseData.clients?.full_name ?? caseData.client_name}`
+      : "",
     caseData.opposing_party ? `Karşı Taraf: ${caseData.opposing_party}` : "",
     caseData.description ? `Açıklama: ${caseData.description}` : "",
     caseData.notes ? `Notlar: ${caseData.notes}` : "",
@@ -292,7 +294,17 @@ export default async function DavaDetayPage({
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Client card */}
+            {/* Client card — kayıtlı müvekkil yoksa manuel isim gösterilir */}
+            {!caseData.clients && caseData.client_name && (
+              <div className="card">
+                <h2 className="font-heading text-base font-bold text-primary mb-3 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Müvekkil
+                </h2>
+                <p className="font-body font-medium text-foreground">{caseData.client_name}</p>
+                <p className="font-body text-xs text-muted-foreground mt-1">Manuel kayıt — müvekkil kartı yok</p>
+              </div>
+            )}
             {caseData.clients && (
               <div className="card">
                 <h2 className="font-heading text-base font-bold text-primary mb-3 flex items-center gap-2">

@@ -4,6 +4,7 @@ import { getSystemPrompt, SYSTEM_PROMPT_MEVZUAT_OZET } from "@/lib/ai/prompts";
 import { classifyQuery } from "@/lib/ai/classify";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import { fetchRAGContext, buildContextString } from "@/lib/ai/rag";
+import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
 import type { UserType } from "@/types/database";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
               session_id: activeSessionId,
               user_id: user.id,
               role: "assistant",
-              content: fullResponse,
+              content: aiCiktiTemizle(fullResponse),
               sources: ragContext.sources.length > 0 ? ragContext.sources : null,
               credit_cost: userType === "vatandas" ? 1 : null,
             });
