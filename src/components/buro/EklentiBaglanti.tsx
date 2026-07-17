@@ -43,7 +43,7 @@ export default function EklentiBaglanti() {
           <Globe className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="font-heading text-base font-bold text-primary">Mizanım UYAP Eklentisi (v1.0.0)</h2>
+          <h2 className="font-heading text-base font-bold text-primary">Mizanım UYAP Eklentisi (v1.3.0)</h2>
           <p className="font-body text-xs text-muted-foreground">
             UYAP&apos;ta gördüğünüz dosyaları tek tıkla Mizanım&apos;daki davalarınıza aktarın
           </p>

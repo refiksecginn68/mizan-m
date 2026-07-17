@@ -33,9 +33,11 @@ async function scanAllFrames(tabId, msgType, listKey, dedupeKey) {
 
   const merged = [];
   const seen = new Set();
+  let yanitVeren = 0; // içerik betiği yüklü olmayan sekmeyi ayırt etmek için
   for (const f of frames) {
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: msgType }, { frameId: f.frameId });
+      if (res) yanitVeren++;
       if (res && res.ok && Array.isArray(res[listKey])) {
         res[listKey].forEach((item) => {
           const key = item[dedupeKey] || JSON.stringify(item);
@@ -46,7 +48,7 @@ async function scanAllFrames(tabId, msgType, listKey, dedupeKey) {
       }
     } catch (_) { /* bu çerçevede içerik betiği yok */ }
   }
-  return merged;
+  return { merged, yanitVeren };
 }
 
 async function scan() {
@@ -65,7 +67,15 @@ async function scan() {
 
   try {
     if (mode === "uyap") {
-      davalar = await scanAllFrames(tab.id, "MIZANIM_SCAN", "davalar", "esasNo");
+      const sonuc = await scanAllFrames(tab.id, "MIZANIM_SCAN", "davalar", "esasNo");
+      davalar = sonuc.merged;
+      if (sonuc.yanitVeren === 0) {
+        // İçerik betiği bu sekmede hiç yüklü değil (eklenti kurulumundan önce açılmış sayfa)
+        setStatus($("transferStatus"), "Eklenti bu sayfaya henüz bağlanamadı. UYAP sayfasını yenileyin (F5) ve tekrar 'Sayfayı Tara' deyin.", "err");
+        $("count").textContent = "0";
+        $("transfer").disabled = true;
+        return;
+      }
       $("count").textContent = String(davalar.length);
       const list = $("list");
       list.innerHTML = "";
@@ -89,7 +99,14 @@ async function scan() {
         $("transferStatus").className = "status";
       }
     } else {
-      tebligatlar = await scanAllFrames(tab.id, "MIZANIM_SCAN_UETS", "tebligatlar", "barkod");
+      const sonuc = await scanAllFrames(tab.id, "MIZANIM_SCAN_UETS", "tebligatlar", "barkod");
+      tebligatlar = sonuc.merged;
+      if (sonuc.yanitVeren === 0) {
+        setStatus($("transferStatus"), "Eklenti bu sayfaya henüz bağlanamadı. UETS sayfasını yenileyin (F5) ve tekrar 'Sayfayı Tara' deyin.", "err");
+        $("count").textContent = "0";
+        $("transfer").disabled = true;
+        return;
+      }
       $("count").textContent = String(tebligatlar.length);
       const list = $("list");
       list.innerHTML = "";

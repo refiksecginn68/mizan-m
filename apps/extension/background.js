@@ -1,7 +1,9 @@
 // Mizanım UYAP Aktarım — background service worker
 // Content script'in okuduğu verileri güvenli token ile Mizanım API'ye gönderir.
 
-const DEFAULT_API = "https://xn--mizanm-t9a.com";
+// ÖNEMLİ: www zorunlu — apex alan adı www'ya 308 yönlendirir ve tarayıcı fetch,
+// cross-origin yönlendirmede Authorization başlığını düşürür (401'e yol açar).
+const DEFAULT_API = "https://www.xn--mizanm-t9a.com";
 
 async function getSettings() {
   const data = await chrome.storage.local.get(["token", "apiBase"]);
