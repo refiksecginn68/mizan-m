@@ -7,10 +7,27 @@ const DEFAULT_API = "https://www.xn--mizanm-t9a.com";
 
 async function getSettings() {
   const data = await chrome.storage.local.get(["token", "apiBase"]);
-  return {
-    token: data.token || "",
-    apiBase: (data.apiBase || DEFAULT_API).replace(/\/$/, ""),
-  };
+  let apiBase = (data.apiBase || DEFAULT_API).replace(/\/$/, "");
+  // Apex alan adı www'ya 308 yönlendirir ve Authorization düşer → her zaman www'ya zorla
+  apiBase = apiBase.replace(/^https:\/\/xn--mizanm-t9a\.com/, "https://www.xn--mizanm-t9a.com");
+  return { token: data.token || "", apiBase };
+}
+
+// Geçici hatalarda (ağ/kesinti/5xx) bir kez daha dener — bağlantı kodunun
+// "ilk denemede hata verip sonra düzelmesi" davranışını önler.
+async function fetchWithRetry(url, options, tries = 2) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status >= 500 && i < tries - 1) { await new Promise((r) => setTimeout(r, 600)); continue; }
+      return res;
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await new Promise((r) => setTimeout(r, 600));
+    }
+  }
+  throw lastErr;
 }
 
 // Rozet: bulunan dosya sayısı
@@ -30,7 +47,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const { token, apiBase } = await getSettings();
       if (!token) return sendResponse({ ok: false, error: "Bağlantı kodu girilmedi" });
       try {
-        const res = await fetch(`${apiBase}/api/extension/aktar`, {
+        const res = await fetchWithRetry(`${apiBase}/api/extension/aktar`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -69,7 +86,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       const { token, apiBase } = await getSettings();
       if (!token) return sendResponse({ ok: false, error: "Önce bağlantı kodu girin" });
       try {
-        const res = await fetch(`${apiBase}/api/extension/aktar`, {
+        const res = await fetchWithRetry(`${apiBase}/api/extension/aktar`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

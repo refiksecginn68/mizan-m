@@ -16,6 +16,8 @@
     return (s || "").replace(/\s+/g, " ").trim();
   }
 
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
   // Açık shadow root'lar dahil tüm eşleşmeleri toplar (Avukat Portalı React+DevExtreme,
   // shadow DOM kullanmaz; bu genel güvenlik ağıdır)
   function deepQueryAll(selector) {
@@ -48,6 +50,9 @@
       const iDosyaNo = colIndex(/dosya no|esas/);
       const iTur = colIndex(/t[üu]r/);
       const iDurum = colIndex(/durum/);
+      const iDavaci = colIndex(/davac[ıi]|alacakl[ıi]|m[üu][şs]teki/);
+      const iDavali = colIndex(/daval[ıi]|bor[çc]lu|san[ıi]k|[şs][üu]pheli/);
+      const iAcilis = colIndex(/a[çc][ıi]l[ıi][şs]/);
 
       grid.querySelectorAll(".dx-data-row").forEach((row) => {
         const cells = Array.from(row.querySelectorAll("td")).map((c) => clean(c.textContent));
@@ -64,7 +69,9 @@
           esasNo,
           mahkemeAdi: mahkeme || undefined,
           davaTuru: (iTur >= 0 && cells[iTur]) || undefined,
-          davaliAdi: undefined,
+          davaciAdi: (iDavaci >= 0 && cells[iDavaci]) || undefined,
+          davaliAdi: (iDavali >= 0 && cells[iDavali]) || undefined,
+          acilisTarihi: (iAcilis >= 0 && cells[iAcilis]) || undefined,
           durumu: (iDurum >= 0 && cells[iDurum]) || undefined,
         });
       });
@@ -152,7 +159,99 @@
     return davalar;
   }
 
-  // Dosya detay sayfası — etiket/değer çiftlerinden alanları çıkar
+  // Dosya detay sayfasındaki Taraf Bilgileri tablosunu okur.
+  // UYAP: Rol | Tipi | Adı | Vekil sütunları. Grid veya klasik tablo olabilir.
+  function parseTaraflar() {
+    const taraflar = [];
+    const seen = new Set();
+
+    // Taraf/vekil desenli başlık içeren tabloyu ve grid'i tara
+    const candidates = deepQueryAll("table, .dx-datagrid, .dx-treelist");
+    candidates.forEach((tbl) => {
+      const head = clean(tbl.textContent).toLowerCase();
+      // Tablo taraf tablosuna benziyor mu? (rol + vekil/taraf sinyali)
+      if (!/(rol|taraf).*(vekil|ad[ıi]|kimlik)|davac[ıi]|daval[ıi]/i.test(head)) return;
+
+      const headerCells = tbl.querySelectorAll(".dx-header-row td, thead th, thead td, tr:first-child th");
+      const caps = Array.from(headerCells).map((c) => clean(c.textContent).toLowerCase());
+      const idx = (re) => caps.findIndex((c) => re.test(c));
+      const iRol = idx(/rol|s[ıi]fat/);
+      const iTip = idx(/tip/);
+      const iAd = idx(/ad[ıi]|isim|unvan/);
+      const iVekil = idx(/vekil|avukat/);
+
+      const dataRows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
+      dataRows.forEach((row) => {
+        if (row.querySelector("th")) return; // başlık satırı
+        const cells = Array.from(row.querySelectorAll("td, .dx-data-row td")).map((c) => clean(c.textContent));
+        if (cells.length < 2) return;
+        const rol = iRol >= 0 ? cells[iRol] : cells[0];
+        const ad = iAd >= 0 ? cells[iAd] : cells.find((c) => c && !/^(davac[ıi]|daval[ıi]|vekil)$/i.test(c) && c.length > 2);
+        if (!ad || !/(davac[ıi]|daval[ıi]|vekil|[şs][üu]pheli|san[ıi]k|m[üu][şs]teki|alacakl|bor[çc]lu|kat[ıi]lan)/i.test(rol || cells.join(" "))) return;
+        const key = (rol || "") + "|" + ad;
+        if (seen.has(key)) return;
+        seen.add(key);
+        taraflar.push({
+          rol: rol || undefined,
+          tip: iTip >= 0 ? cells[iTip] : undefined,
+          ad,
+          vekil: iVekil >= 0 ? cells[iVekil] : undefined,
+        });
+      });
+    });
+
+    return taraflar;
+  }
+
+  // Safahat (dosya hareketleri) tablosunu okur: Tarih | İşlem/Açıklama
+  function parseSafahat() {
+    const safahat = [];
+    const seen = new Set();
+    const tables = deepQueryAll("table, .dx-datagrid");
+    tables.forEach((tbl) => {
+      const head = clean(tbl.textContent).toLowerCase();
+      if (!/safahat|i[şs]lem tarih|a[çc][ıi]klama|evrak tarih/i.test(head)) return;
+      const rows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
+      rows.forEach((row) => {
+        if (row.querySelector("th")) return;
+        const cells = Array.from(row.querySelectorAll("td")).map((c) => clean(c.textContent));
+        if (cells.length < 2) return;
+        const tarih = cells.find((c) => /\d{2}[./]\d{2}[./]\d{4}/.test(c));
+        const aciklama = cells.filter((c) => c !== tarih).sort((a, b) => b.length - a.length)[0];
+        if (!aciklama) return;
+        const key = (tarih || "") + "|" + aciklama.slice(0, 40);
+        if (seen.has(key)) return;
+        seen.add(key);
+        safahat.push({ tarih: tarih || undefined, aciklama });
+      });
+    });
+    return safahat.slice(0, 60);
+  }
+
+  // Evrak listesi (klasör ağacı / evrak tablosu) — ad + tarih metadatası.
+  // Gerçek dosya indirmesi yapılmaz; yalnızca listelenen evrak adları okunur.
+  function parseEvraklar() {
+    const evraklar = [];
+    const seen = new Set();
+    const tables = deepQueryAll("table, .dx-datagrid, .dx-treelist");
+    tables.forEach((tbl) => {
+      const head = clean(tbl.textContent).toLowerCase();
+      if (!/(evrak|belge|karar|tensip|m[üu]talaa|zapt)/i.test(head)) return;
+      const rows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
+      rows.forEach((row) => {
+        if (row.querySelector("th")) return;
+        const cells = Array.from(row.querySelectorAll("td")).map((c) => clean(c.textContent));
+        const ad = cells.filter(Boolean).sort((a, b) => b.length - a.length)[0];
+        if (!ad || ad.length < 4 || seen.has(ad)) return;
+        const tarih = cells.find((c) => /\d{2}[./]\d{2}[./]\d{4}/.test(c));
+        seen.add(ad);
+        evraklar.push({ ad, tarih: tarih || undefined });
+      });
+    });
+    return evraklar.slice(0, 100);
+  }
+
+  // Dosya detay sayfası — etiket/değer çiftlerinden alanları + taraf/safahat/evrak çıkarır
   function parseDetail() {
     const bodyText = document.body ? document.body.innerText : "";
     const esasMatch = bodyText.match(ESAS_RE);
@@ -167,14 +266,24 @@
       return undefined;
     }
 
+    const taraflar = parseTaraflar();
+    const davaci = findAfterLabel(["Davacı", "Alacaklı", "Müşteki", "Katılan"])
+      || (taraflar.find((t) => /davac[ıi]|alacakl|m[üu][şs]teki|kat[ıi]lan/i.test(t.rol || "")) || {}).ad;
+    const davali = findAfterLabel(["Davalı", "Borçlu", "Sanık", "Şüpheli"])
+      || (taraflar.find((t) => /daval[ıi]|bor[çc]lu|san[ıi]k|[şs][üu]pheli/i.test(t.rol || "")) || {}).ad;
+
     return {
       esasNo: esasMatch[0],
       mahkemeAdi: findAfterLabel(["Birim(?:i)?", "Mahkeme(?:si)?"]),
       davaTuru: findAfterLabel(["Dava Türü", "Dosya Türü"]),
-      davaciAdi: findAfterLabel(["Davacı", "Alacaklı", "Müşteki"]),
-      davaliAdi: findAfterLabel(["Davalı", "Borçlu", "Sanık", "Şüpheli"]),
+      davaciAdi: davaci,
+      davaliAdi: davali,
       acilisTarihi: findAfterLabel(["Açılış Tarihi", "Dosya Açılış"]),
       durumu: findAfterLabel(["Dosya Durumu", "Durum"]),
+      taraflar: taraflar.length ? taraflar : undefined,
+      safahat: parseSafahat(),
+      evraklar: parseEvraklar(),
+      _detay: true,
     };
   }
 
@@ -182,31 +291,104 @@
     // Önce DevExtreme grid (Avukat Portalı), sonra genel tablolar
     let liste = parseDxGrids();
     if (liste.length === 0) liste = parseTables();
+
+    // Detay sayfası zenginliği: tek dosya + taraf/safahat varsa detay olarak dön
+    const detay = parseDetail();
+    if (detay && (detay.taraflar || (detay.safahat && detay.safahat.length) || liste.length <= 1)) {
+      // Liste tek satırsa ve detay zengintse detayı tercih et
+      if (liste.length <= 1 && (detay.taraflar || detay.safahat?.length || detay.evraklar?.length)) {
+        return [detay];
+      }
+    }
     if (liste.length > 0) return liste;
 
-    // Tablo bulunamadı: yaprak taraması birden çok dosya bulursa liste sayfasıdır;
-    // tek/sıfır sonuçta detay ekranı etiket/değer ayrıştırması daha güvenilirdir
+    // Tablo bulunamadı: yaprak taraması birden çok dosya bulursa liste sayfasıdır
     const leaf = parseLeafScan();
     if (leaf.length > 1) return leaf;
-    const detay = parseDetail();
     if (detay) return [detay];
     return leaf;
   }
 
+  // DevExtreme sayfalayıcıda sonraki sayfaya geç. Başarılıysa true döner.
+  function gotoNextPage() {
+    const nextBtns = deepQueryAll(".dx-pager .dx-navigate-button.dx-next-button, .dx-pager .dx-next-button, .dx-page-navigation .dx-next-button");
+    for (const btn of nextBtns) {
+      const disabled = btn.classList.contains("dx-button-disable") || btn.getAttribute("aria-disabled") === "true";
+      if (!disabled) { btn.click(); return true; }
+    }
+    return false;
+  }
+
+  // Tüm sayfaları gezerek liste dosyalarını topla (tek tıkla tam senkron).
+  async function collectAllPages(maxPages = 40, onProgress) {
+    const merged = [];
+    const seen = new Set();
+    function absorb() {
+      collect().forEach((d) => {
+        if (!d.esasNo || seen.has(d.esasNo)) return;
+        seen.add(d.esasNo);
+        merged.push(d);
+      });
+    }
+    absorb();
+    for (let page = 1; page < maxPages; page++) {
+      if (onProgress) try { onProgress(merged.length, page); } catch (_) { /* yoksay */ }
+      const before = merged.length;
+      if (!gotoNextPage()) break;
+      await sleep(900); // grid yeniden render beklemesi
+      absorb();
+      if (merged.length === before) break; // yeni kayıt gelmedi → son sayfa
+    }
+    return merged;
+  }
+
+  // Teşhis: sayfa yapısını özetle (Seyma'nın oturumunda selector'ları doğrulamak için)
+  function diagnostics() {
+    const grids = deepQueryAll(".dx-datagrid, .dx-treelist").length;
+    const tables = deepQueryAll("table").length;
+    const headerSamples = deepQueryAll(".dx-header-row").slice(0, 3).map((h) => clean(h.textContent).slice(0, 200));
+    const pager = deepQueryAll(".dx-pager").length;
+    const found = collect();
+    return {
+      url: location.href,
+      grids, tables, pager,
+      headerSamples,
+      foundCount: found.length,
+      firstItem: found[0] || null,
+      bodyLen: (document.body && document.body.innerText || "").length,
+    };
+  }
+
   // Popup'tan gelen tarama isteğini yanıtla
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg && msg.type === "MIZANIM_SCAN") {
+    if (!msg) return;
+    if (msg.type === "MIZANIM_SCAN") {
       try {
         sendResponse({ ok: true, davalar: collect(), url: location.href });
       } catch (e) {
         sendResponse({ ok: false, error: String(e) });
       }
+      return true;
+    }
+    if (msg.type === "MIZANIM_SCAN_ALL") {
+      collectAllPages(40).then((davalar) => {
+        sendResponse({ ok: true, davalar, url: location.href });
+      }).catch((e) => sendResponse({ ok: false, error: String(e) }));
+      return true; // async
+    }
+    if (msg.type === "MIZANIM_DIAG") {
+      try { sendResponse({ ok: true, diag: diagnostics() }); }
+      catch (e) { sendResponse({ ok: false, error: String(e) }); }
+      return true;
     }
     return true;
   });
 
   // İzole dünyada test/teşhis kancası (sayfa JS'i göremez)
-  try { window.__MIZANIM_SCAN = collect; } catch (_) { /* yoksay */ }
+  try {
+    window.__MIZANIM_SCAN = collect;
+    window.__MIZANIM_DIAG = diagnostics;
+  } catch (_) { /* yoksay */ }
 
   // Sayfa yüklendiğinde arka plana özet bildir (rozet için) — SPA geç render eder,
   // kısa aralıklarla birkaç kez dene

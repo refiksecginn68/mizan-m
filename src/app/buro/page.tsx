@@ -10,7 +10,20 @@ import {
   Search,
   ExternalLink,
   Newspaper,
+  Building2,
+  Calendar,
+  Scale,
+  TrendingUp,
 } from "lucide-react";
+
+// Ana sayfa hızlı kısayol barı — UYAP ana sayfası referans (sade, efektif)
+const KISAYOLLAR = [
+  { href: "/buro/uyap", label: "Dosya Sorgula", icon: Building2 },
+  { href: "/buro/takvim", label: "Duruşmalarım", icon: Calendar },
+  { href: "/buro/dilekce", label: "Yeni Dilekçe", icon: FileText },
+  { href: "/buro/emsal", label: "Emsal Arama", icon: Scale },
+  { href: "/buro/finans", label: "Finans", icon: TrendingUp },
+];
 import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -206,6 +219,24 @@ export default async function BuroPage() {
               Kanun, karar veya içtihat ara...
             </Link>
           </div>
+        </div>
+      </div>
+
+      {/* Hızlı kısayol barı */}
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+          {KISAYOLLAR.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group flex flex-col items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-4 hover:border-[#c9a84c] hover:shadow-md transition-all"
+            >
+              <div className="w-9 h-9 rounded-xl bg-[#0f1729] flex items-center justify-center group-hover:bg-[#c9a84c] transition-colors">
+                <Icon className="w-5 h-5 text-[#c9a84c] group-hover:text-white transition-colors" />
+              </div>
+              <span className="text-[11px] font-semibold text-gray-600 group-hover:text-[#0f1729] text-center leading-tight">{label}</span>
+            </Link>
+          ))}
         </div>
       </div>
 

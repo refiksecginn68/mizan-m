@@ -44,6 +44,9 @@
     .btn-gold { background: linear-gradient(90deg, #c9a84c, #e7b743); color: #fff; }
     .btn-gold:disabled { opacity: .4; cursor: default; }
     .btn-ghost { background: rgba(255,255,255,.08); color: rgba(255,255,255,.8); }
+    .row2 { display: flex; gap: 8px; }
+    .row2 button { flex: 1; }
+    .btn-diag { font-size: 10px; opacity: .7; margin-top: 6px; }
     .status { font-size: 11px; margin-top: 8px; padding: 8px 10px; border-radius: 8px; display: none; }
     .status.ok { display: block; background: rgba(34,197,94,.15); color: #4ade80; }
     .status.err { display: block; background: rgba(239,68,68,.15); color: #f87171; }
@@ -82,8 +85,12 @@
   <div class="section">
     <p class="found"><span id="modeLabel">Bu sayfada bulunanlar</span>: <strong id="count">–</strong></p>
     <div class="list" id="list"></div>
-    <button class="btn-ghost" id="scan">Sayfayı Tara</button>
-    <button class="btn-gold" id="transfer" disabled>Mizanım'a Aktar</button>
+    <button class="btn-gold" id="syncAll">Tümünü Mizanım'a Aktar</button>
+    <div class="row2">
+      <button class="btn-ghost" id="scan">Sayfayı Tara</button>
+      <button class="btn-ghost" id="transfer" disabled>Aktar</button>
+    </div>
+    <button class="btn-ghost btn-diag" id="diag">Teşhis Kopyala</button>
     <div class="status" id="transferStatus"></div>
   </div>
 

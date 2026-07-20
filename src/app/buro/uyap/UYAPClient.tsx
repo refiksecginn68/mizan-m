@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Search, Calendar, FileText, Shield, AlertCircle,
   CheckCircle, Clock, Building2, User, Download,
-  PlusCircle, Info, Key, Loader2, Users,
+  PlusCircle, Info, Loader2, Users, Puzzle,
 } from "lucide-react";
 
 interface Case {
@@ -66,7 +66,6 @@ const TABS = [
   { id: "durusmalar", label: "Duruşmalarım", icon: Calendar },
   { id: "udf", label: "UDF Belgesi", icon: FileText },
   { id: "eimza", label: "E-İmza", icon: Shield },
-  { id: "kimlik", label: "UYAP Girişi", icon: Key },
 ];
 
 // Vekalet giriş formu — createClientFromVekalet servisini çağırır
@@ -213,30 +212,11 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
   const [udfContent, setUdfContent] = useState("");
   const [udfLoading, setUdfLoading] = useState(false);
 
-  // Kimlik bilgileri
-  const [tcKimlik, setTcKimlik] = useState("");
-  const [uyapSifre, setUyapSifre] = useState("");
-  const [baroSicil, setBaroSicil] = useState("");
-  const [credLoading, setCredLoading] = useState(false);
-  const [credSaved, setCredSaved] = useState(false);
-  const [hasCredentials, setHasCredentials] = useState(false);
-  const [maskedTc, setMaskedTc] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<{ text: string; type: "error" | "success" } | null>(null);
   function showToast(text: string, type: "error" | "success" = "error") {
     setToastMsg({ text, type });
     setTimeout(() => setToastMsg(null), 4000);
   }
-
-  useEffect(() => {
-    fetch("/api/buro/uyap/credentials")
-      .then((r) => r.json())
-      .then((d) => {
-        setHasCredentials(d.hasCredentials);
-        setMaskedTc(d.tcKimlik);
-        if (d.baroSicil) setBaroSicil(d.baroSicil);
-      })
-      .catch(() => null);
-  }, []);
 
   const handleSorgula = async () => {
     if (!esasNo.trim() || !mahkeme) return;
@@ -316,35 +296,6 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
     }
   };
 
-  const handleSaveCredentials = async () => {
-    if (!tcKimlik || tcKimlik.length !== 11) {
-      showToast("Geçerli TC kimlik no girin (11 hane)");
-      return;
-    }
-    setCredLoading(true);
-    try {
-      const res = await fetch("/api/buro/uyap/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tcKimlik, uyapSifre, baroSicil }),
-      });
-      const json = await res.json();
-      if (res.ok) {
-        setCredSaved(true);
-        setHasCredentials(true);
-        setMaskedTc(`${tcKimlik.slice(0, 3)}****${tcKimlik.slice(-2)}`);
-        setUyapSifre("");
-        setTimeout(() => setCredSaved(false), 3000);
-      } else {
-        showToast(json.error || "Kayıt başarısız");
-      }
-    } catch {
-      showToast("Bağlantı hatası");
-    } finally {
-      setCredLoading(false);
-    }
-  };
-
   const filteredDurusmalar = DEMO_DURUSMALAR.filter((d) => {
     const diff = d.tarih.getTime() - Date.now();
     if (durusmaFilter === "hafta") return diff <= 7 * 24 * 3600 * 1000 && diff > 0;
@@ -358,33 +309,19 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
           {toastMsg.text}
         </div>
       )}
-      {/* UYAP bağlantı durumu */}
-      <div className={`flex items-start gap-3 rounded-lg p-4 mb-6 border ${
-        hasCredentials ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
-      }`}>
-        {hasCredentials ? (
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-        ) : (
-          <Info className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        )}
+      {/* UYAP bağlantısı: Chrome eklentisi üzerinden */}
+      <div className="flex items-start gap-3 rounded-lg p-4 mb-6 border bg-primary/5 border-primary/20">
+        <Puzzle className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
         <div>
-          <p className={`font-body text-sm font-semibold ${hasCredentials ? "text-green-800" : "text-amber-800"}`}>
-            {hasCredentials ? `UYAP Kimlik Kayıtlı — TC: ${maskedTc}` : "UYAP Kimlik Bilgisi Gerekli"}
+          <p className="font-body text-sm font-semibold text-primary">
+            UYAP bağlantısı Chrome eklentisiyle yapılır
           </p>
-          <p className={`font-body text-xs mt-0.5 ${hasCredentials ? "text-green-700" : "text-amber-700"}`}>
-            {hasCredentials
-              ? "Kimlik bilgileriniz kayıtlı. E-imza sertifikası eklendiğinde canlı bağlantı aktif olacak."
-              : "\"UYAP Girişi\" sekmesinden kimlik bilgilerinizi kaydedin, ardından müvekkil entegrasyonu yapın."}
+          <p className="font-body text-xs mt-0.5 text-muted-foreground">
+            Mizanım UYAP eklentisini kurup aşağıdaki karttan bağlantı kodunuzu alın; UYAP Avukat
+            Portalı&apos;na kendi e-imzanızla girin ve <strong>Tümünü Mizanım&apos;a Aktar</strong> ile
+            dosyalarınızı tek tıkla çekin. Mizanım UYAP şifrenizi veya kimlik bilgilerinizi saklamaz.
           </p>
         </div>
-        {!hasCredentials && (
-          <button
-            onClick={() => setActiveTab("kimlik")}
-            className="ml-auto btn-primary text-xs flex-shrink-0"
-          >
-            Kimlik Ekle
-          </button>
-        )}
       </div>
 
       {/* Gizlilik / KVKK uyarısı */}
@@ -418,103 +355,21 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
         ))}
       </div>
 
-      {/* UYAP Girişi Tab */}
-      {activeTab === "kimlik" && (
-        <div className="space-y-6">
-          <div className="card">
-            <h2 className="font-heading text-lg font-bold text-primary mb-2">UYAP Kimlik Bilgileri</h2>
-            <p className="font-body text-sm text-muted-foreground mb-6">
-              Bilgileriniz şifrelenmiş olarak saklanır. Kaydettikten sonra &quot;Müvekkil Entegrasyon&quot; sekmesinden müvekkil dosyalarını sisteme ekleyin.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="font-body text-sm font-medium text-foreground block mb-1.5">
-                  TC Kimlik No <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  maxLength={11}
-                  value={tcKimlik}
-                  onChange={(e) => setTcKimlik(e.target.value.replace(/\D/g, ""))}
-                  placeholder="11 haneli TC kimlik no"
-                  className="input-field font-mono"
-                />
-              </div>
-              <div>
-                <label className="font-body text-sm font-medium text-foreground block mb-1.5">
-                  UYAP Şifresi
-                </label>
-                <input
-                  type="password"
-                  value={uyapSifre}
-                  onChange={(e) => setUyapSifre(e.target.value)}
-                  placeholder="UYAP avukat portal şifresi"
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="font-body text-sm font-medium text-foreground block mb-1.5">
-                  Baro Sicil No
-                </label>
-                <input
-                  type="text"
-                  value={baroSicil}
-                  onChange={(e) => setBaroSicil(e.target.value)}
-                  placeholder="Baro sicil numaranız"
-                  className="input-field"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSaveCredentials}
-                  disabled={credLoading || !tcKimlik}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  {credLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Kaydediliyor...</>
-                  ) : credSaved ? (
-                    <><CheckCircle className="w-4 h-4" /> Kaydedildi!</>
-                  ) : (
-                    <><Key className="w-4 h-4" /> Kaydet</>
-                  )}
-                </button>
-                {credSaved && (
-                  <button
-                    onClick={() => setActiveTab("muvekkil")}
-                    className="btn-outline text-sm flex items-center gap-2"
-                  >
-                    <Users className="w-4 h-4" /> Müvekkil Entegrasyonuna Geç →
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="font-body text-xs text-blue-700 font-semibold mb-2">Sonraki Adım: E-İmza Entegrasyonu</p>
-              <ol className="font-body text-xs text-blue-700 space-y-1 list-decimal list-inside">
-                <li>TÜBİTAK-BİLGEM veya e-Güven&apos;den NES sertifikası alın</li>
-                <li>Sertifika dosyanızı (.p12) sisteme yükleyin</li>
-                <li>UYAP avukat portalında uygulamayı yetkilendirin</li>
-              </ol>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Müvekkil Entegrasyon Tab */}
       {activeTab === "muvekkil" && (
         <div className="space-y-5">
 
-          {/* Yakında notu */}
+          {/* Eklenti bilgi notu */}
           <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl p-4">
             <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-body text-sm font-semibold text-blue-800">
-                Gerçek UYAP entegrasyonu yakında aktif olacak
+                Dosyaları otomatik çekmek için Chrome eklentisini kullanın
               </p>
               <p className="font-body text-xs text-blue-700 mt-0.5">
-                E-imza sertifikası ve UYAP kurumsal API onayı tamamlandığında TC kimlik numarasıyla müvekkilin tüm dosyaları otomatik çekilecek.
-                Şimdilik vekalet bilgilerini elle girin — sisteme tek tıkla CRM müvekkili olarak eklenir.
+                Eklenti ile dosyaları aktardığınızda, taraf bilgilerindeki müvekkiliniz otomatik olarak CRM&apos;e
+                eklenir ve dosyaya bağlanır. Eklentiyi kullanamıyorsanız, vekalet bilgilerini aşağıdan elle
+                girerek müvekkil oluşturabilirsiniz.
               </p>
             </div>
           </div>
@@ -605,9 +460,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
                     <span className="px-2 py-0.5 rounded-full text-xs font-body bg-green-100 text-green-800">
                       {sorguResult.durumu}
                     </span>
-                    {!hasCredentials && (
-                      <span className="px-2 py-0.5 rounded-full text-xs font-body bg-amber-100 text-amber-800">Demo</span>
-                    )}
+                    <span className="px-2 py-0.5 rounded-full text-xs font-body bg-amber-100 text-amber-800">Demo</span>
                   </div>
                   <h3 className="font-heading text-lg font-bold text-primary">{sorguResult.davaTuru}</h3>
                   <p className="font-body text-sm text-muted-foreground">{sorguResult.mahkemeAdi}</p>
@@ -845,7 +698,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
           <div className="grid sm:grid-cols-3 gap-4">
             {[
               { label: "E-İmza", value: "Entegrasyon Bekleniyor", color: "text-amber-600 bg-amber-50" },
-              { label: "UYAP Üyeliği", value: hasCredentials ? "Kimlik Kayıtlı" : "Bağlı Değil", color: hasCredentials ? "text-green-700 bg-green-50" : "text-muted-foreground bg-muted/50" },
+              { label: "UYAP Bağlantısı", value: "Chrome Eklentisi", color: "text-green-700 bg-green-50" },
               { label: "Sertifika", value: "Yüklenmedi", color: "text-muted-foreground bg-muted/50" },
             ].map((item) => (
               <div key={item.label} className={`rounded-xl p-4 ${item.color}`}>
@@ -861,8 +714,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
             </h3>
             <div className="space-y-3">
               {[
-                "\"UYAP Girişi\" sekmesinden TC kimlik ve şifreyi kaydedin",
-                "TÜBİTAK-BİLGEM veya e-Güven&apos;den NES sertifikası edinin",
+                "TÜBİTAK-BİLGEM veya e-Güven'den NES sertifikası edinin",
                 "M-İmza için GSM operatörünüzden SIM tabanlı imza sertifikası alın",
                 "Sertifika dosyanızı (.p12) Mizanım'a yükleyin",
               ].map((s, i) => (

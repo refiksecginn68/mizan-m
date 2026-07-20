@@ -73,8 +73,6 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
-  const [uyapLoading, setUyapLoading] = useState(false);
-  const [uyapMsg, setUyapMsg] = useState("");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   // Sayım
@@ -125,15 +123,6 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
     finally { setSaving(false); }
   }
 
-  async function handleUyapSync() {
-    setUyapLoading(true);
-    setUyapMsg("");
-    // Demo: UYAP gerçek API olmadığı için simüle et
-    await new Promise((r) => setTimeout(r, 1500));
-    setUyapMsg("UYAP bağlantısı için e-imza / UETS kimlik bilgileri gereklidir. Entegrasyon yakında aktif olacak.");
-    setUyapLoading(false);
-  }
-
   async function updateStatus(id: string, status: string) {
     await fetch(`/api/buro/dava/${id}`, {
       method: "PATCH",
@@ -154,17 +143,13 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
             <p className="text-sm text-gray-400 mt-0.5">{cases.length} dosya</p>
           </div>
           <div className="flex items-center gap-2">
-            {uyapMsg && (
-              <p className="text-xs text-gray-500 max-w-xs">{uyapMsg}</p>
-            )}
-            <button
-              onClick={handleUyapSync}
-              disabled={uyapLoading}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+            <a
+              href="/buro/uyap"
+              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors no-underline"
             >
-              {uyapLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              UYAP Senkronizasyon
-            </button>
+              <RefreshCw className="w-3.5 h-3.5" />
+              UYAP&apos;tan Aktar
+            </a>
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl bg-[#c9a84c] text-white hover:bg-[#e7b743] transition-colors"
