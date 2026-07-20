@@ -54,3 +54,12 @@ awesome-claude-skills/
 RAPOR*.md
 .env.local
 .cron-secret-yeni.tmp
+
+# Supabase CLI gecici/yerel dosyalari
+supabase/.temp/
+supabase/.mig_hold/
+
+# Gecici script ve yedekler (migration/status yedekleri, _ ile baslayan lokal scriptler)
+_*.mjs
+_*.json
+*_status_backup*.json
