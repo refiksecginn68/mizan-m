@@ -10,6 +10,7 @@ import {
 
 import dynamic from "next/dynamic";
 import { duzMetinHtml } from "@/lib/services/metin-html";
+import MicButton from "@/components/ui/MicButton";
 
 // TipTap tabanlı editör ağır (~100KB) — yalnızca belge üretilince yüklenir
 const DilekceEditor = dynamic(() => import("@/components/dilekce/DilekceEditor"), {
@@ -547,8 +548,10 @@ export default function DilekceAvukatClient({
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    Olayı Anlatın <span className="text-red-400">*</span>
+                  <label className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                    <span>Olayı Anlatın <span className="text-red-400">*</span></span>
+                    <MicButton onTranscript={(t) => setKonu((p) => p + t)} title="Olayı sesle anlatın"
+                      className="w-7 h-7" />
                   </label>
                   <textarea
                     value={konu}

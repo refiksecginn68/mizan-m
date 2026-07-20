@@ -15,6 +15,7 @@ import {
   Bell,
   RefreshCw,
   Loader2,
+  ListTodo,
 } from "lucide-react";
 
 interface TebligatCase {
@@ -105,6 +106,9 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
   const [taraLoading, setTaraLoading] = useState(false);
   const [taraSonuc, setTaraSonuc] = useState<string | null>(null);
 
+  const [gorevYapan, setGorevYapan] = useState<string | null>(null);
+  const [gorevYapilan, setGorevYapilan] = useState<Set<string>>(new Set());
+
   const stats = useMemo(() => {
     const total = tebligatlar.length;
     const unread = tebligatlar.filter((t) => !t.is_read).length;
@@ -179,6 +183,30 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Tebligattan görev oluştur — süre yakınsa öncelik yükselir, son gün göreve işlenir
+  const handleGorevOlustur = async (t: Tebligat) => {
+    setGorevYapan(t.id);
+    try {
+      const days = getDaysLeft(t.deadline_at);
+      const priority = days !== null && days <= 3 ? "yuksek" : days !== null && days <= 7 ? "orta" : "dusuk";
+      const dosyaEki = t.cases ? ` [${t.cases.case_number ?? t.cases.title}]` : "";
+      const res = await fetch("/api/buro/gorevler", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: `Tebligat: ${t.subject}${dosyaEki}`,
+          due_at: t.deadline_at || undefined,
+          priority,
+        }),
+      });
+      if (res.ok) setGorevYapilan((prev) => new Set(prev).add(t.id));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGorevYapan(null);
     }
   };
 
@@ -432,6 +460,19 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => handleGorevOlustur(t)}
+                    disabled={gorevYapan === t.id || gorevYapilan.has(t.id)}
+                    className="btn-outline text-xs flex items-center gap-1.5 py-1.5 disabled:opacity-60"
+                    title="Bu tebligattan görev oluştur"
+                  >
+                    {gorevYapan === t.id
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : gorevYapilan.has(t.id)
+                        ? <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                        : <ListTodo className="w-3.5 h-3.5" />}
+                    {gorevYapilan.has(t.id) ? "Görev Eklendi" : "Görev Oluştur"}
+                  </button>
                   {!t.is_read && (
                     <button
                       onClick={() => handleMarkRead(t.id)}

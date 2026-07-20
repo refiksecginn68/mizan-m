@@ -9,6 +9,7 @@ import {
   PanelLeftClose, PanelLeftOpen, AlertCircle,
 } from "lucide-react";
 import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
+import MicButton from "@/components/ui/MicButton";
 
 interface Message {
   id: string;
@@ -455,6 +456,8 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                 style={{ scrollbarWidth: "none" }}
               />
             </div>
+            <MicButton onTranscript={(t) => setInput((p) => p + t)} title="Sesle soru sorun"
+              className="w-11 h-11 flex-shrink-0" />
             {loading ? (
               <button
                 onClick={() => abortRef.current?.abort()}

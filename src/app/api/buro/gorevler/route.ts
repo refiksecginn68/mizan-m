@@ -29,7 +29,7 @@ export async function GET() {
   const svc = createServiceClient() as AnyClient;
   const { data, error: dbError } = await svc
     .from("todos")
-    .select("id, text, done, due_at, created_at")
+    .select("id, text, done, due_at, priority, created_at")
     .eq("lawyer_id", user.id)
     .order("created_at", { ascending: true });
 
@@ -37,11 +37,13 @@ export async function GET() {
   return NextResponse.json({ todos: data });
 }
 
+const GECERLI_ONCELIK = ["dusuk", "orta", "yuksek"];
+
 export async function POST(request: NextRequest) {
   const { user, error } = await getAuthenticatedLawyer();
   if (!user) return NextResponse.json({ error }, { status: 401 });
 
-  let body: { text?: string; due_at?: string };
+  let body: { text?: string; due_at?: string; priority?: string };
   try {
     body = await request.json();
   } catch {
@@ -52,6 +54,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Görev metni zorunludur" }, { status: 400 });
   }
 
+  const priority = GECERLI_ONCELIK.includes(body.priority ?? "") ? body.priority : "orta";
+
   const svc = createServiceClient() as AnyClient;
   const { data, error: dbError } = await svc
     .from("todos")
@@ -59,8 +63,9 @@ export async function POST(request: NextRequest) {
       lawyer_id: user.id,
       text: body.text.trim(),
       due_at: body.due_at || null,
+      priority,
     })
-    .select("id, text, done, due_at, created_at")
+    .select("id, text, done, due_at, priority, created_at")
     .single();
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
@@ -71,21 +76,28 @@ export async function PATCH(request: NextRequest) {
   const { user, error } = await getAuthenticatedLawyer();
   if (!user) return NextResponse.json({ error }, { status: 401 });
 
-  let body: { id?: string; done?: boolean };
+  let body: { id?: string; done?: boolean; priority?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
   }
 
-  if (!body.id || typeof body.done !== "boolean") {
-    return NextResponse.json({ error: "id ve done gerekli" }, { status: 400 });
+  if (!body.id) {
+    return NextResponse.json({ error: "id gerekli" }, { status: 400 });
+  }
+
+  const guncelleme: Record<string, unknown> = {};
+  if (typeof body.done === "boolean") guncelleme.done = body.done;
+  if (GECERLI_ONCELIK.includes(body.priority ?? "")) guncelleme.priority = body.priority;
+  if (Object.keys(guncelleme).length === 0) {
+    return NextResponse.json({ error: "done veya priority gerekli" }, { status: 400 });
   }
 
   const svc = createServiceClient() as AnyClient;
   const { error: dbError } = await svc
     .from("todos")
-    .update({ done: body.done })
+    .update(guncelleme)
     .eq("id", body.id)
     .eq("lawyer_id", user.id);
 

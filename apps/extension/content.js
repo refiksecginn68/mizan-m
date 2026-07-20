@@ -342,7 +342,124 @@
     return merged;
   }
 
-  // Teşhis: sayfa yapısını özetle (Seyma'nın oturumunda selector'ları doğrulamak için)
+  // Bir öğe için kısa, benzersizce yeniden bulunabilir bir CSS yol ipucu üretir
+  function selectorHint(el) {
+    if (!el || !el.tagName) return "";
+    const tag = el.tagName.toLowerCase();
+    const id = el.id ? "#" + el.id : "";
+    const cls = (el.className && typeof el.className === "string")
+      ? "." + el.className.trim().split(/\s+/).slice(0, 4).join(".")
+      : "";
+    return (tag + id + cls).slice(0, 160);
+  }
+
+  // Sorgu formundaki kontrolleri (yargı türü/birim seçicileri, sorgula butonu) döker.
+  // A1 auto-crawler'ın hangi selector'ları süreceğini Seyma'nın canlı DOM'undan çıkarmak için.
+  function dumpFormControls() {
+    const controls = [];
+
+    // Klasik <select> öğeleri
+    deepQueryAll("select").forEach((sel) => {
+      const label = clean(
+        (sel.labels && sel.labels[0] && sel.labels[0].textContent) ||
+        (sel.getAttribute("aria-label")) ||
+        (sel.previousElementSibling && sel.previousElementSibling.textContent) || ""
+      ).slice(0, 60);
+      controls.push({
+        kind: "select",
+        hint: selectorHint(sel),
+        label,
+        name: sel.name || undefined,
+        options: Array.from(sel.options).slice(0, 40).map((o) => clean(o.textContent)).filter(Boolean),
+      });
+    });
+
+    // DevExtreme seçiciler (.dx-selectbox / .dx-dropdowneditor) — UYAP formu bunları kullanır
+    deepQueryAll(".dx-selectbox, .dx-dropdowneditor, .dx-lookup").forEach((box) => {
+      const input = box.querySelector("input, .dx-texteditor-input");
+      const nearby = clean(
+        (box.getAttribute("aria-label")) ||
+        (box.closest("[class*='field'],[class*='form']") &&
+          box.closest("[class*='field'],[class*='form']").querySelector("label, .dx-field-item-label-text")
+          ? box.closest("[class*='field'],[class*='form']").querySelector("label, .dx-field-item-label-text").textContent
+          : "")
+      ).slice(0, 60);
+      controls.push({
+        kind: "dx-selectbox",
+        hint: selectorHint(box),
+        label: nearby,
+        currentValue: input ? clean(input.value || input.getAttribute("value") || input.textContent) : undefined,
+      });
+    });
+
+    // Sorgula / Ara / Listele butonları
+    const btns = [];
+    deepQueryAll("button, .dx-button, input[type='submit'], a[role='button']").forEach((b) => {
+      const t = clean(b.textContent || b.value || b.getAttribute("aria-label"));
+      if (/sorgula|listele|\bara\b|getir|sorgu|filtrele/i.test(t)) {
+        btns.push({ text: t.slice(0, 40), hint: selectorHint(b) });
+      }
+    });
+
+    return { selectors: controls.slice(0, 30), actionButtons: btns.slice(0, 15) };
+  }
+
+  // Grid'in başlık + ilk veri satırının hücre yapısını döker (sütun eşleme doğrulaması için)
+  function dumpGridStructure() {
+    const grids = [];
+    deepQueryAll(".dx-datagrid, .dx-treelist, table").slice(0, 4).forEach((grid) => {
+      const isDx = grid.matches(".dx-datagrid, .dx-treelist");
+      const headerSel = isDx ? ".dx-header-row td" : "thead th, thead td, tr:first-child th";
+      const rowSel = isDx ? ".dx-data-row" : "tbody tr, tr";
+      const headers = Array.from(grid.querySelectorAll(headerSel)).map((c) => clean(c.textContent)).filter(Boolean);
+      const firstRow = grid.querySelector(rowSel);
+      const firstRowCells = firstRow
+        ? Array.from(firstRow.querySelectorAll("td")).map((c) => clean(c.textContent).slice(0, 40))
+        : [];
+      grids.push({
+        type: isDx ? (grid.matches(".dx-treelist") ? "dx-treelist" : "dx-datagrid") : "table",
+        hint: selectorHint(grid),
+        rowSelector: rowSel,
+        headers,
+        rowCount: grid.querySelectorAll(rowSel).length,
+        firstRowCells,
+      });
+    });
+    return grids;
+  }
+
+  // Detay sayfası: Taraf Bilgileri sekmesi/tablosu ile safahat/evrak yapısını döker
+  function dumpDetailStructure() {
+    // Sekme başlıkları (Taraf Bilgileri, Safahat, Evraklar...) — DevExtreme tab veya klasik
+    const tabs = [];
+    deepQueryAll(".dx-tab, [role='tab'], .nav-link, .tab, li[class*='tab']").forEach((t) => {
+      const txt = clean(t.textContent);
+      if (txt && txt.length < 40) tabs.push({ text: txt, hint: selectorHint(t) });
+    });
+
+    const taraflar = parseTaraflar();
+    // Taraf tablosunun ham yapısını da ver (parse tutmazsa Seyma'nın DOM'undan düzeltiriz)
+    const tarafTablo = deepQueryAll("table, .dx-datagrid").map((tbl) => {
+      const head = clean(tbl.textContent).toLowerCase();
+      if (!/(rol|taraf|vekil|davac[ıi]|daval[ıi])/i.test(head)) return null;
+      const caps = Array.from(tbl.querySelectorAll(".dx-header-row td, thead th, thead td, tr:first-child th"))
+        .map((c) => clean(c.textContent)).filter(Boolean);
+      return { hint: selectorHint(tbl), headerCaptions: caps };
+    }).filter(Boolean).slice(0, 3);
+
+    return {
+      tabs: tabs.slice(0, 15),
+      tarafParseCount: taraflar.length,
+      tarafSample: taraflar.slice(0, 4),
+      tarafTables: tarafTablo,
+      safahatCount: parseSafahat().length,
+      evrakCount: parseEvraklar().length,
+    };
+  }
+
+  // Teşhis: sayfa yapısını özetle (Seyma'nın oturumunda selector'ları doğrulamak için).
+  // A1 derin taramanın gerçek selector'larını bu çıktıdan çıkaracağız:
+  // sorgu formu (yargı türü/birim seçiciler + Sorgula butonu), grid yapısı, detay/taraf yapısı.
   function diagnostics() {
     const grids = deepQueryAll(".dx-datagrid, .dx-treelist").length;
     const tables = deepQueryAll("table").length;
@@ -356,6 +473,10 @@
       foundCount: found.length,
       firstItem: found[0] || null,
       bodyLen: (document.body && document.body.innerText || "").length,
+      // A1 için yeni: sorgu formu + grid + detay yapısı
+      form: dumpFormControls(),
+      gridStructure: dumpGridStructure(),
+      detail: dumpDetailStructure(),
     };
   }
 

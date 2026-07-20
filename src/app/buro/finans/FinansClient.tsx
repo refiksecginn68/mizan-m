@@ -14,7 +14,16 @@ interface PaymentMetadata {
   client_name?: string;
   case_id?: string;
   case_title?: string;
+  muhasebe_turu?: string;
 }
+
+// Muhasebe türleri — avukatlık ücreti ve müvekkile ödeme sınıflandırması
+const MUHASEBE_TURLERI = [
+  "Anlaşılan Avukatlık Ücreti",
+  "Alınan Avukatlık Ücreti",
+  "Müvekkile Yapılacak Ödeme",
+  "Müvekkile Yapılan Ödeme",
+] as const;
 
 interface Payment {
   id: string;
@@ -49,6 +58,10 @@ interface FormData {
   description: string;
   clientId: string;
   caseId: string;
+  muhasebeTuru: string;
+  yuzdeMod: boolean;
+  bazTutar: string;
+  oran: string;
   taksitli: boolean;
   taksit_sayisi: number;
   taksit_aralik: "haftalik" | "aylik";
@@ -62,10 +75,25 @@ const EMPTY_FORM: FormData = {
   description: "",
   clientId: "",
   caseId: "",
+  muhasebeTuru: "",
+  yuzdeMod: false,
+  bazTutar: "",
+  oran: "",
   taksitli: false,
   taksit_sayisi: 3,
   taksit_aralik: "aylik",
 };
+
+// Yüzde modunda tutar = baz tutar × oran / 100; değilse doğrudan girilen tutar
+function hesaplananTutar(f: FormData): number {
+  if (f.yuzdeMod) {
+    const baz = parseFloat(f.bazTutar);
+    const oran = parseFloat(f.oran);
+    if (!baz || !oran) return 0;
+    return Math.round(baz * (oran / 100) * 100) / 100;
+  }
+  return parseFloat(f.amount) || 0;
+}
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
   success: { label: "Ödendi", color: "bg-green-100 text-green-800", icon: CheckCircle },
@@ -257,8 +285,11 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
-    const amt = parseFloat(formData.amount);
-    if (!amt || amt <= 0) { setFormError("Geçerli bir tutar giriniz."); return; }
+    const amt = hesaplananTutar(formData);
+    if (!amt || amt <= 0) {
+      setFormError(formData.yuzdeMod ? "Baz tutar ve oran giriniz." : "Geçerli bir tutar giriniz.");
+      return;
+    }
     if (formData.kayitTur === "muvekkil" && !formData.clientId) {
       setFormError("Müvekkil seçiniz veya 'Serbest Gelir' modunu kullanınız.");
       return;
@@ -277,6 +308,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
       client_name: formData.kayitTur === "muvekkil" ? client?.full_name : undefined,
       case_id: formData.kayitTur === "muvekkil" ? formData.caseId || undefined : undefined,
       case_title: formData.kayitTur === "muvekkil" ? (kase ? kase.case_number || kase.title : undefined) : undefined,
+      muhasebe_turu: formData.muhasebeTuru || undefined,
     };
     const baseDesc =
       formData.kayitTur === "muvekkil"
@@ -691,18 +723,72 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 </>
               )}
 
+              {/* Muhasebe türü (avukatlık ücreti / müvekkile ödeme sınıfı) */}
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1.5 block">
-                  Tutar (₺) <span className="text-red-500">*</span>
+                  Muhasebe Türü <span className="text-muted-foreground">(opsiyonel)</span>
                 </label>
-                <input
-                  type="number" step="0.01" min="0.01"
+                <select
                   className="input-field w-full"
-                  placeholder="1.500,00"
-                  value={formData.amount}
-                  onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
-                  required
-                />
+                  value={formData.muhasebeTuru}
+                  onChange={(e) => setFormData((p) => ({ ...p, muhasebeTuru: e.target.value }))}
+                >
+                  <option value="">Sınıflandırma yok</option>
+                  {MUHASEBE_TURLERI.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tutar — sabit veya yüzde bazlı hesap */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-body text-sm font-medium text-foreground">
+                    Tutar (₺) <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, yuzdeMod: !p.yuzdeMod }))}
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
+                      formData.yuzdeMod ? "border-primary bg-primary/5 text-primary" : "border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    % ile hesapla
+                  </button>
+                </div>
+
+                {formData.yuzdeMod ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="number" step="0.01" min="0"
+                        className="input-field w-full"
+                        placeholder="Dava değeri (baz)"
+                        value={formData.bazTutar}
+                        onChange={(e) => setFormData((p) => ({ ...p, bazTutar: e.target.value }))}
+                      />
+                      <input
+                        type="number" step="0.01" min="0" max="100"
+                        className="input-field w-full"
+                        placeholder="Oran %"
+                        value={formData.oran}
+                        onChange={(e) => setFormData((p) => ({ ...p, oran: e.target.value }))}
+                      />
+                    </div>
+                    <p className="font-body text-xs text-muted-foreground">
+                      Hesaplanan ücret: <strong className="text-primary">{formatCurrency(hesaplananTutar(formData))}</strong>
+                      {formData.bazTutar && formData.oran ? ` (${formData.oran}% × ${formatCurrency(parseFloat(formData.bazTutar) || 0)})` : ""}
+                    </p>
+                  </div>
+                ) : (
+                  <input
+                    type="number" step="0.01" min="0.01"
+                    className="input-field w-full"
+                    placeholder="1.500,00"
+                    value={formData.amount}
+                    onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
+                  />
+                )}
               </div>
 
               {/* Taksit toggle */}
@@ -716,9 +802,9 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 </button>
                 <div className="flex-1">
                   <p className="font-body text-sm font-medium text-foreground">Taksitli</p>
-                  {formData.taksitli && formData.amount && (
+                  {formData.taksitli && hesaplananTutar(formData) > 0 && (
                     <p className="font-body text-xs text-muted-foreground">
-                      Her taksit: {formatCurrency(parseFloat(formData.amount || "0") / formData.taksit_sayisi)} — vade tarihleri otomatik dizilir
+                      Her taksit: {formatCurrency(hesaplananTutar(formData) / formData.taksit_sayisi)} — vade tarihleri otomatik dizilir
                     </p>
                   )}
                 </div>

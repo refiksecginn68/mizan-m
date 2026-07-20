@@ -103,7 +103,23 @@ export async function POST(req: NextRequest) {
 
     if (deadline_at) insertData.deadline_at = deadline_at;
     if (content) insertData.notes = content;
-    if (case_id) insertData.case_id = case_id;
+
+    // Dosya bağlama: elle case_id verilmediyse esas no'yu konu/içerikten yakalayıp otomatik eşle
+    let baglananCaseId = case_id;
+    if (!baglananCaseId) {
+      const esas = `${subject} ${content ?? ""}`.match(/\b(19|20)\d{2}\/\d{1,6}\b/)?.[0];
+      if (esas) {
+        const { data: eslesen } = await serviceSupabase
+          .from("cases")
+          .select("id")
+          .eq("lawyer_id", user.id)
+          .eq("case_number", esas)
+          .limit(1)
+          .maybeSingle();
+        if (eslesen?.id) baglananCaseId = eslesen.id;
+      }
+    }
+    if (baglananCaseId) insertData.case_id = baglananCaseId;
 
     const { data, error } = await serviceSupabase
       .from("tebligat_records")
@@ -143,15 +159,21 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id } = body as { id: string };
+    const { id, case_id, is_processed } = body as { id: string; case_id?: string; is_processed?: boolean };
 
     if (!id) {
       return NextResponse.json({ error: "ID zorunludur" }, { status: 400 });
     }
 
+    // Dosya Eşleştir (case_id) veya işlendi işaretle — verilen alanları güncelle
+    const guncelleme: Record<string, unknown> = {};
+    if (case_id !== undefined) guncelleme.case_id = case_id || null;
+    if (typeof is_processed === "boolean") guncelleme.is_processed = is_processed;
+    if (Object.keys(guncelleme).length === 0) guncelleme.is_processed = true;
+
     const { data, error } = await serviceSupabase
       .from("tebligat_records")
-      .update({ is_processed: true })
+      .update(guncelleme)
       .eq("id", id)
       .eq("lawyer_id", user.id)
       .select()

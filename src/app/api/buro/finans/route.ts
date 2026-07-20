@@ -90,6 +90,7 @@ export async function POST(request: NextRequest) {
     client_name?: string;
     case_id?: string;
     case_title?: string;
+    muhasebe_turu?: string;
   };
 
   try {
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
   if (body.client_name) metadata.client_name = body.client_name;
   if (body.case_id) metadata.case_id = body.case_id;
   if (body.case_title) metadata.case_title = body.case_title;
+  if (body.muhasebe_turu) metadata.muhasebe_turu = body.muhasebe_turu;
 
   const { data, error: dbError } = await serviceSupabase
     .from("payments")

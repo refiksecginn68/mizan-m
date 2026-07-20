@@ -3,11 +3,26 @@
 import { useEffect, useState } from "react";
 import { Plus, CheckSquare, Square, Trash2, Clock } from "lucide-react";
 
+type Oncelik = "dusuk" | "orta" | "yuksek";
+
 interface Todo {
   id: string;
   text: string;
   done: boolean;
   dueAt?: string; // ISO datetime string
+  priority: Oncelik;
+}
+
+const ONCELIK_CFG: Record<Oncelik, { label: string; dot: string; text: string }> = {
+  yuksek: { label: "Yüksek", dot: "bg-red-500", text: "text-red-600" },
+  orta:   { label: "Orta",   dot: "bg-blue-400", text: "text-blue-600" },
+  dusuk:  { label: "Düşük",  dot: "bg-gray-400", text: "text-gray-500" },
+};
+const ONCELIK_SIRA: Record<Oncelik, number> = { yuksek: 0, orta: 1, dusuk: 2 };
+const ONCELIK_DONGU: Oncelik[] = ["orta", "yuksek", "dusuk"];
+
+function normOncelik(v: unknown): Oncelik {
+  return v === "yuksek" || v === "dusuk" || v === "orta" ? v : "orta";
 }
 
 function formatDue(iso: string): string {
@@ -26,6 +41,7 @@ export default function BuroAnaSayfaClient() {
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
   const [dueAt, setDueAt] = useState("");
+  const [oncelik, setOncelik] = useState<Oncelik>("orta");
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   useEffect(() => {
@@ -33,8 +49,8 @@ export default function BuroAnaSayfaClient() {
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d.todos)) {
-          setTodos(d.todos.map((t: { id: string; text: string; done: boolean; due_at: string | null }) => ({
-            id: t.id, text: t.text, done: t.done, dueAt: t.due_at || undefined,
+          setTodos(d.todos.map((t: { id: string; text: string; done: boolean; due_at: string | null; priority?: string }) => ({
+            id: t.id, text: t.text, done: t.done, dueAt: t.due_at || undefined, priority: normOncelik(t.priority),
           })));
         }
       })
@@ -44,6 +60,7 @@ export default function BuroAnaSayfaClient() {
 
   const sorted = [...todos].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.priority !== b.priority) return ONCELIK_SIRA[a.priority] - ONCELIK_SIRA[b.priority];
     if (a.dueAt && b.dueAt) return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
     if (a.dueAt) return -1;
     if (b.dueAt) return 1;
@@ -54,17 +71,19 @@ export default function BuroAnaSayfaClient() {
     const text = input.trim();
     if (!text) return;
     const dueIso = dueAt ? new Date(dueAt).toISOString() : undefined;
+    const secilenOncelik = oncelik;
     setInput("");
     setDueAt("");
+    setOncelik("orta");
     setShowDatePicker(false);
     const res = await fetch("/api/buro/gorevler", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, due_at: dueIso }),
+      body: JSON.stringify({ text, due_at: dueIso, priority: secilenOncelik }),
     });
     const d = await res.json().catch(() => null);
     if (d?.todo) {
-      setTodos((t) => [...t, { id: d.todo.id, text: d.todo.text, done: d.todo.done, dueAt: d.todo.due_at || undefined }]);
+      setTodos((t) => [...t, { id: d.todo.id, text: d.todo.text, done: d.todo.done, dueAt: d.todo.due_at || undefined, priority: normOncelik(d.todo.priority) }]);
     }
   }
 
@@ -106,6 +125,15 @@ export default function BuroAnaSayfaClient() {
             placeholder="Görev ekle..."
             className="flex-1 text-xs bg-transparent text-gray-700 placeholder:text-gray-300 focus:outline-none"
           />
+          <button
+            type="button"
+            onClick={() => setOncelik((o) => ONCELIK_DONGU[(ONCELIK_DONGU.indexOf(o) + 1) % ONCELIK_DONGU.length])}
+            className="flex items-center gap-1 px-1.5 h-6 rounded-lg text-[10px] font-semibold transition-colors flex-shrink-0 hover:bg-gray-100"
+            title={`Öncelik: ${ONCELIK_CFG[oncelik].label} (değiştirmek için tıkla)`}
+          >
+            <span className={`w-2 h-2 rounded-full ${ONCELIK_CFG[oncelik].dot}`} />
+            <span className={ONCELIK_CFG[oncelik].text}>{ONCELIK_CFG[oncelik].label}</span>
+          </button>
           <button
             type="button"
             onClick={() => setShowDatePicker(!showDatePicker)}
@@ -154,8 +182,12 @@ export default function BuroAnaSayfaClient() {
               }
             </button>
             <div className="flex-1 min-w-0">
-              <span className={`block text-xs truncate ${todo.done ? "line-through text-gray-300" : "text-gray-700"}`}>
-                {todo.text}
+              <span className={`flex items-center gap-1.5 text-xs ${todo.done ? "line-through text-gray-300" : "text-gray-700"}`}>
+                {!todo.done && (
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ONCELIK_CFG[todo.priority].dot}`}
+                    title={`Öncelik: ${ONCELIK_CFG[todo.priority].label}`} />
+                )}
+                <span className="truncate">{todo.text}</span>
               </span>
               {todo.dueAt && !todo.done && (
                 <span className={`text-[10px] font-medium ${

@@ -23,7 +23,7 @@ export default async function DosyaYonetimiPage() {
   const [casesResult, clientsResult] = await Promise.all([
     serviceSupabase
       .from("cases")
-      .select(`id, title, case_number, court, status, description, opposing_party, created_at, clients (id, full_name)`)
+      .select(`id, title, case_number, court, status, case_type, description, opposing_party, created_at, clients (id, full_name)`)
       .eq("lawyer_id", user.id)
       .order("created_at", { ascending: false }),
     serviceSupabase

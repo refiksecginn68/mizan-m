@@ -20,6 +20,7 @@ interface CaseRow {
   case_number: string | null;
   court: string | null;
   status: string;
+  case_type: string | null;
   description: string | null;
   opposing_party: string | null;
   created_at: string;
@@ -43,10 +44,19 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string;
 
 const STATUS_ORDER = ["aktif", "beklemede", "istinaf_temyiz", "kapatildi"];
 
-const YARG_TURLERI = [
-  "Tüm Yargı Türleri", "Hukuk", "Ceza", "İdare", "Vergi", "İş",
-  "Aile", "Ticaret", "İcra", "Anayasa",
-];
+// Dosya türü kategorileri (çip sırası). "Diğer" yalnız eşleşmeyen dosya varsa gösterilir.
+const KATEGORILER = ["Ceza", "Hukuk", "İcra", "İdari Yargı", "Arabuluculuk"] as const;
+
+// Dosya türü/mahkeme metninden yargı kategorisi çıkarır (case_type + court sinyalleri).
+function davaKategorisi(c: CaseRow): string {
+  const d = `${c.case_type ?? ""} ${c.court ?? ""} ${c.title ?? ""}`.toLocaleLowerCase("tr");
+  if (/arabulucu/.test(d)) return "Arabuluculuk";
+  if (/icra|iflas|haciz|i̇cra/.test(d)) return "İcra";
+  if (/ceza|san[ıi]k|sav[cç][ıi]|soru[şs]turma|a[ğg][ıi]r ceza|asliye ceza|sulh ceza/.test(d)) return "Ceza";
+  if (/idar[ei]|vergi|dan[ıi][şs]tay|b[öo]lge idare/.test(d)) return "İdari Yargı";
+  if (/hukuk|aile|bo[şs]anma|i[şs] mahkeme|asliye|sulh hukuk|ticaret|t[üu]ketici|tazminat|alacak|k[ıi]dem|nafaka|velayet/.test(d)) return "Hukuk";
+  return "Diğer";
+}
 
 const EMPTY_FORM = {
   title: "", client_id: "", client_name: "", case_number: "", court: "",
@@ -66,7 +76,7 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
   const [cases, setCases] = useState<CaseRow[]>(initialCases);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("tumu");
-  const [yargFilter, setYargFilter] = useState("Tüm Yargı Türleri");
+  const [kategoriFilter, setKategoriFilter] = useState("tumu");
   const [sort, setSort] = useState("en_yeni");
   const [viewMode, setViewMode] = useState<"liste" | "kart">("liste");
   const [showModal, setShowModal] = useState(false);
@@ -81,10 +91,20 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
     return acc;
   }, {} as Record<string, number>);
 
+  // Kategori sayımları (çipler için) — yalnız var olan kategoriler gösterilir
+  const kategoriCounts = cases.reduce((acc, c) => {
+    const k = davaKategorisi(c);
+    acc[k] = (acc[k] ?? 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const gorunenKategoriler = KATEGORILER.filter((k) => kategoriCounts[k]);
+  if (kategoriCounts["Diğer"]) gorunenKategoriler.push("Diğer" as never);
+
   // Filtrele
   const filtered = cases
     .filter((c) => {
       if (statusFilter !== "tumu" && c.status !== statusFilter) return false;
+      if (kategoriFilter !== "tumu" && davaKategorisi(c) !== kategoriFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -186,6 +206,29 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
             );
           })}
         </div>
+
+        {/* Dosya türü sayaç çipleri */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          <button
+            onClick={() => setKategoriFilter("tumu")}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              kategoriFilter === "tumu" ? "bg-[#0f1729] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            Tümü {cases.length}
+          </button>
+          {gorunenKategoriler.map((k) => (
+            <button
+              key={k}
+              onClick={() => setKategoriFilter(kategoriFilter === k ? "tumu" : k)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                kategoriFilter === k ? "bg-[#c9a84c] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              {k} {kategoriCounts[k]}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Araç çubuğu */}
@@ -199,10 +242,6 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[#c9a84c] bg-[#f9f9f9]"
           />
         </div>
-        <select value={yargFilter} onChange={(e) => setYargFilter(e.target.value)}
-          className="text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
-          {YARG_TURLERI.map((t) => <option key={t}>{t}</option>)}
-        </select>
         <select value={sort} onChange={(e) => setSort(e.target.value)}
           className="text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-600 bg-white focus:outline-none focus:border-[#c9a84c]">
           <option value="en_yeni">En Yeni</option>
