@@ -21,6 +21,17 @@ interface UyapDava {
 
 const norm = (s?: string) => (s ?? "").toLocaleLowerCase("tr").replace(/\s+/g, " ").trim();
 
+// UYAP dosya durumu metnini (İstinafta, Yargıtayda, Kapalı, Karara Çıkmış...) liste UI'ının
+// kullandığı status kovasına eşler. Boş durumda undefined döner (mevcut status'e dokunma).
+function durumBucket(durum?: string): "aktif" | "beklemede" | "istinaf_temyiz" | "kapatildi" | undefined {
+  const d = norm(durum);
+  if (!d) return undefined;
+  if (/istinaf|yarg[ıi]tay|temyiz/.test(d)) return "istinaf_temyiz";
+  if (/kapal|kesinle[şs]|reddedil|d[üu][şs]t[üu]|i[şs]lemden kald/.test(d)) return "kapatildi";
+  if (/karar/.test(d)) return "beklemede"; // Karara çıkmış → kesinleşmeyi bekliyor
+  return "aktif"; // Açık, Derdest, vb.
+}
+
 // Vekili avukatın adını içeren tarafı müvekkil kabul eder (Avukat Portalı taraf tablosu).
 function muvekkilAdiBul(dava: UyapDava, lawyerName: string): string | undefined {
   const ln = norm(lawyerName).replace(/^av\.?\s*/, "");
@@ -124,6 +135,7 @@ export async function POST(request: Request) {
         await svc.from("cases").update({
           court: dava.mahkemeAdi ?? undefined,
           opposing_party: dava.davaliAdi ?? undefined,
+          status: durumBucket(dava.durumu) ?? undefined,
           uyap_status: dava.durumu ?? undefined,
           is_uyap_synced: true,
           // Mevcut bağlantıyı ezme; yalnızca boşsa yeni müvekkili bağla
@@ -141,7 +153,7 @@ export async function POST(request: Request) {
           court: dava.mahkemeAdi ?? null,
           case_type: dava.davaTuru ?? null,
           opposing_party: dava.davaliAdi ?? null,
-          status: "aktif",
+          status: durumBucket(dava.durumu) ?? "aktif",
           uyap_status: dava.durumu ?? null,
           is_uyap_synced: true,
           description: `UYAP eklentisinden aktarıldı${dava.acilisTarihi ? ` · Açılış: ${dava.acilisTarihi}` : ""}`,
