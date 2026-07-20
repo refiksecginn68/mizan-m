@@ -8,12 +8,14 @@ import {
   FolderOpen,
   Calendar,
   MessageSquare,
+  Film,
 } from "lucide-react";
 
 const MOBILE_NAV = [
   { href: "/buro", label: "Ana Sayfa", icon: LayoutDashboard, exact: true },
   { href: "/buro/emsal", label: "Emsal", icon: Search },
   { href: "/buro/davalar", label: "Dosyalar", icon: FolderOpen },
+  { href: "/buro/medya", label: "Delil", icon: Film },
   { href: "/buro/takvim", label: "Takvim", icon: Calendar },
   { href: "/buro/asistan", label: "AI", icon: MessageSquare },
 ];
@@ -34,7 +36,7 @@ export default function BuroMobileNav() {
           <Link
             key={href}
             href={href}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
+            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
               active ? "text-[#c9a84c]" : "text-white/40 hover:text-white/70"
             }`}
           >

@@ -102,7 +102,7 @@ export default function BuroLeftSidebar({
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-hidden py-2 px-2 space-y-2">
+      <nav className="flex-1 overflow-y-auto scrollbar-hide py-2 px-2 space-y-2">
         {/* Ana Menü */}
         <div>
           {!collapsed && (
