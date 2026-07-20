@@ -91,12 +91,15 @@ export async function POST(request: Request) {
 
   for (const dava of davalar.slice(0, 100)) {
     try {
-      const { data: existing } = await svc
+      // Idempotent eşleşme: aynı avukat + esas no + birim tek dosyadır. .single() KULLANMA —
+      // grupta >1 satır olunca hata döner ve her taramada yeni kayıt eklenirdi (mükerrer kaçağı).
+      const { data: adaylar } = await svc
         .from("cases")
-        .select("id, client_id")
+        .select("id, client_id, court")
         .eq("lawyer_id", verified.userId)
-        .eq("case_number", dava.esasNo)
-        .single();
+        .eq("case_number", dava.esasNo);
+      const birimKey = norm(dava.mahkemeAdi);
+      const existing = (adaylar ?? []).find((c: Any) => norm(c.court) === birimKey) ?? (adaylar ?? [])[0];
 
       // Müvekkil: taraf tablosunda vekili avukat olan taraf → bul/oluştur/bağla
       const muvekkilAdi = muvekkilAdiBul(dava, profile.full_name ?? "");
