@@ -61,6 +61,13 @@ interface Props {
 
 const MAX_DOSYA = 20;
 const KABUL_EDILEN = ".pdf,.docx,.doc,.txt,.udf,.png,.jpg,.jpeg,.gif,.webp";
+const MAX_TOPLAM_CHARS = 200_000;
+
+// Okunan belgelerden AI'a giden birleşik metni üretir (extract API ile aynı format)
+const birlesikMetin = (liste: DosyaSonucu[]) =>
+  liste.filter((d) => d.ok && d.text)
+    .map((d) => `\n\n===== BELGE: ${d.ad} =====\n${d.text}`)
+    .join("").trim().slice(0, MAX_TOPLAM_CHARS);
 
 export default function DilekceAvukatClient({
   lawyerName, sablonar: initialSablonar, initialFavoriler = [],
@@ -118,15 +125,23 @@ export default function DilekceAvukatClient({
     setMetin(t);
   }, []);
 
-  // ── Çoklu dosya yükleme (en fazla 20) ───────────────────────────
+  // ── Çoklu dosya yükleme (en fazla 20, birikimli) ────────────────
+  // Yeni seçim öncekileri EZMEZ: aynı adlı dosya güncellenir, farklılar eklenir.
+  // Böylece farklı türdeki belgeler (UDF+PDF+görsel...) tek tek veya toplu yüklenebilir.
   const dosyalariYukle = useCallback(async (
-    secilen: FileList,
+    secilen: FileList | File[],
     hedef: "ai" | "evrak",
   ) => {
-    const liste = Array.from(secilen).slice(0, MAX_DOSYA);
+    const mevcut = hedef === "ai" ? dosyalar : evrakDosyalar;
+    const bosYer = MAX_DOSYA - mevcut.length;
+    if (bosYer <= 0) {
+      setError(`En fazla ${MAX_DOSYA} dosya yükleyebilirsiniz — önce listeden dosya çıkarın.`);
+      return;
+    }
+    const liste = Array.from(secilen).slice(0, bosYer);
     if (!liste.length) return;
-    if (secilen.length > MAX_DOSYA) {
-      setError(`En fazla ${MAX_DOSYA} dosya yükleyebilirsiniz — ilk ${MAX_DOSYA} tanesi alındı.`);
+    if (secilen.length > bosYer) {
+      setError(`En fazla ${MAX_DOSYA} dosya yükleyebilirsiniz — ilk ${bosYer} tanesi alındı.`);
     } else {
       setError("");
     }
@@ -143,12 +158,14 @@ export default function DilekceAvukatClient({
       if (!res.ok) { setError(data.error ?? "Belgeler okunamadı"); return; }
 
       const sonuclar = data.files ?? [];
+      const yeniAdlar = new Set(sonuclar.map((s) => s.ad));
+      const birlesik = [...mevcut.filter((d) => !yeniAdlar.has(d.ad)), ...sonuclar];
       if (hedef === "ai") {
-        setDosyalar(sonuclar);
-        setDosyaMetni(data.text ?? "");
+        setDosyalar(birlesik);
+        setDosyaMetni(birlesikMetin(birlesik));
       } else {
-        setEvrakDosyalar(sonuclar);
-        setEvrakMetin(data.text ?? "");
+        setEvrakDosyalar(birlesik);
+        setEvrakMetin(birlesikMetin(birlesik));
       }
 
       const hatali = sonuclar.filter((f) => !f.ok);
@@ -163,15 +180,18 @@ export default function DilekceAvukatClient({
     } finally {
       setDosyaYukleniyor(false);
     }
-  }, []);
+  }, [dosyalar, evrakDosyalar]);
 
   function dosyaCikar(ad: string) {
     const kalan = dosyalar.filter((d) => d.ad !== ad);
     setDosyalar(kalan);
-    setDosyaMetni(
-      kalan.filter((d) => d.ok && d.text)
-        .map((d) => `\n\n===== BELGE: ${d.ad} =====\n${d.text}`).join("").trim()
-    );
+    setDosyaMetni(birlesikMetin(kalan));
+  }
+
+  // Sürükle-bırak: iki yükleme alanı da drop kabul eder ("Sürükle" vaadi gerçek olsun)
+  function dropAl(e: React.DragEvent, hedef: "ai" | "evrak") {
+    e.preventDefault();
+    if (e.dataTransfer.files?.length) dosyalariYukle(e.dataTransfer.files, hedef);
   }
 
   // ── Soru-sor akışı ──────────────────────────────────────────────
@@ -584,11 +604,16 @@ export default function DilekceAvukatClient({
                     Ek Dosyalar <span className="text-gray-300">(en fazla {MAX_DOSYA})</span>
                   </label>
                   <div onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => dropAl(e, "ai")}
                     className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
                       dosyalar.length ? "border-[#7c3aed]/40 bg-[#7c3aed]/5" : "border-gray-200 hover:border-gray-300"
                     }`}>
                     <input ref={fileRef} type="file" className="hidden" multiple accept={KABUL_EDILEN}
-                      onChange={(e) => e.target.files && dosyalariYukle(e.target.files, "ai")} />
+                      onChange={(e) => {
+                        if (e.target.files) dosyalariYukle(e.target.files, "ai");
+                        e.target.value = ""; // aynı dosya tekrar seçilebilsin (change tetiklenmezdi)
+                      }} />
                     {dosyaYukleniyor ? (
                       <div className="flex items-center justify-center gap-2 text-xs text-[#7c3aed]">
                         <Loader2 className="w-4 h-4 animate-spin" /> Belgeler okunuyor...
@@ -793,11 +818,16 @@ export default function DilekceAvukatClient({
                 </p>
 
                 <div onClick={() => evrakRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => dropAl(e, "evrak")}
                   className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
                     evrakDosyalar.length ? "border-[#7c3aed]/40 bg-[#7c3aed]/5" : "border-gray-200 hover:border-[#7c3aed]/30"
                   }`}>
                   <input ref={evrakRef} type="file" className="hidden" multiple accept={KABUL_EDILEN}
-                    onChange={(e) => e.target.files && dosyalariYukle(e.target.files, "evrak")} />
+                    onChange={(e) => {
+                      if (e.target.files) dosyalariYukle(e.target.files, "evrak");
+                      e.target.value = ""; // aynı dosya tekrar seçilebilsin
+                    }} />
                   {dosyaYukleniyor ? (
                     <div className="flex items-center justify-center gap-2 text-sm text-[#7c3aed]">
                       <Loader2 className="w-5 h-5 animate-spin" /> Belgeler okunuyor...
