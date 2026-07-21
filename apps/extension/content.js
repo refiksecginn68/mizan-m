@@ -629,6 +629,33 @@
     return btns.find((b) => /sorgula|listele|\bara\b/i.test(clean(b.textContent))) || null;
   }
 
+  // Form alanları türe göre yeniden render olur — kutu referansları bayatlar.
+  // Her kullanımda TAZE bulunmalı (canlı testte birimlerin dolaşılmama kök nedeni buydu).
+  const findBirimBox = () => findSelectboxByLabel(/yarg[ıi]\s*birim|birim/i);
+  const findIlBox = () => findSelectboxByLabel(/^\s*[İIıi]l\s*:?\s*$/);       // Cbs formu: birim yerine İl
+  const findMahkemeBox = () => findSelectboxByLabel(/^\s*mahkeme\s*:?\s*$/i); // 3. seviye (İcra/Satış/Ceza'da görüldü)
+
+  function boxUsable(box) {
+    return box && visible(box) && !box.classList.contains("dx-state-disabled") &&
+      !box.classList.contains("dx-state-readonly");
+  }
+
+  // Bağımlı dropdown ASENKRON dolar: taze referansla, seçenekler gelene dek tekrar dene.
+  async function optionsWithRetry(finder, timeoutMs) {
+    const t0 = Date.now();
+    for (;;) {
+      await gate();
+      const box = finder();
+      if (boxUsable(box)) {
+        const opts = (await listOptions(box))
+          .filter((t) => !/g[öo]sterilecek bilgi yok|se[çc]iniz/i.test(t));
+        if (opts.length > 0) return opts;
+      }
+      if (Date.now() - t0 > timeoutMs) return [];
+      await sleep(700);
+    }
+  }
+
   // ── Ana grid yardımcıları ──
 
   function mainGrid() {
@@ -1011,7 +1038,6 @@
 
     try {
       const turuBox = findSelectboxByLabel(/yarg[ıi]\s*t[üu]r/i);
-      const birimBox = findSelectboxByLabel(/yarg[ıi]\s*birim|birim/i);
       const sorgula = findSorgulaButton();
 
       if (!turuBox || !sorgula) {
@@ -1022,31 +1048,84 @@
         const turler = await listOptions(turuBox);
         if (turler.length === 0) deepLog("Yargı türü listesi boş geldi");
         deep.progress.turler = turler;
+        deep.progress.kombIslenen = 0;
+        deep.progress.kombToplam = 0;
         saveDeepState();
 
         for (const turu of turler) {
           await gate();
           setPhase("sorgu", `${turu} seçiliyor`);
-          if (!(await selectOption(turuBox, turu))) { deepLog(`Yargı türü seçilemedi: ${turu}`); continue; }
-          await sleep(600);
+          const tBox = findSelectboxByLabel(/yarg[ıi]\s*t[üu]r/i) || turuBox;
+          if (!(await selectOption(tBox, turu))) { deepLog(`Yargı türü seçilemedi: ${turu}`); continue; }
 
-          // Birim listesi türe göre asenkron dolar
-          const birimler = birimBox ? await listOptions(birimBox) : [];
-          const hedefBirimler = birimler.length > 0 ? birimler : [""];
+          // Birim listesi türe göre ASENKRON dolar ve alan yeniden render olabilir —
+          // taze referansla dolana kadar bekle. HARDCODE liste yok: dropdown gerçekten okunur.
+          const birimler = await optionsWithRetry(findBirimBox, 10000);
 
-          for (const birim of hedefBirimler) {
+          // Özel formlar: Cbs'de birim yerine İl dropdown'ı var; Tazminat Komisyonu'nda
+          // Yargı Birimi alanı hiç yok → birimsiz tek sorgu.
+          let kombinasyonlar;
+          if (birimler.length > 0) {
+            kombinasyonlar = birimler.map((b) => ({ birim: b }));
+          } else {
+            const iller = await optionsWithRetry(findIlBox, 4000);
+            kombinasyonlar = iller.length > 0 ? iller.map((il) => ({ il })) : [{}];
+            deepLog(`${turu}: birim listesi yok — ${iller.length > 0 ? iller.length + " il dolaşılacak" : "birimsiz tek sorgu"}`);
+          }
+          deep.progress.kombToplam += kombinasyonlar.length;
+          saveDeepState();
+
+          for (const komb of kombinasyonlar) {
             await gate();
-            const qKey = `${turu}|${birim}`;
-            if (deep.doneQueries[qKey]) continue;
-            if (birim && birimBox && !(await selectOption(birimBox, birim))) {
-              deepLog(`Birim seçilemedi: ${turu} / ${birim}`);
-              continue;
+            const qKey = `${turu}|${komb.birim || ""}|${komb.il || ""}`;
+            if (deep.doneQueries[qKey]) { deep.progress.kombIslenen++; continue; }
+            if (komb.birim) {
+              const bBox = findBirimBox();
+              if (!bBox || !(await selectOption(bBox, komb.birim))) {
+                deepLog(`Birim seçilemedi: ${turu} / ${komb.birim}`);
+                deep.progress.kombIslenen++;
+                continue;
+              }
+            } else if (komb.il) {
+              const ilBox = findIlBox();
+              if (!ilBox || !(await selectOption(ilBox, komb.il))) {
+                deepLog(`İl seçilemedi: ${turu} / ${komb.il}`);
+                deep.progress.kombIslenen++;
+                continue;
+              }
             }
-            setPhase("sorgu", `${turu}${birim ? " / " + birim : ""} sorgulanıyor`);
+            const etiket = `${turu}${komb.birim ? " / " + komb.birim : komb.il ? " / " + komb.il : ""}`;
+            setPhase("sorgu", `${etiket} sorgulanıyor (${deep.progress.kombIslenen + 1}/${deep.progress.kombToplam} kombinasyon)`);
             (findSorgulaButton() || sorgula).click();
             await sleep(1200 + Math.floor(Math.random() * 800));
-            await crawlCurrentResults(`${turu}${birim ? "/" + birim : ""}`, batch);
+            const taranan = await crawlCurrentResults(etiket, batch);
+
+            // 3. seviye Mahkeme dropdown'ı: boş bırakılan sorgu (tüm mahkemeler) 0 dosya
+            // döndürdüyse ve mahkeme listesi doluysa yeterli olmamıştır → tek tek dolaş.
+            if (taranan === 0 && komb.birim) {
+              const mahkemeler = await optionsWithRetry(findMahkemeBox, 3000);
+              if (mahkemeler.length > 0) deepLog(`${etiket}: birim sorgusu boş — ${mahkemeler.length} mahkeme tek tek sorgulanacak`);
+              for (const mahkeme of mahkemeler) {
+                await gate();
+                const mKey = `${qKey}|m:${mahkeme}`;
+                if (deep.doneQueries[mKey]) continue;
+                const mBox = findMahkemeBox();
+                if (!mBox || !(await selectOption(mBox, mahkeme))) {
+                  deepLog(`Mahkeme seçilemedi: ${etiket} / ${mahkeme}`);
+                  continue;
+                }
+                setPhase("sorgu", `${etiket} / ${mahkeme} sorgulanıyor`);
+                (findSorgulaButton() || sorgula).click();
+                await sleep(1200 + Math.floor(Math.random() * 800));
+                await crawlCurrentResults(`${etiket}/${mahkeme}`, batch);
+                deep.doneQueries[mKey] = true;
+                saveDeepState();
+                await rateDelay();
+              }
+            }
+
             deep.doneQueries[qKey] = true;
+            deep.progress.kombIslenen++;
             saveDeepState();
             await rateDelay();
           }

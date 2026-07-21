@@ -188,7 +188,8 @@ function renderDeepProgress(st) {
   $("deepPanel").style.display = "block";
   const p = st.progress || {};
   const durum = st.running ? (st.paused ? "⏸ Duraklatıldı" : "⏳ Çalışıyor") : "";
-  $("deepPhase").textContent = `${durum} ${p.phase || ""} — ${p.islenen || 0} dosya işlendi, ${p.aktarilan || 0} aktarıldı`;
+  const komb = p.kombToplam ? `, ${p.kombIslenen || 0}/${p.kombToplam} kombinasyon` : "";
+  $("deepPhase").textContent = `${durum} ${p.phase || ""} — ${p.islenen || 0} dosya işlendi${komb}, ${p.aktarilan || 0} aktarıldı`;
   $("deepDetail").textContent = p.detay || "";
   $("deepErrors").textContent = (p.hatalar || []).slice(-4).join(" · ");
   deepPaused = !!st.paused;
