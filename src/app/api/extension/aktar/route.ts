@@ -4,7 +4,7 @@ import { verifyExtensionToken } from "@/lib/extension-token";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
-interface Taraf { rol?: string; tip?: string; ad?: string; vekil?: string }
+interface Taraf { rol?: string; tip?: string; ad?: string; vekil?: string; muvekkil?: boolean }
 
 interface UyapDava {
   esasNo: string;
@@ -15,7 +15,7 @@ interface UyapDava {
   durumu?: string;
   acilisTarihi?: string;
   taraflar?: Taraf[];
-  evraklar?: Array<{ ad?: string; tarih?: string }>;
+  evraklar?: Array<{ ad?: string; tarih?: string; klasor?: string; itemId?: string }>;
   safahat?: Array<{ tarih?: string; islem?: string; aciklama?: string }>;
 }
 
@@ -55,6 +55,49 @@ async function muvekkilBagla(svc: Any, lawyerId: string, ad: string): Promise<st
     .insert({ lawyer_id: lawyerId, full_name: isim, uyap_synced: true, uyap_synced_at: new Date().toISOString() })
     .select("id").single();
   return yeni?.id;
+}
+
+// "04.05.2026 16:21" / "17/05/2026" → ISO (+03:00 Türkiye). Geçersizse undefined.
+function parseUyapTarih(s?: string): string | undefined {
+  const m = (s ?? "").match(/(\d{2})[./](\d{2})[./](\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (!m) return undefined;
+  const [, gg, aa, yyyy, hh, dk] = m;
+  return `${yyyy}-${aa}-${gg}T${hh ?? "09"}:${dk ?? "00"}:00+03:00`;
+}
+
+// Karşı taraf: vekili avukat OLMAYAN ilk taraf (taraf tablosu Rol|Tipi|Adı|Vekil)
+function karsiTarafBul(dava: UyapDava, lawyerName: string): string | undefined {
+  const ln = norm(lawyerName).replace(/^av\.?\s*/, "");
+  const karsi = (dava.taraflar ?? []).find((t) => t.ad && !(ln && norm(t.vekil).includes(ln)));
+  return karsi?.ad?.trim();
+}
+
+// Safahattaki gelecekteki duruşma tarihlerini takvime işler (var olanı tekrarlamaz)
+async function durusmaSenkron(svc: Any, lawyerId: string, caseId: string, clientId: string | undefined, dava: UyapDava) {
+  const adaylar = (dava.safahat ?? [])
+    .filter((s) => /duru[şs]ma|celse/i.test(`${s.islem ?? ""} ${s.aciklama ?? ""}`))
+    .map((s) => parseUyapTarih(`${s.islem ?? ""} ${s.aciklama ?? ""} ${s.tarih ?? ""}`))
+    .filter((iso): iso is string => !!iso && new Date(iso).getTime() > Date.now());
+  if (adaylar.length === 0) return;
+
+  const { data: mevcut } = await svc
+    .from("calendar_events").select("starts_at")
+    .eq("lawyer_id", lawyerId).eq("case_id", caseId).eq("event_type", "durusma");
+  const varOlan = new Set((mevcut ?? []).map((e: Any) => new Date(e.starts_at).getTime()));
+
+  for (const iso of Array.from(new Set(adaylar)).slice(0, 10)) {
+    if (varOlan.has(new Date(iso).getTime())) continue;
+    await svc.from("calendar_events").insert({
+      lawyer_id: lawyerId,
+      case_id: caseId,
+      client_id: clientId ?? null,
+      title: `Duruşma — ${dava.esasNo}`,
+      description: dava.mahkemeAdi ?? null,
+      event_type: "durusma",
+      starts_at: iso,
+      location: dava.mahkemeAdi ?? null,
+    });
+  }
 }
 
 function getToken(request: Request): string | null {
@@ -121,45 +164,64 @@ export async function POST(request: Request) {
 
       const taraflarSatir = (dava.taraflar ?? []).slice(0, 12)
         .map((t) => `  • ${t.rol ?? "-"}: ${t.ad ?? "-"}${t.vekil ? ` (Vekil: ${t.vekil})` : ""}`);
-      const evrakSatir = (dava.evraklar ?? []).slice(0, 40)
-        .map((e) => `  - ${e.tarih ? `[${e.tarih}] ` : ""}${e.ad ?? ""}`.trimEnd());
       const notes = [
         dava.durumu ? `Durum: ${dava.durumu}` : "",
         muvekkilAdi ? `Müvekkil: ${muvekkilAdi}` : (dava.davaciAdi ? `Davacı: ${dava.davaciAdi}` : ""),
         taraflarSatir.length ? "Taraflar:\n" + taraflarSatir.join("\n") : "",
-        evrakSatir.length ? "Evraklar:\n" + evrakSatir.join("\n") : "",
-        ...(dava.safahat ?? []).slice(0, 30).map((s) => `[${s.tarih ?? "-"}] ${s.islem ?? ""} ${s.aciklama ?? ""}`.trim()),
       ].filter(Boolean).join("\n");
 
+      // Yapılandırılmış UYAP verisi: müvekkil işaretli taraflar + evrak ağacı meta + safahat
+      const ln = norm(profile.full_name ?? "").replace(/^av\.?\s*/, "");
+      const uyapTaraflar = (dava.taraflar ?? []).slice(0, 30).map((t) => ({
+        ...t, muvekkil: !!(t.ad && ln && norm(t.vekil).includes(ln)),
+      }));
+      const karsiTaraf = karsiTarafBul(dava, profile.full_name ?? "");
+      const acilisIso = parseUyapTarih(dava.acilisTarihi);
+
+      const uyapAlanlar = {
+        court: dava.mahkemeAdi ?? undefined,
+        case_type: dava.davaTuru ?? undefined,
+        opposing_party: karsiTaraf ?? dava.davaliAdi ?? undefined,
+        status: durumBucket(dava.durumu) ?? undefined,
+        uyap_status: dava.durumu ?? undefined,
+        is_uyap_synced: true,
+        uyap_taraflar: uyapTaraflar.length ? uyapTaraflar : undefined,
+        uyap_evraklar: dava.evraklar?.length ? dava.evraklar.slice(0, 500) : undefined,
+        uyap_safahat: dava.safahat?.length ? dava.safahat.slice(0, 120) : undefined,
+        uyap_acilis_tarihi: dava.acilisTarihi ?? undefined,
+        opened_at: acilisIso ? acilisIso.slice(0, 10) : undefined,
+      };
+
+      let caseId: string | undefined;
       if (existing) {
         await svc.from("cases").update({
-          court: dava.mahkemeAdi ?? undefined,
-          opposing_party: dava.davaliAdi ?? undefined,
-          status: durumBucket(dava.durumu) ?? undefined,
-          uyap_status: dava.durumu ?? undefined,
-          is_uyap_synced: true,
+          ...uyapAlanlar,
           // Mevcut bağlantıyı ezme; yalnızca boşsa yeni müvekkili bağla
           client_id: existing.client_id ?? clientId ?? undefined,
           notes: notes || undefined,
         }).eq("id", existing.id);
+        caseId = existing.id;
         results.push({ esasNo: dava.esasNo, status: "guncellendi", muvekkil: !!clientId });
       } else {
-        const { error } = await svc.from("cases").insert({
+        const { data: inserted, error } = await svc.from("cases").insert({
           lawyer_id: verified.userId,
           client_id: clientId ?? null,
           client_name: !clientId && muvekkilAdi ? muvekkilAdi : null,
           title: `${dava.davaTuru ?? "Dava"} — ${dava.esasNo}`,
           case_number: dava.esasNo,
-          court: dava.mahkemeAdi ?? null,
-          case_type: dava.davaTuru ?? null,
-          opposing_party: dava.davaliAdi ?? null,
-          status: durumBucket(dava.durumu) ?? "aktif",
-          uyap_status: dava.durumu ?? null,
-          is_uyap_synced: true,
           description: `UYAP eklentisinden aktarıldı${dava.acilisTarihi ? ` · Açılış: ${dava.acilisTarihi}` : ""}`,
           notes: notes || null,
-        });
+          ...uyapAlanlar,
+          status: durumBucket(dava.durumu) ?? "aktif",
+        }).select("id").single();
+        caseId = inserted?.id;
         results.push({ esasNo: dava.esasNo, status: error ? "hata" : "eklendi", muvekkil: !!clientId });
+      }
+
+      // Çapraz senkron: gelecekteki duruşmalar takvime (mükerrersiz)
+      if (caseId) {
+        try { await durusmaSenkron(svc, verified.userId, caseId, existing?.client_id ?? clientId, dava); }
+        catch { /* takvim senkronu dosya aktarımını engellemesin */ }
       }
     } catch {
       results.push({ esasNo: dava.esasNo, status: "hata" });

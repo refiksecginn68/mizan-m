@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import DavaBelgeler from "@/components/buro/DavaBelgeler";
 import DavaAsistanPanel from "@/components/buro/DavaAsistanPanel";
+import UyapDosyaSekmeleri from "@/components/buro/UyapDosyaSekmeleri";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -146,6 +147,22 @@ export default async function DavaDetayPage({
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main info */}
           <div className="lg:col-span-2 space-y-4">
+            {/* UYAP sekmeleri — derin taramayla gelen yapılandırılmış veri varsa */}
+            {caseData.is_uyap_synced && (
+              <UyapDosyaSekmeleri
+                dosyaBilgileri={{
+                  esasNo: caseData.case_number,
+                  birim: caseData.court,
+                  tur: caseData.case_type,
+                  durum: caseData.uyap_status ?? caseData.status,
+                  acilis: caseData.uyap_acilis_tarihi ?? (caseData.opened_at ? new Date(caseData.opened_at).toLocaleDateString("tr-TR") : null),
+                }}
+                taraflar={(caseData.uyap_taraflar as AnyClient[]) ?? []}
+                evraklar={(caseData.uyap_evraklar as AnyClient[]) ?? []}
+                safahat={(caseData.uyap_safahat as AnyClient[]) ?? []}
+              />
+            )}
+
             {/* Case details card */}
             <div className="card">
               <h2 className="font-heading text-lg font-bold text-primary mb-4 flex items-center gap-2">

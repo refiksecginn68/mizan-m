@@ -178,6 +178,79 @@ async function syncAll() {
   }
 }
 
+// ── A1 DERİN TARAMA: tüm yargı türleri × birimler × sayfalar × dosya detayları ──
+// Motor content script'te çalışır (popup kapansa da sürer); ilerleme storage'dan okunur.
+
+let deepPaused = false;
+
+function renderDeepProgress(st) {
+  if (!st) return;
+  $("deepPanel").style.display = "block";
+  const p = st.progress || {};
+  const durum = st.running ? (st.paused ? "⏸ Duraklatıldı" : "⏳ Çalışıyor") : "";
+  $("deepPhase").textContent = `${durum} ${p.phase || ""} — ${p.islenen || 0} dosya işlendi, ${p.aktarilan || 0} aktarıldı`;
+  $("deepDetail").textContent = p.detay || "";
+  $("deepErrors").textContent = (p.hatalar || []).slice(-4).join(" · ");
+  deepPaused = !!st.paused;
+  $("deepPause").textContent = deepPaused ? "Devam Et" : "Duraklat";
+  $("deepScan").disabled = !!st.running;
+}
+
+// Derin tarama komutunu uygun çerçeveye ilet (grid/form hangi frame'deyse orada başlar)
+async function deepSend(msgType, extra) {
+  const tab = await activeTab();
+  let frames = [{ frameId: 0 }];
+  try {
+    const all = await chrome.webNavigation.getAllFrames({ tabId: tab.id });
+    if (all && all.length) frames = all;
+  } catch (_) { /* üst çerçeveyle devam */ }
+  for (const f of frames) {
+    try {
+      const res = await chrome.tabs.sendMessage(tab.id, { type: msgType, ...extra }, { frameId: f.frameId });
+      if (res && res.ok) return res;
+    } catch (_) { /* bu çerçevede içerik betiği yok */ }
+  }
+  return null;
+}
+
+async function startDeepScan() {
+  const tab = await activeTab();
+  if (!tab || !(tab.url || "").includes("uyap.gov.tr")) {
+    setStatus($("transferStatus"), "Derin tarama için UYAP dosya sorgulama sayfasını açın.", "err");
+    return;
+  }
+  const ok = await verify();
+  if (!ok) {
+    setStatus($("transferStatus"), "Önce bağlantı kodunu girin (aktarım için gerekli).", "err");
+    return;
+  }
+  const res = await deepSend("MIZANIM_DEEP_START", {});
+  if (!res) {
+    setStatus($("transferStatus"), "Dosya sorgulama ekranı bulunamadı. UYAP'ta 'Dosya Sorgulama' sayfasını açıp tekrar deneyin.", "err");
+    return;
+  }
+  $("deepPanel").style.display = "block";
+  setStatus($("transferStatus"), res.alreadyRunning ? "Derin tarama zaten sürüyor." : "Derin tarama başladı — bu pencereyi kapatabilirsiniz, tarama sürer.", "ok");
+}
+
+$("deepScan").addEventListener("click", startDeepScan);
+$("deepPause").addEventListener("click", async () => {
+  await deepSend(deepPaused ? "MIZANIM_DEEP_RESUME" : "MIZANIM_DEEP_PAUSE", {});
+});
+$("deepStop").addEventListener("click", async () => {
+  await deepSend("MIZANIM_DEEP_STOP", {});
+});
+
+// İlerlemeyi canlı izle: storage.onChanged + açılışta mevcut durum
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes.mzDeep) renderDeepProgress(changes.mzDeep.newValue);
+});
+chrome.storage.local.get(["mzDeep"]).then((d) => {
+  if (d.mzDeep && (d.mzDeep.running || (d.mzDeep.progress && d.mzDeep.progress.islenen > 0))) {
+    renderDeepProgress(d.mzDeep);
+  }
+});
+
 // Teşhis: sayfa yapısını panoya kopyala (destek için)
 async function copyDiag() {
   const tab = await activeTab();

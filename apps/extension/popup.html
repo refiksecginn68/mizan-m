@@ -85,6 +85,16 @@
   <div class="section">
     <p class="found"><span id="modeLabel">Bu sayfada bulunanlar</span>: <strong id="count">–</strong></p>
     <div class="list" id="list"></div>
+    <button class="btn-gold" id="deepScan">Tüm Sayfaları Aktar (Derin Tarama)</button>
+    <div id="deepPanel" style="display:none; margin-top:8px; background:rgba(255,255,255,.05); border-radius:8px; padding:8px 10px;">
+      <p id="deepPhase" style="font-size:11px; margin:0; color:#e7b743;"></p>
+      <p id="deepDetail" style="font-size:10px; margin:4px 0 0; color:rgba(255,255,255,.6);"></p>
+      <p id="deepErrors" style="font-size:9px; margin:4px 0 0; color:#f87171; max-height:60px; overflow-y:auto;"></p>
+      <div class="row2">
+        <button class="btn-ghost" id="deepPause">Duraklat</button>
+        <button class="btn-ghost" id="deepStop">Durdur</button>
+      </div>
+    </div>
     <button class="btn-gold" id="syncAll">Tümünü Mizanım'a Aktar</button>
     <div class="row2">
       <button class="btn-ghost" id="scan">Sayfayı Tara</button>
