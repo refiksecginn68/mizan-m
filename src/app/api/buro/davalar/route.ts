@@ -124,3 +124,39 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ case: data }, { status: 201 });
 }
+
+// Toplu silme: { ids: string[] } seçilenleri, { all: true } avukatın TÜM dosyalarını siler.
+// Her iki durumda da lawyer_id ile sınırlıdır (başka avukatın dosyasına dokunmaz).
+export async function DELETE(request: NextRequest) {
+  const { user, error } = await getAuthenticatedLawyer();
+  if (!user) {
+    return NextResponse.json({ error }, { status: 401 });
+  }
+
+  const serviceSupabase = createServiceClient() as AnyClient;
+
+  let body: { ids?: string[]; all?: boolean };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
+  }
+
+  let query = serviceSupabase.from("cases").delete().eq("lawyer_id", user.id);
+
+  if (!body.all) {
+    if (!Array.isArray(body.ids) || body.ids.length === 0) {
+      return NextResponse.json({ error: "Silinecek dosya seçilmedi" }, { status: 400 });
+    }
+    query = query.in("id", body.ids);
+  }
+
+  // select("id") ile silinen satırları geri alıp sayısını döneriz
+  const { data, error: dbError } = await query.select("id");
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: data?.length ?? 0 });
+}

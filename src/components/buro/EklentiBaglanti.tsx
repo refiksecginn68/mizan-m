@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Puzzle, Copy, Check, Loader2, KeyRound, Download, ShieldCheck, Globe, ChevronDown } from "lucide-react";
+import { EXTENSION_VERSION } from "@/lib/extension-version";
 
 const STORE_URL = "https://chromewebstore.google.com/detail/ancbdklmehchmpefmjcachkidbgjapfm";
 
@@ -43,7 +44,7 @@ export default function EklentiBaglanti() {
           <Globe className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="font-heading text-base font-bold text-primary">Mizanım UYAP Eklentisi (v1.3.0)</h2>
+          <h2 className="font-heading text-base font-bold text-primary">Mizanım UYAP Eklentisi (v{EXTENSION_VERSION})</h2>
           <p className="font-body text-xs text-muted-foreground">
             UYAP&apos;ta gördüğünüz dosyaları tek tıkla Mizanım&apos;daki davalarınıza aktarın
           </p>

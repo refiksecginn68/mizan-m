@@ -8,6 +8,7 @@ import {
   Loader2, ChevronRight, MoreHorizontal,
   Calendar, User, Scale, AlertCircle, Check,
   Eye, FileText, ArrowUpDown, ArrowUp, ArrowDown,
+  Trash2, CheckSquare, Square,
 } from "lucide-react";
 
 interface Client {
@@ -132,6 +133,11 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
   const [pageSize, setPageSize] = useState<number>(20);
   const [page, setPage] = useState(0);
   const [preview, setPreview] = useState<CaseRow | null>(null);
+  // Silme: seçili id'ler + onay modalı (ids boş & all=true ise "tümünü sil")
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: string[]; all: boolean } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   // Sayım
   const counts = STATUS_ORDER.reduce((acc, s) => {
@@ -219,6 +225,78 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
     });
     setCases((prev) => prev.map((c) => c.id === id ? { ...c, status } : c));
     setOpenMenu(null);
+  }
+
+  // Seçim: tek satır aç/kapa
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // Seçim: görünen (filtrelenmiş) satırların tümünü aç/kapa
+  const tumSecili = uyapFiltered.length > 0 && uyapFiltered.every((c) => selected.has(c.id));
+  function toggleSelectAll() {
+    setSelected((prev) => {
+      if (tumSecili) {
+        const next = new Set(prev);
+        uyapFiltered.forEach((c) => next.delete(c.id));
+        return next;
+      }
+      const next = new Set(prev);
+      uyapFiltered.forEach((c) => next.add(c.id));
+      return next;
+    });
+  }
+
+  // Onaylanan silmeyi çalıştırır: all=true → toplu "tümünü sil", ids → seçilenler,
+  // tek id → tekil endpoint. State ve seçim güncellenir.
+  async function runDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      const { ids, all } = confirmDelete;
+      let res: Response;
+      if (all) {
+        res = await fetch("/api/buro/davalar", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ all: true }),
+        });
+      } else if (ids.length === 1) {
+        res = await fetch(`/api/buro/dava/${ids[0]}`, { method: "DELETE" });
+      } else {
+        res = await fetch("/api/buro/davalar", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setDeleteError(data.error ?? "Silme başarısız"); return; }
+
+      if (all) {
+        setCases([]);
+        setSelected(new Set());
+      } else {
+        const silinen = new Set(ids);
+        setCases((prev) => prev.filter((c) => !silinen.has(c.id)));
+        setSelected((prev) => {
+          const next = new Set(prev);
+          ids.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+      setConfirmDelete(null);
+      setOpenMenu(null);
+    } catch {
+      setDeleteError("Bağlantı hatası");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -319,11 +397,31 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
       </div>
 
       {/* Liste/Kart ve sayı */}
-      <div className="px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <p className="text-sm text-gray-500">
-          <strong className="text-[#0f1729]">{filtered.length}</strong> dosya gösteriliyor
-        </p>
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
+      <div className="px-6 py-3 flex items-center justify-between flex-shrink-0 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <p className="text-sm text-gray-500">
+            <strong className="text-[#0f1729]">{filtered.length}</strong> dosya gösteriliyor
+          </p>
+          {selected.size > 0 && (
+            <button
+              onClick={() => setConfirmDelete({ ids: Array.from(selected), all: false })}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Seçilenleri Sil ({selected.size})
+            </button>
+          )}
+          {cases.length > 0 && (
+            <button
+              onClick={() => setConfirmDelete({ ids: [], all: true })}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Tümünü Sil
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 flex-shrink-0">
           <button
             onClick={() => setViewMode("liste")}
             className={`p-1.5 rounded-lg transition-colors ${viewMode === "liste" ? "bg-[#0f1729] text-white" : "text-gray-400 hover:text-gray-600"}`}
@@ -362,6 +460,12 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-gray-100">
+                    <th className="px-4 py-2.5 align-top w-10">
+                      <button onClick={toggleSelectAll} title={tumSecili ? "Seçimi kaldır" : "Tümünü seç"}
+                        className="text-gray-400 hover:text-[#c9a84c] transition-colors mt-0.5">
+                        {tumSecili ? <CheckSquare className="w-4 h-4 text-[#c9a84c]" /> : <Square className="w-4 h-4" />}
+                      </button>
+                    </th>
                     {UYAP_SUTUNLAR.map((s) => (
                       <th key={s.key} className="px-4 py-2.5 align-top">
                         <button onClick={() => toggleSirala(s.key)}
@@ -387,8 +491,14 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                   {sayfali.map((c) => {
                     const rozet = uyapDurumRozet(c);
                     return (
-                      <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+                      <tr key={c.id} className={`border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${selected.has(c.id) ? "bg-[#c9a84c]/5" : ""}`}
                         onClick={() => router.push(`/buro/dava/${c.id}`)}>
+                        <td className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => toggleSelect(c.id)} title="Seç"
+                            className="text-gray-400 hover:text-[#c9a84c] transition-colors">
+                            {selected.has(c.id) ? <CheckSquare className="w-4 h-4 text-[#c9a84c]" /> : <Square className="w-4 h-4" />}
+                          </button>
+                        </td>
                         <td className="px-4 py-3 max-w-[260px]">
                           <div className="flex items-center gap-1.5">
                             <Building2 className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
@@ -419,6 +529,10 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                               className="p-1.5 rounded-lg text-gray-400 hover:text-[#c9a84c] hover:bg-gray-100 transition-colors">
                               <FileText className="w-4 h-4" />
                             </button>
+                            <button onClick={() => setConfirmDelete({ ids: [c.id], all: false })} title="Dosyayı sil"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -444,6 +558,11 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                                     {cfg2.label}
                                   </button>
                                 ))}
+                                <div className="border-t border-gray-50 my-1" />
+                                <button onClick={() => { setOpenMenu(null); setConfirmDelete({ ids: [c.id], all: false }); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50">
+                                  <Trash2 className="w-3.5 h-3.5" /> Dosyayı Sil
+                                </button>
                               </div>
                             )}
                           </div>
@@ -523,14 +642,23 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                       <Calendar className="w-3 h-3" />
                       {new Date(c.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}
                     </span>
-                    {/* Finans'a çapraz geçiş — ödeme bu dosya + müvekkille ön-ilişkilendirilir */}
-                    <a
-                      href={`/buro/finans?case=${c.id}&caseTitle=${encodeURIComponent(c.case_number || c.title)}${c.clients ? `&client=${c.clients.id}&clientName=${encodeURIComponent(c.clients.full_name)}` : ""}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-green-500 hover:text-green-600 transition-colors"
-                    >
-                      ₺ Finans
-                    </a>
+                    <div className="flex items-center gap-1.5">
+                      {/* Finans'a çapraz geçiş — ödeme bu dosya + müvekkille ön-ilişkilendirilir */}
+                      <a
+                        href={`/buro/finans?case=${c.id}&caseTitle=${encodeURIComponent(c.case_number || c.title)}${c.clients ? `&client=${c.clients.id}&clientName=${encodeURIComponent(c.clients.full_name)}` : ""}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-[10px] font-semibold px-2 py-1 rounded-lg border border-gray-200 text-gray-500 hover:border-green-500 hover:text-green-600 transition-colors"
+                      >
+                        ₺ Finans
+                      </a>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ ids: [c.id], all: false }); }}
+                        title="Dosyayı sil"
+                        className="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:border-red-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -689,6 +817,48 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Silme onay modalı */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !deleting && setConfirmDelete(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h2 className="font-heading text-lg font-bold text-[#0f1729]">
+                  {confirmDelete.all ? "Tüm dosyalar silinecek" : confirmDelete.ids.length > 1 ? `${confirmDelete.ids.length} dosya silinecek` : "Dosya silinecek"}
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  {confirmDelete.all
+                    ? `Hesabınızdaki ${cases.length} dosyanın tamamı kalıcı olarak silinecek.`
+                    : "Bu işlem geri alınamaz."} Dosyaya bağlı evrak ve belgeler de silinir; takvim/tebligat kayıtlarının dosya bağlantısı kaldırılır.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5 mb-4">
+                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-600">{deleteError}</p>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setConfirmDelete(null)} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50">
+                Vazgeç
+              </button>
+              <button type="button" onClick={runDelete} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {confirmDelete.all ? "Tümünü Sil" : "Sil"}
+              </button>
+            </div>
           </div>
         </div>
       )}

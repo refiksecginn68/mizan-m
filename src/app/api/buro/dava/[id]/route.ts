@@ -99,3 +99,33 @@ export async function PATCH(
 
   return NextResponse.json({ case: data });
 }
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { user, error } = await getAuthenticatedLawyer();
+  if (!user) {
+    return NextResponse.json({ error }, { status: 401 });
+  }
+
+  const serviceSupabase = createServiceClient() as AnyClient;
+
+  // lawyer_id filtresi başka avukatın dosyasını silmeyi engeller.
+  // İlişkili kayıtlar DB'de CASCADE/SET NULL ile otomatik temizlenir (bkz. 001_schema.sql).
+  const { data, error: dbError } = await serviceSupabase
+    .from("cases")
+    .delete()
+    .eq("id", params.id)
+    .eq("lawyer_id", user.id)
+    .select("id");
+
+  if (dbError) {
+    return NextResponse.json({ error: dbError.message }, { status: 500 });
+  }
+  if (!data || data.length === 0) {
+    return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 404 });
+  }
+
+  return NextResponse.json({ ok: true, deleted: data.length });
+}
