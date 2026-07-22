@@ -108,9 +108,12 @@ export default function MizanAIFloating({ lawyerName }: Props) {
         <Image src="/logo.png" alt="MizanAI" width={40} height={40} className="w-10 h-10 object-cover rounded-full" />
       </button>
 
-      {/* Chat panel */}
-      {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 h-[480px] bg-[#0f1729] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      {/* Chat panel — yumuşak slide-in/out (yalnızca transform+opacity anime edilir) */}
+      <div
+        aria-hidden={!open}
+        className={`fixed bottom-6 right-6 z-50 w-80 h-[480px] bg-[#0f1729] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden origin-bottom-right transition-[transform,opacity] duration-[250ms] ease-out ${
+          open ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-4 scale-95 pointer-events-none"
+        }`}>
           {/* Header */}
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/10 bg-gradient-to-r from-[#c9a84c]/20 to-transparent flex-shrink-0">
             <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
@@ -177,8 +180,7 @@ export default function MizanAIFloating({ lawyerName }: Props) {
               </button>
             )}
           </div>
-        </div>
-      )}
+      </div>
     </>
   );
 }

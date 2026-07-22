@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, CheckSquare, Square, Trash2, Clock } from "lucide-react";
+import MicButton from "@/components/ui/MicButton";
 
 type Oncelik = "dusuk" | "orta" | "yuksek";
 
@@ -43,6 +44,8 @@ export default function BuroAnaSayfaClient() {
   const [dueAt, setDueAt] = useState("");
   const [oncelik, setOncelik] = useState<Oncelik>("orta");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // Sesli yazım: dinleme başladığındaki metin taban alınır, interim üstüne yazılır
+  const micBase = useRef("");
 
   useEffect(() => {
     fetch("/api/buro/gorevler")
@@ -125,6 +128,12 @@ export default function BuroAnaSayfaClient() {
             placeholder="Görev ekle..."
             className="flex-1 text-xs bg-transparent text-gray-700 placeholder:text-gray-300 focus:outline-none"
           />
+          <MicButton
+            onStart={() => { micBase.current = input ? input.trimEnd() + " " : ""; }}
+            onTranscript={(t) => { micBase.current += t; setInput(micBase.current); }}
+            onInterim={(t) => setInput(micBase.current + t)}
+            title="Görevi sesle yazın"
+            className="w-6 h-6 flex-shrink-0" />
           <button
             type="button"
             onClick={() => setOncelik((o) => ONCELIK_DONGU[(ONCELIK_DONGU.indexOf(o) + 1) % ONCELIK_DONGU.length])}

@@ -66,6 +66,8 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Sesli yazım: dinleme başladığındaki metin taban alınır, interim üstüne yazılır
+  const micBase = useRef("");
   // Scroll-anchor: kullanıcı en alttaysa takip et, yukarı kaydırdıysa dokunma
   const pinnedToBottom = useRef(true);
 
@@ -255,7 +257,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     <div className="flex h-full overflow-hidden">
 
       {/* Sol — Sohbet Geçmişi */}
-      <aside className={`flex-shrink-0 bg-[#0f1729] flex flex-col h-full transition-all duration-200 ${sidebarOpen ? "w-64" : "w-12"}`}>
+      <aside className={`flex-shrink-0 bg-[#0f1729] flex flex-col h-full overflow-hidden transition-[width] duration-[250ms] ease-in-out ${sidebarOpen ? "w-64" : "w-12"}`}>
         {/* Header */}
         <div className="px-3 py-3 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
@@ -293,7 +295,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
         </div>
 
         {/* Sessions */}
-        <div className={`flex-1 overflow-y-auto py-2 px-2 ${!sidebarOpen ? "hidden" : ""}`}>
+        <div className={`flex-1 overflow-y-auto py-2 px-2 transition-opacity duration-200 ${!sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
           {sessionsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
@@ -456,7 +458,11 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                 style={{ scrollbarWidth: "none" }}
               />
             </div>
-            <MicButton onTranscript={(t) => setInput((p) => p + t)} title="Sesle soru sorun"
+            <MicButton
+              onStart={() => { micBase.current = input ? input.trimEnd() + " " : ""; }}
+              onTranscript={(t) => { micBase.current += t; setInput(micBase.current); }}
+              onInterim={(t) => setInput(micBase.current + t)}
+              title="Sesle soru sorun"
               className="w-11 h-11 flex-shrink-0" />
             {loading ? (
               <button

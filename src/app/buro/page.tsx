@@ -14,17 +14,26 @@ import {
   Calendar,
   Scale,
   TrendingUp,
+  BookOpen,
+  FolderOpen,
 } from "lucide-react";
 
-// Ana sayfa hızlı kısayol barı — UYAP ana sayfası referans (sade, efektif)
+// Ana sayfa hızlı kısayol kartları — UYAP ana sayfası referans (kart tabanlı, ferah).
+// tone: ikon çipinin rengi — kartlar arası ince ton farkı için lacivert→mavi geçişi
 const KISAYOLLAR = [
-  { href: "/buro/uyap", label: "Dosya Sorgula", icon: Building2 },
-  { href: "/buro/takvim", label: "Duruşmalarım", icon: Calendar },
-  { href: "/buro/dilekce", label: "Yeni Dilekçe", icon: FileText },
-  { href: "/buro/emsal", label: "Emsal Arama", icon: Scale },
-  { href: "/buro/finans", label: "Finans", icon: TrendingUp },
+  { href: "/buro/emsal", label: "Karar Arama", alt: "İçtihat & emsal", icon: Scale, tone: "bg-[#0f1729]" },
+  { href: "/buro/mevzuat", label: "Mevzuat Arama", alt: "Güncel kanunlar", icon: BookOpen, tone: "bg-[#16203a]" },
+  { href: "/buro/dilekce", label: "Yeni Dilekçe", alt: "AI destekli", icon: FileText, tone: "bg-[#1a2744]" },
+  { href: "/buro/asistan", label: "MizanAI", alt: "Hukuki asistan", icon: MessageSquare, tone: "bg-[#20304f]" },
+  { href: "/buro/davalar", label: "Dosyalarım", alt: "Dava dosyaları", icon: FolderOpen, tone: "bg-[#26395c]" },
+  { href: "/buro/takvim", label: "Duruşmalarım", alt: "Takvim & süreler", icon: Calendar, tone: "bg-[#2c4269]" },
+  { href: "/buro/finans", label: "Finans", alt: "Tahsilat & kasa", icon: TrendingUp, tone: "bg-[#324b76]" },
+  { href: "/buro/uyap", label: "UYAP Aktar", alt: "Dosya senkron", icon: Building2, tone: "bg-[#385483]" },
 ];
 import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
+import Selamlama from "@/components/buro/Selamlama";
+import DuyuruBar, { type Duyuru } from "@/components/buro/DuyuruBar";
+import BildirimlerPaneli from "@/components/buro/BildirimlerPaneli";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -61,13 +70,6 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   not: "Not",
   diger: "Diğer",
 };
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Günaydın";
-  if (h < 18) return "İyi günler";
-  return "İyi akşamlar";
-}
 
 export default async function BuroPage() {
   const supabase = createClient() as AnyClient;
@@ -193,6 +195,14 @@ export default async function BuroPage() {
     ? newsResult.data as LegalNews[]
     : FALLBACK_NEWS;
 
+  // Kayan duyuru barı: güncel hukuki haberlerden beslenir
+  const duyurular: Duyuru[] = dashboardNews.map((h) => ({
+    id: h.id,
+    kategori: h.category,
+    text: h.title,
+    href: "/buro/haberler",
+  }));
+
   const firstName = profile.full_name.split(" ")[0];
   const tarih = now.toLocaleDateString("tr-TR", {
     weekday: "long",
@@ -207,9 +217,7 @@ export default async function BuroPage() {
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="font-heading text-xl font-bold text-[#0f1729]">
-              {getGreeting()}, {firstName} 👋
-            </h1>
+            <Selamlama firstName={firstName} />
             <p className="text-sm text-gray-500 mt-0.5">{tarih}</p>
           </div>
           {/* Arama çubuğu */}
@@ -222,19 +230,25 @@ export default async function BuroPage() {
         </div>
       </div>
 
-      {/* Hızlı kısayol barı */}
-      <div className="px-4 sm:px-6 pt-4 sm:pt-6">
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-          {KISAYOLLAR.map(({ href, label, icon: Icon }) => (
+      {/* Duyurular — kayan bar */}
+      <div className="px-4 sm:px-6 pt-4">
+        <DuyuruBar items={duyurular} />
+      </div>
+
+      {/* Hızlı kısayol kartları */}
+      <div className="px-4 sm:px-6 pt-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {KISAYOLLAR.map(({ href, label, alt, icon: Icon, tone }) => (
             <Link
               key={href}
               href={href}
-              className="group flex flex-col items-center gap-2 bg-white border border-gray-200 rounded-2xl px-3 py-4 hover:border-[#c9a84c] hover:shadow-md transition-all"
+              className="group flex flex-col items-center gap-2.5 bg-white border border-gray-200 rounded-2xl px-3 py-5 shadow-sm hover:border-[#c9a84c]/60 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-[transform,box-shadow,border-color] duration-200 ease-out"
             >
-              <div className="w-9 h-9 rounded-xl bg-[#0f1729] flex items-center justify-center group-hover:bg-[#c9a84c] transition-colors">
-                <Icon className="w-5 h-5 text-[#c9a84c] group-hover:text-white transition-colors" />
+              <div className={`w-10 h-10 rounded-xl ${tone} flex items-center justify-center group-hover:bg-[#c9a84c] transition-colors duration-200`}>
+                <Icon className="w-5 h-5 text-[#c9a84c] group-hover:text-white transition-colors duration-200" />
               </div>
-              <span className="text-[11px] font-semibold text-gray-600 group-hover:text-[#0f1729] text-center leading-tight">{label}</span>
+              <span className="text-xs font-semibold text-gray-700 group-hover:text-[#0f1729] text-center leading-tight">{label}</span>
+              <span className="text-[10px] text-gray-400 text-center leading-tight -mt-1.5">{alt}</span>
             </Link>
           ))}
         </div>
@@ -262,6 +276,9 @@ export default async function BuroPage() {
               Ek Paket Satın Al
             </Link>
           </div>
+
+          {/* Bildirimler — dosya hareketleri, duruşmalar, vadesi gelen ödemeler */}
+          <BildirimlerPaneli />
 
           {/* Yaklaşan ödeme hatırlatmaları */}
           {odemeHatirlatmalari.length > 0 && (

@@ -78,7 +78,7 @@ export default function BuroLeftSidebar({
 
   return (
     <aside
-      className={`hidden lg:flex flex-col bg-[#0f1729] border-r border-white/5 transition-all duration-300 flex-shrink-0 h-screen sticky top-0 ${
+      className={`hidden lg:flex flex-col bg-[#0f1729] border-r border-white/5 transition-[width] duration-[250ms] ease-in-out flex-shrink-0 h-screen sticky top-0 overflow-hidden ${
         collapsed ? "w-16" : "w-56"
       }`}
     >
@@ -87,12 +87,10 @@ export default function BuroLeftSidebar({
         <div className="w-8 h-8 rounded-lg overflow-hidden flex-shrink-0 bg-[#0f1729]">
           <Image src="/logo.png" alt="Mizanım" width={32} height={32} className="w-full h-full object-cover" />
         </div>
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-sm font-bold text-white leading-tight">Mizanım</p>
-            <p className="text-[10px] text-white/30">Hukuk Asistanı</p>
-          </div>
-        )}
+        <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? "w-0 opacity-0 overflow-hidden" : "flex-1 opacity-100"}`}>
+          <p className="font-heading text-sm font-bold text-white leading-tight whitespace-nowrap">Mizanım</p>
+          <p className="text-[10px] text-white/30 whitespace-nowrap">Hukuk Asistanı</p>
+        </div>
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="ml-auto text-white/30 hover:text-white/70 transition-colors flex-shrink-0"
@@ -105,11 +103,9 @@ export default function BuroLeftSidebar({
       <nav className="flex-1 overflow-y-auto scrollbar-hide py-2 px-2 space-y-2">
         {/* Ana Menü */}
         <div>
-          {!collapsed && (
-            <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1">
-              ANA MENÜ
-            </p>
-          )}
+          <p className={`text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1 whitespace-nowrap transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}>
+            ANA MENÜ
+          </p>
           <div className="space-y-0.5">
             {ANA_MENU.map((item) => {
               const Icon = item.icon;
@@ -126,11 +122,9 @@ export default function BuroLeftSidebar({
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && (
-                    <span className="flex-1 truncate">{item.label}</span>
-                  )}
-                  {!collapsed && item.ai && (
-                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[9px] font-semibold flex-shrink-0">
+                  <span className={`truncate transition-opacity duration-200 ${collapsed ? "w-0 opacity-0 overflow-hidden" : "flex-1 opacity-100"}`}>{item.label}</span>
+                  {item.ai && (
+                    <span className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[9px] font-semibold flex-shrink-0 transition-opacity duration-200 ${collapsed ? "opacity-0 w-0 px-0 overflow-hidden" : "opacity-100"}`}>
                       <Sparkles className="w-2.5 h-2.5" />
                       AI
                     </span>
@@ -143,11 +137,9 @@ export default function BuroLeftSidebar({
 
         {/* Yönetim */}
         <div>
-          {!collapsed && (
-            <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1">
-              YÖNETİM
-            </p>
-          )}
+          <p className={`text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1 whitespace-nowrap transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}>
+            YÖNETİM
+          </p>
           <div className="space-y-0.5">
             {YONETIM_MENU.map((item) => {
               const Icon = item.icon;
@@ -164,7 +156,7 @@ export default function BuroLeftSidebar({
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+                  <span className={`truncate transition-opacity duration-200 ${collapsed ? "w-0 opacity-0 overflow-hidden" : "flex-1 opacity-100"}`}>{item.label}</span>
                 </Link>
               );
             })}
@@ -173,11 +165,9 @@ export default function BuroLeftSidebar({
 
         {/* Organizasyon */}
         <div>
-          {!collapsed && (
-            <p className="text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1">
-              ORGANİZASYON
-            </p>
-          )}
+          <p className={`text-[9px] font-semibold text-white/25 uppercase tracking-widest px-3 mb-1 whitespace-nowrap transition-opacity duration-200 ${collapsed ? "opacity-0" : "opacity-100"}`}>
+            ORGANİZASYON
+          </p>
           <div className="space-y-0.5">
             {ORGANIZASYON_MENU.map((item) => {
               const Icon = item.icon;
@@ -194,7 +184,7 @@ export default function BuroLeftSidebar({
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+                  <span className={`truncate transition-opacity duration-200 ${collapsed ? "w-0 opacity-0 overflow-hidden" : "flex-1 opacity-100"}`}>{item.label}</span>
                 </Link>
               );
             })}
@@ -212,14 +202,12 @@ export default function BuroLeftSidebar({
           <div className="w-8 h-8 rounded-full bg-[#c9a84c]/20 flex items-center justify-center flex-shrink-0">
             <span className="text-xs font-bold text-[#c9a84c]">{initials}</span>
           </div>
-          {!collapsed && (
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-white truncate">Av. {lawyerName}</p>
-              <p className="text-[10px] text-accent font-semibold mt-0.5">
-                Sorgu: {remainingQueries} / {totalQueries}
-              </p>
-            </div>
-          )}
+          <div className={`min-w-0 transition-opacity duration-200 ${collapsed ? "w-0 opacity-0 overflow-hidden" : "flex-1 opacity-100"}`}>
+            <p className="text-xs font-semibold text-white truncate">Av. {lawyerName}</p>
+            <p className="text-[10px] text-accent font-semibold mt-0.5 whitespace-nowrap">
+              Sorgu: {remainingQueries} / {totalQueries}
+            </p>
+          </div>
         </Link>
         <form action={logoutAction}>
           <button

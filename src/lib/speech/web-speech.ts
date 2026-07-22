@@ -32,11 +32,42 @@ function getCtor(): SRConstructor | undefined {
 }
 
 const HATA_MESAJLARI: Record<string, string> = {
-  "not-allowed": "Mikrofon izni reddedildi. Tarayıcı ayarlarından izin verin.",
+  "not-allowed": "Mikrofon izni gerekli — adres çubuğundaki kilit ikonundan izin verin.",
+  "service-not-allowed": "Ses tanıma servisi bu tarayıcıda engellenmiş. Chrome kullanmayı deneyin.",
   "no-speech": "Ses algılanmadı. Tekrar deneyin.",
-  "audio-capture": "Mikrofon bulunamadı.",
-  "network": "Ağ hatası — ses tanıma sunucusuna ulaşılamadı.",
+  "audio-capture": "Mikrofon bulunamadı. Bir mikrofon bağlayıp tekrar deneyin.",
+  "network": "Ağ hatası — ses tanıma sunucusuna ulaşılamadı. İnternet bağlantınızı kontrol edin.",
+  "aborted": "Ses tanıma iptal edildi.",
 };
+
+// Teşhis çıktısı: kullanıcı ortamında sorun olursa konsoldan tek bakışta sebep görülür
+function dbg(...args: unknown[]) {
+  console.info("[Mizanım Mic]", ...args);
+}
+
+// İzni recognition.start()'tan ÖNCE açıkça iste — reddedilirse net mesajla dur.
+// (webkitSpeechRecognition izin reddini sessizce onerror'a gömer, prompt bile çıkmayabilir.)
+async function izinIste(): Promise<void> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    dbg("getUserMedia yok — izin ön kontrolü atlandı (muhtemelen http, güvensiz bağlam)");
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+    dbg("mikrofon izni OK");
+  } catch (e) {
+    const name = e instanceof DOMException ? e.name : String(e);
+    dbg("getUserMedia hatası:", name);
+    if (name === "NotAllowedError" || name === "PermissionDeniedError")
+      throw new Error("Mikrofon izni gerekli — adres çubuğundaki kilit ikonundan izin verin.");
+    if (name === "NotFoundError" || name === "DevicesNotFoundError")
+      throw new Error("Mikrofon bulunamadı. Bir mikrofon bağlayıp tekrar deneyin.");
+    if (name === "NotReadableError")
+      throw new Error("Mikrofon başka bir uygulama tarafından kullanılıyor.");
+    throw new Error(`Mikrofona erişilemedi (${name}).`);
+  }
+}
 
 export const webSpeechProvider: SpeechProvider = {
   id: "web-speech",
@@ -47,31 +78,66 @@ export const webSpeechProvider: SpeechProvider = {
 
   async start(handlers: SpeechHandlers, opts): Promise<SpeechSession> {
     const Ctor = getCtor();
-    if (!Ctor) throw new Error("Web Speech API bu tarayıcıda desteklenmiyor.");
+    if (!Ctor) throw new Error("Bu tarayıcı sesli yazmayı desteklemiyor. Chrome veya Edge kullanın.");
+
+    if (!window.isSecureContext) {
+      dbg("güvensiz bağlam (http) — Web Speech çalışmaz");
+      throw new Error("Sesli yazma yalnızca HTTPS üzerinde çalışır.");
+    }
+
+    await izinIste();
 
     const rec = new Ctor();
     rec.lang = opts?.lang ?? "tr-TR";
     rec.continuous = true;
     rec.interimResults = true;
 
+    // Kullanıcı durdurmadan onend gelirse (Chrome süre sınırı, sessizlik) oturumu yeniden başlat
+    let kullaniciDurdurdu = false;
+
     rec.onresult = (e: SREvent) => {
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const res = e.results[i];
         const metin = res[0].transcript;
-        if (res.isFinal) handlers.onFinal(metin);
-        else interim += metin;
+        if (res.isFinal) {
+          dbg("final:", metin);
+          handlers.onFinal(metin);
+        } else interim += metin;
       }
       if (interim && handlers.onPartial) handlers.onPartial(interim);
     };
 
     rec.onerror = (e: SRErrorEvent) => {
+      dbg("onerror:", e.error);
+      // no-speech continuous modda rutin — oturumu düşürme, onend restart'ı halleder
+      if (e.error === "no-speech") return;
+      kullaniciDurdurdu = true;
       handlers.onError?.(HATA_MESAJLARI[e.error] ?? `Ses tanıma hatası: ${e.error}`);
     };
 
-    rec.onend = () => handlers.onEnd?.();
+    rec.onend = () => {
+      dbg("onend, kullanıcı durdurdu:", kullaniciDurdurdu);
+      if (kullaniciDurdurdu) {
+        handlers.onEnd?.();
+        return;
+      }
+      // Chrome ~60 sn sonra veya sessizlikte oturumu kendiliğinden kapatır — devam et
+      try {
+        rec.start();
+        dbg("oturum otomatik yeniden başlatıldı");
+      } catch {
+        handlers.onEnd?.();
+      }
+    };
 
     rec.start();
-    return { stop: () => rec.stop() };
+    dbg("dinleme başladı, dil:", rec.lang);
+    return {
+      stop: () => {
+        kullaniciDurdurdu = true;
+        rec.stop();
+      },
+    };
   },
 };

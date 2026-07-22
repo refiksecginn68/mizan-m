@@ -118,6 +118,9 @@ export default function DilekceAvukatClient({
   const fileRef = useRef<HTMLInputElement>(null);
   const evrakRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // Sesli yazım tabanları: dinleme başladığındaki metin, interim üstüne yazılır
+  const micKonuBase = useRef("");
+  const micEkBilgiBase = useRef("");
   const firstName = lawyerName.split(" ")[0];
 
   const editorDegisti = useCallback((h: string, t: string) => {
@@ -570,7 +573,11 @@ export default function DilekceAvukatClient({
                 <div>
                   <label className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-1.5">
                     <span>Olayı Anlatın <span className="text-red-400">*</span></span>
-                    <MicButton onTranscript={(t) => setKonu((p) => p + t)} title="Olayı sesle anlatın"
+                    <MicButton
+                      onStart={() => { micKonuBase.current = konu ? konu.trimEnd() + " " : ""; }}
+                      onTranscript={(t) => { micKonuBase.current += t; setKonu(micKonuBase.current); }}
+                      onInterim={(t) => setKonu(micKonuBase.current + t)}
+                      title="Olayı sesle anlatın"
                       className="w-7 h-7" />
                   </label>
                   <textarea
@@ -583,8 +590,14 @@ export default function DilekceAvukatClient({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    Bahsetme / Not <span className="text-gray-300">(isteğe bağlı)</span>
+                  <label className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-1.5">
+                    <span>Bahsetme / Not <span className="text-gray-300">(isteğe bağlı)</span></span>
+                    <MicButton
+                      onStart={() => { micEkBilgiBase.current = ekBilgi ? ekBilgi.trimEnd() + " " : ""; }}
+                      onTranscript={(t) => { micEkBilgiBase.current += t; setEkBilgi(micEkBilgiBase.current); }}
+                      onInterim={(t) => setEkBilgi(micEkBilgiBase.current + t)}
+                      title="Notu sesle yazın"
+                      className="w-7 h-7" />
                   </label>
                   <textarea
                     value={ekBilgi}
