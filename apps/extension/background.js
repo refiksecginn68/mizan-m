@@ -1,14 +1,16 @@
 // Mizanım UYAP Aktarım — background service worker
 // Content script'in okuduğu verileri güvenli token ile Mizanım API'ye gönderir.
 
-// ÖNEMLİ: www zorunlu — apex alan adı www'ya 308 yönlendirir ve tarayıcı fetch,
-// cross-origin yönlendirmede Authorization başlığını düşürür (401'e yol açar).
-const DEFAULT_API = "https://www.xn--mizanm-t9a.com";
+// Yeni domain: apex (mizanim.com) kanonik olmalı — Vercel'de mizanim.com birincil,
+// www.mizanim.com apex'e yönlenir. Böylece cross-origin 308 olmaz ve Authorization
+// başlığı düşmez. (Eski www.xn--mizanm-t9a.com kullanıcıları eski domainden çalışmayı
+// sürdürür; eski apex→www rewrite'ı geriye dönük uyum için korunur.)
+const DEFAULT_API = "https://mizanim.com";
 
 async function getSettings() {
   const data = await chrome.storage.local.get(["token", "apiBase"]);
   let apiBase = (data.apiBase || DEFAULT_API).replace(/\/$/, "");
-  // Apex alan adı www'ya 308 yönlendirir ve Authorization düşer → her zaman www'ya zorla
+  // Eski punycode apex www'ya 308 yönlendirir ve Authorization düşer → eski apex'i www'ya zorla
   apiBase = apiBase.replace(/^https:\/\/xn--mizanm-t9a\.com/, "https://www.xn--mizanm-t9a.com");
   return { token: data.token || "", apiBase };
 }

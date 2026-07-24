@@ -21,9 +21,30 @@ const PUBLIC_PATHS = new Set([
   "/dogrulama-bekliyor", "/offline", "/auth/hata",
 ]);
 
+// Eski punycode domain → yeni domain kalıcı taşıma.
+// DOMAIN_REDIRECT=1 olana kadar UYUTULUR (yeni domain canlı+SSL olmadan
+// yönlendirme yaparsak eski kullanıcılar ölü domaine düşer). /api HARİÇ tutulur:
+// eklenti Bearer token gönderir; cross-origin 301'de tarayıcı Authorization
+// başlığını düşürür → 401. Eski eklenti kullanıcıları /api'yi eski domainden
+// (aynı deployment) kesintisiz kullanmaya devam etsin.
+const ESKI_HOSTLAR = new Set(["xn--mizanm-t9a.com", "www.xn--mizanm-t9a.com"]);
+const YENI_HOST = "mizanim.com";
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const pathname = request.nextUrl.pathname;
+
+  // Domain taşıma yönlendirmesi (aktifse ve istek eski domaindense)
+  if (process.env.DOMAIN_REDIRECT === "1" && !pathname.startsWith("/api/")) {
+    const host = request.headers.get("host")?.toLowerCase() ?? "";
+    if (ESKI_HOSTLAR.has(host)) {
+      const url = request.nextUrl.clone();
+      url.protocol = "https:";
+      url.host = YENI_HOST;
+      url.port = "";
+      return NextResponse.redirect(url, 301); // yol + query korunur
+    }
+  }
 
   // Statik dosyalar için atla
   if (pathname.startsWith("/_next/") || pathname.includes(".")) {

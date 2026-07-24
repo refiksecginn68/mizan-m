@@ -6,7 +6,7 @@ const ADMIN_EMAILS = Array.from(new Set([
   process.env.MIZANIM_ADMIN_EMAIL ?? "refiksecginn@hotmail.com",
   "refiksecginn@gmail.com",
 ]));
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://xn--mizanm-t9a.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com";
 
 // IBAN gizli değil; env bağımlılığı prod'da "IBAN tanımlanmadı" hatasına yol
 // açtığı için varsayılanlar kodda sabitlendi (env yine de öncelikli).
@@ -52,7 +52,7 @@ function wrap(title: string, bodyHtml: string): string {
         <tr>
           <td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #f3f4f6;">
             <p style="margin:0;font-size:11px;color:#9ca3af;">
-              <a href="https://xn--mizanm-t9a.com" style="color:#c9a84c;text-decoration:none;">mizanım.com</a>
+              <a href="${APP_URL}" style="color:#c9a84c;text-decoration:none;">mizanim.com</a>
             </p>
           </td>
         </tr>

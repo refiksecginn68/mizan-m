@@ -2,7 +2,7 @@
 
 Son güncelleme: 7 Temmuz 2026
 
-Yayın adresi: https://www.xn--mizanm-t9a.com/eklenti-gizlilik
+Yayın adresi: https://mizanim.com/eklenti-gizlilik
 
 ## Özet
 Mizanım UYAP & UETS Aktarım eklentisi, **yalnızca sizin talebinizle** ve **yalnızca sizin
@@ -31,7 +31,7 @@ kişisel veriyi okumaz ve iletmez.
 
 ## Verinin gittiği yer
 Okunan dosya bilgileri, sizin oluşturduğunuz bağlantı koduyla doğrulanarak
-**https://mizanım.com (xn--mizanm-t9a.com)** üzerindeki kendi Mizanım hesabınıza
+**https://mizanim.com** üzerindeki kendi Mizanım hesabınıza
 HTTPS ile iletilir ve orada dava kayıtlarınız olarak saklanır. Veriler üçüncü
 taraflarla paylaşılmaz, reklam veya analiz amacıyla kullanılmaz.
 
@@ -40,7 +40,7 @@ taraflarla paylaşılmaz, reklam veya analiz amacıyla kullanılmaz.
   (chrome.storage.local) tutulur. Eklentiyi kaldırdığınızda silinir. Dosya verileri
   eklentide saklanmaz.
 - **Mizanım hesabınızda:** Aktardığınız dosya kayıtları, siz silene kadar hesabınızda
-  kalır ve Mizanım Gizlilik Politikası'na (mizanım.com/gizlilik-politikasi) tabidir.
+  kalır ve Mizanım Gizlilik Politikası'na (mizanim.com/gizlilik-politikasi) tabidir.
 
 ## Otomatik giriş yapılmaz
 Eklenti UYAP oturumu AÇMAZ, e-imza/kart PIN'i istemez, arka planda sorgu çalıştırmaz.
@@ -57,4 +57,4 @@ kodu geçersiz kılabilirsiniz (yeni kod üretmek eskisini otomatik iptal etmez;
 6698 sayılı KVKK kapsamındaki başvurularınız için: info@mizanim.com
 
 ## İletişim
-Mizanım — https://mizanım.com — info@mizanim.com
+Mizanım — https://mizanim.com — info@mizanim.com

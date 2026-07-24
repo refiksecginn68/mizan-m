@@ -10,7 +10,7 @@ function setVapid() {
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   if (publicKey && privateKey) {
     webpush.setVapidDetails(
-      "mailto:destek@xn--mizanm-t9a.com",
+      "mailto:destek@mizanim.com",
       publicKey,
       privateKey
     );

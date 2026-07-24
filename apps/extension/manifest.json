@@ -1,12 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Mizanım UYAP + UETS Aktarım",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "UYAP dosyalarınızı ve UETS e-Tebligatlarınızı Mizanım'a aktarır. Otomatik giriş yapmaz; yalnızca sizin açtığınız oturumu okur.",
   "permissions": ["storage", "activeTab", "webNavigation"],
   "host_permissions": [
     "https://*.uyap.gov.tr/*",
     "https://*.etebligat.gov.tr/*",
+    "https://mizanim.com/*",
+    "https://*.mizanim.com/*",
     "https://*.xn--mizanm-t9a.com/*",
     "https://xn--mizanm-t9a.com/*"
   ],

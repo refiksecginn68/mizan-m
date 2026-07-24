@@ -38,6 +38,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com"),
   title: "Mizanım — AI Destekli Hukuk Platformu",
   description:
     "Türkiye'nin ilk çift kapılı AI hukuk platformu. Avukatlar ve vatandaşlar için emsal arama, belge analizi, dilekçe üretimi ve daha fazlası.",

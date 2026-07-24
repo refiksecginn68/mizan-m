@@ -34,7 +34,8 @@ Türkçe
 | `storage` | Kullanıcının Mizanım bağlantı kodunu tarayıcıda yerel olarak saklamak için. Başka hiçbir veri kalıcı saklanmaz. |
 | `activeTab` | "Sayfayı Tara" düğmesine basıldığında yalnızca etkin sekmedeki dosya listesini okumak için. |
 | `https://*.uyap.gov.tr/*` (host) | UYAP Avukat Portal sayfalarındaki dosya tablolarını, kullanıcı talebiyle DOM'dan okumak için. |
-| `https://xn--mizanm-t9a.com/*` (host) | Okunan dosya bilgilerini kullanıcının kendi Mizanım hesabına (mizanım.com) iletmek için. |
+| `https://mizanim.com/*`, `https://*.mizanim.com/*` (host) | Okunan dosya bilgilerini kullanıcının kendi Mizanım hesabına (mizanim.com) iletmek için. |
+| `https://xn--mizanm-t9a.com/*`, `https://*.xn--mizanm-t9a.com/*` (host) | Eski domaindeki mevcut kullanıcıların bağlantısı kesilmesin diye geçiş süresince korunur. |
 
 ## Tek amaç (single purpose) beyanı
 Eklentinin tek amacı, avukatın UYAP Avukat Portal oturumunda görüntülediği dosya

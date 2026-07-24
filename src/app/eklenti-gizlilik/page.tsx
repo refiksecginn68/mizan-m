@@ -61,7 +61,7 @@ export default function EklentiGizlilikPage() {
             <h2 className="font-heading text-xl font-bold text-primary mb-3">2. Verinin Gittiği Yer</h2>
             <p>
               Okunan dosya ve tebligat bilgileri, sizin oluşturduğunuz bağlantı koduyla doğrulanarak{" "}
-              <strong>https://mizanım.com (xn--mizanm-t9a.com)</strong> üzerindeki kendi Mizanım
+              <strong>https://mizanim.com</strong> üzerindeki kendi Mizanım
               hesabınıza HTTPS ile iletilir ve orada dava/tebligat kayıtlarınız olarak saklanır.
               Veriler üçüncü taraflarla paylaşılmaz, satılmaz, reklam veya analiz amacıyla kullanılmaz.
             </p>
@@ -116,7 +116,7 @@ export default function EklentiGizlilikPage() {
           <section>
             <h2 className="font-heading text-xl font-bold text-primary mb-3">7. İletişim</h2>
             <p>
-              Mizanım — <a href="https://www.xn--mizanm-t9a.com" className="text-accent hover:underline">https://mizanım.com</a> —{" "}
+              Mizanım — <a href={process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com"} className="text-accent hover:underline">https://mizanim.com</a> —{" "}
               <a href="mailto:info@mizanim.com" className="text-accent hover:underline">info@mizanim.com</a>
             </p>
           </section>
