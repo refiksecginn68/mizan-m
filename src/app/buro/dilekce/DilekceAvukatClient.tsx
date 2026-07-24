@@ -25,7 +25,20 @@ const DilekceEditor = dynamic(() => import("@/components/dilekce/DilekceEditor")
 import type { DilekceSablonu } from "@/lib/data/dilekce-sablonlari";
 
 type Tab = "ai" | "evrak" | "sablonar" | "ornekler";
-type Asama = "form" | "sorular";
+type Asama = "form" | "sorular" | "ozet";
+type Uzunluk = "kisa" | "standart" | "detayli";
+
+// Dilekçe türleri (HMK usul rolleri) — hızlı seçim dropdown'u
+const DILEKCE_TURLERI = [
+  "Dava dilekçesi", "Cevap dilekçesi", "İstinaf dilekçesi", "Temyiz dilekçesi",
+  "İcra itirazı", "İhtarname", "Şikayet dilekçesi", "Diğer",
+] as const;
+
+const UZUNLUK_SECENEK: { id: Uzunluk; ad: string; not: string }[] = [
+  { id: "kisa", ad: "Kısa", not: "~150-350 kelime" },
+  { id: "standart", ad: "Standart", not: "~400-700 kelime" },
+  { id: "detayli", ad: "Detaylı", not: "~700-1400 kelime" },
+];
 
 interface Sablon {
   id: string;
@@ -80,7 +93,8 @@ export default function DilekceAvukatClient({
   // AI formu
   const [konu, setKonu] = useState(initialKonu);
   const [ekBilgi, setEkBilgi] = useState("");
-  const [tur] = useState(initialTur);
+  const [tur, setTur] = useState(initialTur);
+  const [uzunluk, setUzunluk] = useState<Uzunluk>("standart");
   const [dosyalar, setDosyalar] = useState<DosyaSonucu[]>([]);
   const [dosyaMetni, setDosyaMetni] = useState("");
   const [dosyaYukleniyor, setDosyaYukleniyor] = useState(false);
@@ -101,6 +115,8 @@ export default function DilekceAvukatClient({
   const [sohbet, setSohbet] = useState<{ soru: string; cevap: string }[]>([]);
   const [soruYukleniyor, setSoruYukleniyor] = useState(false);
   const [soruTuru, setSoruTuru] = useState({ tur: 1, maxTur: 3 });
+  // Özet onayı — üretimden önce "şunları anladım" listesi (avukat düzeltebilir)
+  const [ozetMetni, setOzetMetni] = useState("");
 
   // Üretilen belge
   const [html, setHtml] = useState("");
@@ -198,9 +214,10 @@ export default function DilekceAvukatClient({
   }
 
   // ── Soru-sor akışı ──────────────────────────────────────────────
+  // Dönüş: "sorular" → ek soru gösterildi · "ozet" → özet onayı gösterildi · "uret" → doğrudan üret
   const sorulariGetir = useCallback(async (
     mevcutSohbet: { soru: string; cevap: string }[],
-  ): Promise<boolean> => {
+  ): Promise<"sorular" | "ozet" | "uret"> => {
     setSoruYukleniyor(true);
     try {
       const res = await fetch("/api/buro/dilekce/sorular", {
@@ -214,19 +231,29 @@ export default function DilekceAvukatClient({
         }),
       });
       const data = (await res.json()) as
-        { hazir?: boolean; sorular?: Soru[]; tur?: number; maxTur?: number; error?: string };
+        { hazir?: boolean; sorular?: Soru[]; ozet?: string[]; tur?: number; maxTur?: number; error?: string };
 
-      if (!res.ok) { setError(data.error ?? "Sorular alınamadı"); return true; }
-      if (data.hazir || !data.sorular?.length) return true;
+      if (!res.ok) { setError(data.error ?? "Sorular alınamadı"); return "uret"; }
 
-      setSorular(data.sorular);
-      setYanitlar(new Array(data.sorular.length).fill(""));
-      setSoruTuru({ tur: data.tur ?? 1, maxTur: data.maxTur ?? 3 });
-      setAsama("sorular");
-      return false;
+      if (!data.hazir && data.sorular?.length) {
+        setSorular(data.sorular);
+        setYanitlar(new Array(data.sorular.length).fill(""));
+        setSoruTuru({ tur: data.tur ?? 1, maxTur: data.maxTur ?? 3 });
+        setAsama("sorular");
+        return "sorular";
+      }
+
+      // Hazır — özet varsa onay ekranı göster, yoksa doğrudan üret
+      if (data.ozet?.length) {
+        setOzetMetni(data.ozet.join("\n"));
+        setSorular([]);
+        setAsama("ozet");
+        return "ozet";
+      }
+      return "uret";
     } catch {
       // Soru akışı çökerse üretimi engelleme
-      return true;
+      return "uret";
     } finally {
       setSoruYukleniyor(false);
     }
@@ -236,8 +263,9 @@ export default function DilekceAvukatClient({
     if (!konu.trim()) return;
     setError("");
     setSohbet([]);
-    const hazir = await sorulariGetir([]);
-    if (hazir) generate("ai", []);
+    setOzetMetni("");
+    const sonuc = await sorulariGetir([]);
+    if (sonuc === "uret") generate("ai", []);
   }
 
   async function yanitlariGonder() {
@@ -247,13 +275,20 @@ export default function DilekceAvukatClient({
     ];
     setSohbet(yeni);
     setSorular([]);
-    const hazir = await sorulariGetir(yeni);
-    if (hazir) { setAsama("form"); generate("ai", yeni); }
+    const sonuc = await sorulariGetir(yeni);
+    if (sonuc === "uret") { setAsama("form"); generate("ai", yeni); }
   }
 
   function sorulariAtla() {
+    // Soruları atla → özet almayı da atla, doğrudan üret
     setAsama("form");
     setSorular([]);
+    generate("ai", sohbet);
+  }
+
+  // Özet onaylandı → dilekçeyi üret (avukatın düzelttiği özet üretime taşınır)
+  function ozettenUret() {
+    setAsama("form");
     generate("ai", sohbet);
   }
 
@@ -285,6 +320,8 @@ export default function DilekceAvukatClient({
           dosyaMetni: dosyaMetni || undefined,
           sablonId: secilenSablonId || undefined,
           sohbet: mevcutSohbet.length ? mevcutSohbet : undefined,
+          uzunluk,
+          ozet: mod === "ai" && ozetMetni.trim() ? ozetMetni.trim() : undefined,
           mod,
           mevcutMetin: mod === "duzenle" ? metin : undefined,
         }),
@@ -589,6 +626,41 @@ export default function DilekceAvukatClient({
                   />
                 </div>
 
+                {/* Dilekçe türü — hızlı seçim */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    Dilekçe Türü <span className="text-gray-300">(isteğe bağlı)</span>
+                  </label>
+                  <select
+                    value={tur}
+                    onChange={(e) => setTur(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 text-gray-700 focus:outline-none focus:border-[#7c3aed] bg-white"
+                  >
+                    <option value="">Otomatik belirle</option>
+                    {DILEKCE_TURLERI.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Uzunluk — dolgu disiplini için */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Uzunluk</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {UZUNLUK_SECENEK.map((u) => (
+                      <button key={u.id} type="button" onClick={() => setUzunluk(u.id)}
+                        className={`rounded-xl border px-2 py-2 text-center transition-all ${
+                          uzunluk === u.id
+                            ? "border-[#7c3aed] bg-[#7c3aed]/5"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}>
+                        <span className={`block text-xs font-semibold ${uzunluk === u.id ? "text-[#7c3aed]" : "text-gray-600"}`}>{u.ad}</span>
+                        <span className="block text-[9px] text-gray-400 mt-0.5">{u.not}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div>
                   <label className="flex items-center justify-between text-xs font-semibold text-gray-600 mb-1.5">
                     <span>Bahsetme / Not <span className="text-gray-300">(isteğe bağlı)</span></span>
@@ -695,9 +767,60 @@ export default function DilekceAvukatClient({
               </div>
             </div>
 
-            {/* Sağ: Sorular veya Editör */}
+            {/* Sağ: Özet onayı, Sorular veya Editör */}
             <div className="flex-1 overflow-hidden flex flex-col bg-[#f4f5f7]">
-              {asama === "sorular" ? (
+              {asama === "ozet" ? (
+                <div className="flex-1 overflow-y-auto p-8">
+                  <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-100 p-8">
+                    <div className="flex items-center gap-2.5 mb-1">
+                      <div className="w-9 h-9 rounded-xl bg-[#7c3aed]/10 flex items-center justify-center">
+                        <Check className="w-5 h-5 text-[#7c3aed]" />
+                      </div>
+                      <div>
+                        <h2 className="font-heading text-base font-bold text-[#0f1729]">Şunları anladım</h2>
+                        <p className="text-xs text-gray-400">Onaylamadan önce düzeltebilirsiniz</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mt-3 mb-4 leading-relaxed">
+                      Dilekçeyi bu bilgilere göre hazırlayacağım. Yanlış veya eksik gördüğünüz satırı düzeltin;
+                      dokunmadığınız kısımlar aynen kullanılır, bilinmeyenler yer tutucu kalır.
+                    </p>
+
+                    <textarea
+                      value={ozetMetni}
+                      onChange={(e) => setOzetMetni(e.target.value)}
+                      rows={8}
+                      className="w-full text-sm border border-gray-200 rounded-xl px-3.5 py-3 text-gray-700 leading-relaxed focus:outline-none focus:border-[#7c3aed] resize-none"
+                    />
+
+                    <div className="mt-4">
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">Uzunluk</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {UZUNLUK_SECENEK.map((u) => (
+                          <button key={u.id} type="button" onClick={() => setUzunluk(u.id)}
+                            className={`rounded-xl border px-2 py-2 text-center transition-all ${
+                              uzunluk === u.id ? "border-[#7c3aed] bg-[#7c3aed]/5" : "border-gray-200 hover:border-gray-300"
+                            }`}>
+                            <span className={`block text-xs font-semibold ${uzunluk === u.id ? "text-[#7c3aed]" : "text-gray-600"}`}>{u.ad}</span>
+                            <span className="block text-[9px] text-gray-400 mt-0.5">{u.not}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-7">
+                      <button onClick={ozettenUret} disabled={loading}
+                        className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-[#7c3aed] to-[#5b21b6] text-white text-sm font-semibold py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40">
+                        <Sparkles className="w-4 h-4" /> Dilekçeyi Oluştur
+                      </button>
+                      <button onClick={() => setAsama("form")} disabled={loading}
+                        className="text-xs font-semibold text-gray-400 hover:text-[#7c3aed] px-4 py-2.5 transition-colors">
+                        Forma dön
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : asama === "sorular" ? (
                 <div className="flex-1 overflow-y-auto p-8">
                   <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-100 p-8">
                     <div className="flex items-center gap-2.5 mb-1">

@@ -36,6 +36,10 @@ export async function POST(request: Request) {
     sablonId?: string;
     /** Soru-sor akışında verilen yanıtlar */
     sohbet?: { soru: string; cevap: string }[];
+    /** Çıktı uzunluğu — varsayılan "standart" (kısa dilekçe disiplini) */
+    uzunluk?: "kisa" | "standart" | "detayli";
+    /** Avukatın üretimden önce onayladığı/düzelttiği özet — esas alınır */
+    ozet?: string;
   };
 
   if (!body.konu?.trim()) {
@@ -52,8 +56,34 @@ export async function POST(request: Request) {
   const avukatAd = profile?.full_name ?? "Avukat";
   const turBilgi = body.tur ? `\nDilekçe türü: ${body.tur}` : "";
 
+  const uzunluk = body.uzunluk ?? "standart";
+  const uzunlukTalimati = {
+    kisa:
+      "Bu dilekçe KISA olsun: yaklaşık 150-350 kelime. Yalnızca çekirdek vakıalar ve net talep. " +
+      "Açıklamalar bölümü en çok 2-3 kısa numaralı paragraf.",
+    standart:
+      "Bu dilekçe STANDART uzunlukta olsun: yaklaşık 400-700 kelime, 1-2 sayfa. Basit taleplerde daha da kısa tut — " +
+      "kelime hedefini doldurmak için metni ŞİŞİRME. Açıklamalar bölümü konuya yeten sayıda numaralı paragraf.",
+    detayli:
+      "Bu dilekçe DETAYLI olsun: yaklaşık 700-1400 kelime. Vakıaları ve hukuki gerekçeyi daha ayrıntılı işle; " +
+      "yine de dolgu paragraf, tekrar ve genel hukuk anlatımı YASAK.",
+  }[uzunluk];
+  const maxTokens = { kisa: 1500, standart: 2600, detayli: 5000 }[uzunluk];
+
   const systemPrompt = `Sen 30 yıllık deneyime sahip, alanında uzman bir dilekçe yazarı avukatsın.
 Meslektaşın olan Av. ${avukatAd} için profesyonel hukuki belgeler hazırlıyorsun.
+
+UZUNLUK VE ÖZ DİSİPLİNİ (EN ÖNEMLİ KURAL):
+- ${uzunlukTalimati}
+- Az bilgi verildiğinde metni UZATMA. Eksik bilgiyi genel geçer hukuk cümleleriyle DOLDURMA — [YER TUTUCU] bırak.
+- DOLGU YASAĞI: gereksiz giriş/kapanış cümleleri, aynı fikrin tekrarı, "işbu dilekçe ile arz ederiz ki..." türü şişirme YOK.
+- GENEL HUKUK DERSİ YASAK: "Türk hukukunda tazminat şöyledir...", "Bilindiği üzere..." gibi soyut/ansiklopedik paragraflar YAZMA. Yalnızca somut olaya bağlı, ispata dönük cümleler kur.
+- Kanun maddesi atfı YERİNDE ve AZ olsun; olayla ilgisi olmayan madde sıralaması yapma.
+
+ÜSLUP — "30 yıllık avukat yazmış" gibi:
+- Somut, mesafeli, teknik dil. Duygusal/anlatısal ifade YOK ("mağdur olmuş", "büyük üzüntü duymuştur", "çaresiz kalmıştır" gibi).
+- Dilekçe bir dert anlatma metni değildir: vakıalar sıra numarasıyla, kısa ve ispata dönük yazılır (HMK m.119/1-e somutlaştırma yükü).
+- Standart usul kalıplarını doğru ve yalın kullan (makam hitabı, "SONUÇ VE İSTEM" bölümü, saygı ifadesi tek satır).
 
 KURALLAR:
 - Türk hukuku ve usulüne tam uygunluk; USUL ve ESAS ayrımını gözet (usuli itirazlar önce, esasa ilişkin savunma/talep sonra)
@@ -147,11 +177,19 @@ SONUÇ VE İSTEM     : [Net talepler]
       body.ekBilgi.trim()
     : "";
 
+  // Avukatın onayladığı özet — doğrulanmış bilgi kaynağıdır, dilekçenin çekirdeğini oluşturur
+  const ozetBaglam = body.ozet?.trim()
+    ? "\n\n## AVUKATIN ONAYLADIĞI ÖZET (doğrulanmış — dilekçenin çekirdeği bu bilgilerdir)\n" +
+      body.ozet.trim() +
+      "\n\nBu özetteki bilgileri esas al; özet dışındaki eksik noktaları [YER TUTUCU] bırak, uydurma."
+    : "";
+
   const userMessage = body.mod === "duzenle" && body.mevcutMetin
     ? `Aşağıdaki dilekçeyi şu yönde düzenle/iyileştir:\n\nYeni konu/talimat: ${body.konu}` +
       `${talimatBaglam}${hukukiBaglam}\n\nMevcut dilekçe:\n${body.mevcutMetin}`
     : `Konu: ${body.konu}${turBilgi}` +
       `${talimatBaglam}` +
+      `${ozetBaglam}` +
       `${sohbetBaglam}` +
       `${body.dosyaMetni ? `\n\n## YÜKLENEN BELGELERDEN ÇIKARILAN METİN\n${body.dosyaMetni.slice(0, 40000)}` : ""}` +
       `${ornekBaglam}` +
@@ -166,7 +204,7 @@ SONUÇ VE İSTEM     : [Net talepler]
       try {
         const response = anthropic.messages.stream({
           model: "claude-sonnet-4-6",
-          max_tokens: 8000,
+          max_tokens: maxTokens,
           system: systemPrompt,
           messages: [{ role: "user", content: userMessage }],
         });

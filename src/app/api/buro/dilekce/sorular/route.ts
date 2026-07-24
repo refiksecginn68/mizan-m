@@ -32,10 +32,14 @@ KURALLAR:
   T.C. no gibi rutin künye bilgisi) SORMA — bunlar yer tutucu olarak bırakılır.
 - Dilekçeyi yazmak için yeterli bilgi varsa hiç soru sorma.
 
+Yeterli bilgi topladığında ("hazir": true) "ozet" alanına, dilekçe yazılmadan önce avukatın onaylayacağı
+kısa bir anlama-özeti koy: 4-8 kısa madde (taraflar, konu/talep, temel vakıa, varsa tutar/tarih, eksik kalan
+kritik alanlar). Her madde tek satır, sade Türkçe, yer tutucular [KÖŞELİ PARANTEZ] ile. Soru sorarken ozet boş kalır.
+
 Yanıtını YALNIZCA şu JSON biçiminde ver, başka hiçbir metin ekleme:
-{"hazir": false, "sorular": [{"soru": "...", "ipucu": "..."}]}
+{"hazir": false, "sorular": [{"soru": "...", "ipucu": "..."}], "ozet": []}
 veya yeterli bilgi varsa:
-{"hazir": true, "sorular": []}`;
+{"hazir": true, "sorular": [], "ozet": ["Davacı: ...", "Talep: ...", "..."]}`;
 
 export async function POST(request: Request) {
   try {
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
     const sohbet = body.sohbet ?? [];
     // Tur sınırına gelindiyse daha fazla soru sorma
     if (sohbet.length >= MAX_TUR * 2) {
-      return Response.json({ hazir: true, sorular: [] });
+      return Response.json({ hazir: true, sorular: [], ozet: [] });
     }
 
     const gecmis = sohbet.length
@@ -93,19 +97,24 @@ export async function POST(request: Request) {
     // Model bazen JSON'u kod çitiyle sarar
     const json = ham.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 
-    let parsed: { hazir?: boolean; sorular?: SoruTuru[] };
+    let parsed: { hazir?: boolean; sorular?: SoruTuru[]; ozet?: string[] };
     try {
       parsed = JSON.parse(json);
     } catch {
       // JSON bozuksa akışı tıkama — dilekçeyi doğrudan üretmeye izin ver
       console.error("sorular: JSON ayrıştırılamadı:", ham.slice(0, 200));
-      return Response.json({ hazir: true, sorular: [] });
+      return Response.json({ hazir: true, sorular: [], ozet: [] });
     }
 
     const sorular = (parsed.sorular ?? []).filter((s) => s?.soru?.trim()).slice(0, 2);
+    const hazir = parsed.hazir === true || sorular.length === 0;
+    const ozet = hazir
+      ? (parsed.ozet ?? []).map((o) => `${o}`.trim()).filter(Boolean).slice(0, 8)
+      : [];
     return Response.json({
-      hazir: parsed.hazir === true || sorular.length === 0,
+      hazir,
       sorular,
+      ozet,
       tur: Math.floor(sohbet.length / 2) + 1,
       maxTur: MAX_TUR,
     });
