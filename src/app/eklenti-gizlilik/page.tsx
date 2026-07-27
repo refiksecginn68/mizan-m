@@ -116,7 +116,7 @@ export default function EklentiGizlilikPage() {
           <section>
             <h2 className="font-heading text-xl font-bold text-primary mb-3">7. İletişim</h2>
             <p>
-              Mizanım — <a href={process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com"} className="text-accent hover:underline">https://mizanim.com</a> —{" "}
+              Mizanım — <a href={process.env.NEXT_PUBLIC_APP_URL ?? "https://mizanim.com"} className="text-accent hover:underline">https://mizanim.com</a> —{" "}
               <a href="mailto:info@mizanim.com" className="text-accent hover:underline">info@mizanim.com</a>
             </p>
           </section>

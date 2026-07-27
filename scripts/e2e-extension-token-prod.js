@@ -6,7 +6,7 @@ require("dotenv").config({ path: ".env.local", quiet: true });
 const URL_ = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const APP = "https://www.xn--mizanm-t9a.com";
+const APP = process.env.NEXT_PUBLIC_APP_URL ?? "https://mizanim.com";
 const REF = new URL(URL_).hostname.split(".")[0];
 const SH = { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" };
 

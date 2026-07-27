@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #0a1220; }
+  a { color: #c9a84c; text-decoration: none; }
+  a:hover { color: #e0c26a; }
+</style>
+</helmet>
+<div data-screen-label="Ürün Turu" style="min-height: 100vh; background: #0a1220; display: flex; align-items: center; justify-content: center; padding: 72px 56px; box-sizing: border-box; font-family: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif; position: relative; overflow: hidden;">
+
+  <!-- altın radial glow -->
+  <div style="position: absolute; right: -10%; top: 50%; transform: translateY(-50%); width: 1100px; height: 900px; border-radius: 50%; background: radial-gradient(closest-side, rgba(201,168,76,0.09), transparent 70%); pointer-events: none;"></div>
+
+  <div style="display: grid; grid-template-columns: minmax(280px, 420px) minmax(0, 860px); gap: clamp(32px, 5vw, 72px); align-items: center; position: relative; z-index: 1; max-width: 100%; box-sizing: border-box;">
+
+    <!-- SOL: metin bloğu -->
+    <div style="display: flex; flex-direction: column; gap: 20px; color: #f3edda;">
+      <span style="font-size: 12.5px; font-weight: 700; letter-spacing: 3px; color: #c9a84c;">ÜRÜN TURU</span>
+      <h2 style="margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: 44px; line-height: 1.12; font-weight: 600; color: #f5efdf; text-wrap: pretty;">Tek ekranda, tüm dosyanız.</h2>
+      <p style="margin: 0; font-size: 17px; line-height: 1.6; color: rgba(245,239,223,0.7); text-wrap: pretty;">Emsal karar, mevzuat, dilekçe ve dava takibi. Avukatın gün içinde açtığı beş sekmeyi tek yere topladık.</p>
+
+      <div style="min-height: 26px; display: flex; align-items: center; gap: 10px;">
+        <span style="width: 22px; height: 2px; background: #c9a84c; flex-shrink: 0;"></span>
+        <span style="font-size: 15px; font-style: italic; color: rgba(245,239,223,0.85); font-family: 'Playfair Display', Georgia, serif;">{{ activeDesc }}</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 4px;">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: rgba(245,239,223,0.9);"><svg width="15" height="15" viewBox="0 0 16 16" style="flex-shrink: 0;"><path d="m2.5 8.5 3.5 3.5 7.5-8" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>10M+ içtihat, günlük güncelleme</div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: rgba(245,239,223,0.9);"><svg width="15" height="15" viewBox="0 0 16 16" style="flex-shrink: 0;"><path d="m2.5 8.5 3.5 3.5 7.5-8" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>90K+ mevzuat metni</div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: rgba(245,239,223,0.9);"><svg width="15" height="15" viewBox="0 0 16 16" style="flex-shrink: 0;"><path d="m2.5 8.5 3.5 3.5 7.5-8" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>AI destekli dilekçe taslağı</div>
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 15.5px; color: rgba(245,239,223,0.9);"><svg width="15" height="15" viewBox="0 0 16 16" style="flex-shrink: 0;"><path d="m2.5 8.5 3.5 3.5 7.5-8" fill="none" stroke="#c9a84c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>UYAP &amp; UETS entegrasyonu</div>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <a href="#" style="display: inline-block; background: #c9a84c; color: #16130a; font-size: 15px; font-weight: 700; padding: 14px 26px; border-radius: 8px; letter-spacing: 0.2px;" style-hover="background: #d8b95e; color: #16130a; text-decoration: none;">Avukat Girişi — 14 Gün Ücretsiz</a>
+      </div>
+    </div>
+
+    <!-- SAĞ: laptop -->
+    <div style="display: flex; flex-direction: column; gap: 26px; align-items: center;">
+      <div style="perspective: 1700px; width: 100%;" style-hover="transform: translateY(-6px); transition: transform 0.4s ease;">
+        <div style="transform: rotateY({{ ry }}deg) rotateX({{ rx }}deg); transform-style: preserve-3d; transition: transform 0.25s ease-out; position: relative;">
+
+          <!-- rim light (sol üst altın) -->
+          <div style="position: relative; border-radius: 18px; padding: 1px; background: linear-gradient(125deg, rgba(201,168,76,0.75) 0%, rgba(201,168,76,0.12) 30%, rgba(255,255,255,0.06) 55%, rgba(0,0,0,0) 75%); box-shadow: 0 40px 80px rgba(0,0,0,0.55), 0 12px 28px rgba(0,0,0,0.4);">
+            <!-- gövde + bezel -->
+            <div style="border-radius: 17px; background: linear-gradient(160deg, #3c4048 0%, #24272d 45%, #1a1c21 100%); padding: 3px;">
+              <div style="border-radius: 14px; background: #0b0b0d; padding: 12px 12px 14px; position: relative;">
+                <!-- kamera -->
+                <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: #1e2833; box-shadow: inset 0 0 1.5px #3f5468;"></div>
+                <!-- ekran -->
+                <div style="position: relative; border-radius: 4px; overflow: hidden; aspect-ratio: 1355 / 609; background: #f4f2ee;">
+                  <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="0">
+                    <div role="img" aria-label="{{ t.label }}" style="position: absolute; inset: 0; background-image: url('{{ t.src }}'); background-size: cover; background-position: center; opacity: {{ t.opacity }}; transform: scale({{ t.scale }}); transition: opacity 0.55s ease, transform 0.55s ease;"></div>
+                  </sc-for>
+                  <!-- glare -->
+                  <sc-if value="{{ showGlare }}" hint-placeholder-val="{{ true }}">
+                    <div style="position: absolute; inset: 0; background: linear-gradient(115deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.03) 28%, rgba(255,255,255,0) 45%); pointer-events: none;"></div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- klavye tabanı -->
+          <div style="margin: 0 -26px; height: 13px; border-radius: 2px 2px 10px 10px; background: linear-gradient(180deg, #4a4e57 0%, #2c2f36 55%, #17191d 100%); position: relative; transform: translateZ(-2px);">
+            <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 148px; height: 7px; border-radius: 0 0 9px 9px; background: linear-gradient(180deg, #16181c, #2a2d33);"></div>
+            <div style="position: absolute; inset: 0; border-radius: 2px 2px 10px 10px; background: linear-gradient(90deg, rgba(201,168,76,0.28), rgba(255,255,255,0.06) 20%, rgba(0,0,0,0) 45%, rgba(255,255,255,0.05) 90%); pointer-events: none;"></div>
+          </div>
+
+          <!-- zemin gölgesi -->
+          <div style="position: absolute; left: 6%; right: 6%; bottom: -34px; height: 44px; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,0.55), transparent 75%); filter: blur(18px); z-index: -1;"></div>
+        </div>
+      </div>
+
+      <!-- sekmeler -->
+      <div style="display: flex; gap: 6px; margin-top: 12px;">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+          <button onClick="{{ t.select }}" style="appearance: none; background: none; border: none; cursor: pointer; padding: 10px 18px 12px; font-family: 'Source Sans 3', system-ui, sans-serif; font-size: 14.5px; font-weight: 600; letter-spacing: 0.3px; color: {{ t.tabColor }}; border-bottom: 2px solid {{ t.tabBorder }}; transition: color 0.25s;" style-hover="color: rgba(245,239,223,0.85);">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;$preview&quot;: {&quot;width&quot;: 1600, &quot;height&quot;: 900},
+  &quot;showGlare&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Görünüm&quot;}
+}">
+class Component extends DCLogic {
+  state = { active: 0, auto: true, flatten: 0 };
+
+  componentDidMount() {
+    // Otomatik döngü: 5 sn'de bir sıradaki sekme
+    this.timer = setInterval(() => {
+      if (this.state.auto) {
+        this.setState(s => ({ active: (s.active + 1) % 4 }));
+      }
+    }, 5000);
+    // Scroll'da perspektifi düzleştir
+    this.onScroll = () => {
+      const f = Math.min(1, (window.scrollY || 0) / 400);
+      this.setState({ flatten: f });
+    };
+    window.addEventListener('scroll', this.onScroll, { passive: true });
+  }
+
+  componentWillUnmount() {
+    clearInterval(this.timer);
+    window.removeEventListener('scroll', this.onScroll);
+  }
+
+  renderVals() {
+    const data = [
+      { label: 'Ana Sayfa', src: 'images/screens/anasayfa.png', desc: 'Kota, takvim ve dosyalarınız — güne tek bakışta başlayın.' },
+      { label: 'Karar Arama', src: 'images/screens/karar-arama.png', desc: '10 milyon içtihatta AI destekli emsal arama.' },
+      { label: 'Mevzuat Arama', src: 'images/screens/mevzuat-arama.png', desc: 'Kanun, yönetmelik, KHK — günlük güncel mevzuat.' },
+      { label: 'Dilekçe Oluştur', src: 'images/screens/dilekce-olustur.png', desc: 'Olay özetinden emsal destekli dilekçe taslağı.' },
+    ];
+    const active = this.state.active;
+    const flatten = this.state.flatten;
+    return {
+      ry: (-8 * (1 - flatten)).toFixed(2),
+      rx: (3 * (1 - flatten)).toFixed(2),
+      showGlare: this.props.showGlare ?? true,
+      activeDesc: data[active].desc,
+      tabs: data.map((d, i) => ({
+        label: d.label,
+        src: d.src,
+        opacity: i === active ? 1 : 0,
+        scale: i === active ? 1 : 0.98,
+        tabColor: i === active ? '#f5efdf' : 'rgba(245,239,223,0.5)',
+        tabBorder: i === active ? '#c9a84c' : 'transparent',
+        // Manuel tıklamada otomatik geçişi durdur
+        select: () => this.setState({ active: i, auto: false }),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>
