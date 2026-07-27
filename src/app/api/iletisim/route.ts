@@ -78,8 +78,8 @@ export async function POST(request: Request) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            // Fallback, Resend'de doğrulanan punycode domain ile birebir eşleşmeli
-            from: process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>",
+            // Fallback, Resend'de doğrulanan domain ile birebir eşleşmeli
+            from: process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>",
             to: [notifyTo],
             reply_to: email.trim(),
             subject: `Yeni iletişim mesajı: ${konu.trim()}`,

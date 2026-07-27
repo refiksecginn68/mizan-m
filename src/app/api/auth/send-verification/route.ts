@@ -40,8 +40,8 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // Fallback, Resend'de doğrulanan punycode domain ile birebir eşleşmeli
-        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>",
+        // Fallback, Resend'de doğrulanan domain ile birebir eşleşmeli
+        from: process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>",
         to: [email],
         subject: "Mizanım — E-posta Adresinizi Doğrulayın",
         html: verificationEmailHtml(actionLink),
@@ -51,12 +51,16 @@ export async function POST(request: Request) {
     });
 
     if (!emailRes.ok) {
+      // Resend'in gerçek hatasını (ör. "domain not verified") sessizce yutma — logla
+      const detail = await emailRes.text().catch(() => "");
+      console.error("[send-verification] Resend hata", emailRes.status, detail);
       return NextResponse.json({ error: "E-posta gönderilemedi." }, { status: 500 });
     }
 
     const emailData = await emailRes.json().catch(() => null) as { id?: string } | null;
     return NextResponse.json({ success: true, method: "resend", emailId: emailData?.id ?? null });
-  } catch {
+  } catch (err) {
+    console.error("[send-verification] beklenmeyen hata", err);
     return NextResponse.json({ error: "Bir hata oluştu." }, { status: 500 });
   }
 }
@@ -125,7 +129,7 @@ function verificationEmailHtml(actionLink: string, fullName?: string): string {
           <tr>
             <td style="background:#f9fafb;padding:20px 32px;text-align:center;border-top:1px solid #f3f4f6;">
               <p style="margin:0;font-size:11px;color:#9ca3af;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com"}" style="color:#c9a84c;text-decoration:none;">mizanim.com</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://mizanim.com"}" style="color:#c9a84c;text-decoration:none;">mizanim.com</a>
               </p>
             </td>
           </tr>

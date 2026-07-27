@@ -1,12 +1,12 @@
 // Ödeme sistemi e-posta şablonları ve gönderim yardımcıları (Resend)
 
-const FROM = process.env.EMAIL_FROM ?? "Mizanım <noreply@xn--mizanm-t9a.com>";
+const FROM = process.env.EMAIL_FROM ?? "Mizanım <noreply@mizanim.com>";
 // Admin bildirimleri iki adrese birden gider (teslimat yedekliliği)
 const ADMIN_EMAILS = Array.from(new Set([
   process.env.MIZANIM_ADMIN_EMAIL ?? "refiksecginn@hotmail.com",
   "refiksecginn@gmail.com",
 ]));
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.xn--mizanm-t9a.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://mizanim.com";
 
 // IBAN gizli değil; env bağımlılığı prod'da "IBAN tanımlanmadı" hatasına yol
 // açtığı için varsayılanlar kodda sabitlendi (env yine de öncelikli).
