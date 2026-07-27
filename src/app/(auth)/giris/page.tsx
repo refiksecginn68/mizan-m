@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ShieldCheck, Briefcase, Users, UserPlus } from "lucide-react";
 import { loginAction } from "@/lib/actions/auth";
 
 function GirisForm() {
@@ -174,23 +174,52 @@ function GirisForm() {
         </div>
       </div>
 
-      {/* Register Link */}
-      <div className="text-center">
-        <p className="font-body text-sm text-muted-foreground mb-3">
-          Hesabınız yok mu?
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+      {/* Yeni Kayıt Oluştur */}
+      <div>
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <UserPlus className="w-4 h-4 text-accent" />
+          <p className="font-heading text-sm font-bold text-primary">
+            Yeni Kayıt Oluştur
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Vatandaş */}
           <Link
             href="/kayit?tip=vatandas"
-            className="flex-1 btn-outline py-2.5 text-sm text-center"
+            className="group relative overflow-hidden rounded-xl border border-border bg-white p-4 text-left transition-all duration-200 hover:border-accent hover:shadow-gold"
           >
-            Vatandaş Kaydı
+            <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center mb-3 transition-colors group-hover:bg-accent/20">
+              <Users className="w-5 h-5 text-accent" />
+            </div>
+            <p className="font-heading text-sm font-bold text-primary mb-0.5">
+              Vatandaş Kaydı
+            </p>
+            <p className="font-body text-[11px] text-muted-foreground leading-snug">
+              Soru-cevap, belge analizi
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-accent">
+              20 kredi hediye
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </Link>
+          {/* Avukat */}
           <Link
             href="/kayit?tip=avukat"
-            className="flex-1 btn-primary py-2.5 text-sm text-center"
+            className="group relative overflow-hidden rounded-xl border border-border bg-white p-4 text-left transition-all duration-200 hover:border-primary hover:shadow-elevated"
           >
-            Avukat Kaydı
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-3 transition-colors group-hover:bg-primary/20">
+              <Briefcase className="w-5 h-5 text-primary" />
+            </div>
+            <p className="font-heading text-sm font-bold text-primary mb-0.5">
+              Avukat Kaydı
+            </p>
+            <p className="font-body text-[11px] text-muted-foreground leading-snug">
+              CRM, dava takibi, UYAP
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+              14 gün ücretsiz
+              <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+            </span>
           </Link>
         </div>
       </div>

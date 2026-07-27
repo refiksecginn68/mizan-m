@@ -15,13 +15,16 @@ function KayitForm() {
   const [step, setStep] = useState<Step>(tipParam ? "form" : "tip");
   const [userType, setUserType] = useState<UserType>(tipParam ?? "vatandas");
   const [showPassword, setShowPassword] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [form, setForm] = useState({
-    full_name: "",
+    first_name: "",
+    last_name: "",
     email: "",
     password: "",
+    password2: "",
     phone: "",
     bar_number: "",
     terms: false,
@@ -36,13 +39,17 @@ function KayitForm() {
 
   function validate() {
     const errs: Record<string, string> = {};
-    if (!form.full_name.trim()) errs.full_name = "Ad Soyad zorunludur";
+    if (!form.first_name.trim()) errs.first_name = "Ad zorunludur";
+    if (!form.last_name.trim()) errs.last_name = "Soyad zorunludur";
     if (!form.email.trim()) errs.email = "E-posta zorunludur";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       errs.email = "Geçerli bir e-posta girin";
     if (!form.password) errs.password = "Şifre zorunludur";
     else if (form.password.length < 8)
       errs.password = "Şifre en az 8 karakter olmalı";
+    if (!form.password2) errs.password2 = "Şifreyi tekrar girin";
+    else if (form.password && form.password !== form.password2)
+      errs.password2 = "Şifreler eşleşmiyor";
     if (userType === "avukat" && !form.bar_number.trim())
       errs.bar_number = "Baro sicil numarası zorunludur";
     if (!form.terms) errs.terms = "Kullanım şartlarını kabul etmelisiniz";
@@ -65,7 +72,7 @@ function KayitForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          full_name: form.full_name,
+          full_name: `${form.first_name.trim()} ${form.last_name.trim()}`,
           email: form.email,
           password: form.password,
           user_type: userType,
@@ -203,21 +210,40 @@ function KayitForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Full Name */}
-        <div>
-          <label className="font-body text-sm font-semibold text-foreground block mb-1">
-            Ad Soyad
-          </label>
-          <input
-            type="text"
-            className={`input-field ${errors.full_name ? "border-danger" : ""}`}
-            placeholder="Adınız Soyadınız"
-            value={form.full_name}
-            onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-          />
-          {errors.full_name && (
-            <p className="font-body text-xs text-danger mt-1">{errors.full_name}</p>
-          )}
+        {/* Ad / Soyad */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="font-body text-sm font-semibold text-foreground block mb-1">
+              Ad
+            </label>
+            <input
+              type="text"
+              className={`input-field ${errors.first_name ? "border-danger" : ""}`}
+              placeholder="Adınız"
+              value={form.first_name}
+              onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+              autoComplete="given-name"
+            />
+            {errors.first_name && (
+              <p className="font-body text-xs text-danger mt-1">{errors.first_name}</p>
+            )}
+          </div>
+          <div>
+            <label className="font-body text-sm font-semibold text-foreground block mb-1">
+              Soyad
+            </label>
+            <input
+              type="text"
+              className={`input-field ${errors.last_name ? "border-danger" : ""}`}
+              placeholder="Soyadınız"
+              value={form.last_name}
+              onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              autoComplete="family-name"
+            />
+            {errors.last_name && (
+              <p className="font-body text-xs text-danger mt-1">{errors.last_name}</p>
+            )}
+          </div>
         </div>
 
         {/* Email */}
@@ -260,6 +286,32 @@ function KayitForm() {
           </div>
           {errors.password && (
             <p className="font-body text-xs text-danger mt-1">{errors.password}</p>
+          )}
+        </div>
+
+        {/* Password (tekrar) */}
+        <div>
+          <label className="font-body text-sm font-semibold text-foreground block mb-1">
+            Şifre (Tekrar)
+          </label>
+          <div className="relative">
+            <input
+              type={showPassword2 ? "text" : "password"}
+              className={`input-field pr-12 ${errors.password2 ? "border-danger" : ""}`}
+              placeholder="Şifrenizi tekrar girin"
+              value={form.password2}
+              onChange={(e) => setForm({ ...form, password2: e.target.value })}
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowPassword2(!showPassword2)}
+            >
+              {showPassword2 ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.password2 && (
+            <p className="font-body text-xs text-danger mt-1">{errors.password2}</p>
           )}
         </div>
 
