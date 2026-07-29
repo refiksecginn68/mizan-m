@@ -5,6 +5,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { Globe, Download, KeyRound, Lock, ShieldCheck } from "lucide-react";
 import EklentiBaglanti from "@/components/buro/EklentiBaglanti";
 import { getTrialDurum } from "@/lib/trial";
+import { EXTENSION_VERSION } from "@/lib/extension-version";
 
 export default async function UyapAyarlarPage() {
   const supabase = createClient();
@@ -72,7 +73,7 @@ export default async function UyapAyarlarPage() {
         <div>
           <h1 className="font-heading text-xl font-bold text-primary">UYAP/UETS Eklenti Kurulumu</h1>
           <p className="font-body text-sm text-muted-foreground">
-            mizanim-uyap-uets-v1.1.0 · {profile.uyap_uets_active ? "Avukat Max paketinizde aktif" : `Deneme sürenizde aktif (${trial.kalanGun} gün kaldı)`}
+            mizanim-uyap-uets-v{EXTENSION_VERSION} · {profile.uyap_uets_active ? "Avukat Max paketinizde aktif" : `Deneme sürenizde aktif (${trial.kalanGun} gün kaldı)`}
           </p>
         </div>
       </div>
