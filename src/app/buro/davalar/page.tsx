@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import DosyaYonetimiClient from "./DosyaYonetimiClient";
+import BuroTabBar from "@/components/buro/BuroTabBar";
+import { BURO_TABS } from "@/lib/buro-nav";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -36,6 +38,7 @@ export default async function DosyaYonetimiPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
+      <BuroTabBar items={BURO_TABS.dosya} />
       <DosyaYonetimiClient
         initialCases={(casesResult.data as AnyClient[]) ?? []}
         clients={(clientsResult.data as AnyClient[]) ?? []}

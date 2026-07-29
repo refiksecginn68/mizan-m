@@ -4,44 +4,47 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Search,
   FolderOpen,
-  Calendar,
-  MessageSquare,
+  Building2,
   Film,
+  Search,
+  FileText,
 } from "lucide-react";
 
+// Sol menüdeki 8 başlığın mobildeki karşılığı (grup başlıkları → ilk sekme).
+// Hesaplama (yakında) ve Ayarlar dar bara sığması için dışarıda tutuldu.
 const MOBILE_NAV = [
-  { href: "/buro", label: "Ana Sayfa", icon: LayoutDashboard, exact: true },
-  { href: "/buro/emsal", label: "Emsal", icon: Search },
-  { href: "/buro/davalar", label: "Dosyalar", icon: FolderOpen },
-  { href: "/buro/medya", label: "Delil", icon: Film },
-  { href: "/buro/takvim", label: "Takvim", icon: Calendar },
-  { href: "/buro/asistan", label: "AI", icon: MessageSquare },
+  { href: "/buro", label: "Panel", icon: LayoutDashboard, exact: true, match: ["/buro"] },
+  { href: "/buro/davalar", label: "Dosya", icon: FolderOpen, match: ["/buro/davalar", "/buro/muvekkiller", "/buro/finans", "/buro/dava"] },
+  { href: "/buro/uyap", label: "UYAP", icon: Building2, match: ["/buro/uyap", "/buro/tebligat"] },
+  { href: "/buro/medya", label: "Delil", icon: Film, match: ["/buro/medya"] },
+  { href: "/buro/emsal", label: "Araştır", icon: Search, match: ["/buro/emsal", "/buro/mevzuat"] },
+  { href: "/buro/dilekce", label: "Dilekçe", icon: FileText, match: ["/buro/dilekce"] },
 ];
 
 export default function BuroMobileNav() {
   const pathname = usePathname();
 
-  function isActive(href: string, exact?: boolean) {
-    if (exact) return pathname === href;
-    return pathname.startsWith(href);
+  function isActive(item: { exact?: boolean; match: string[] }) {
+    if (item.exact) return pathname === "/buro";
+    return item.match.some((m) => pathname === m || pathname.startsWith(m + "/"));
   }
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0f1729] border-t border-white/5 flex items-center justify-around h-14 px-2">
-      {MOBILE_NAV.map(({ href, label, icon: Icon, exact }) => {
-        const active = isActive(href, exact);
+      {MOBILE_NAV.map((item) => {
+        const Icon = item.icon;
+        const active = isActive(item);
         return (
           <Link
-            key={href}
-            href={href}
+            key={item.href}
+            href={item.href}
             className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
               active ? "text-[#c9a84c]" : "text-white/40 hover:text-white/70"
             }`}
           >
             <Icon className="w-5 h-5" />
-            {label}
+            {item.label}
           </Link>
         );
       })}
