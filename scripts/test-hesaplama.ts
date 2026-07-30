@@ -5,6 +5,8 @@ import { faizHesapla } from "../src/lib/hesaplama/faiz";
 import { iscilikHesapla } from "../src/lib/hesaplama/iscilik";
 import { nafakaTahmin } from "../src/lib/hesaplama/nafaka";
 import { harcVekaletHesapla } from "../src/lib/hesaplama/harc-vekalet";
+import { nispiVekalet } from "../src/lib/hesaplama/icra-kapak";
+import { TARIFE_2026 } from "../src/lib/hesaplama/tarifeler/2026";
 
 function dok(baslik: string, sonuc: { kalemler: { ad: string; tutar: number; formul: string; not?: string }[]; toplam: number }) {
   console.log(`\n=== ${baslik} ===`);
@@ -84,6 +86,16 @@ console.log("  Uyarı:", naf.uyarilar[0]);
 // HARÇ & VEKALET
 const hv = harcVekaletHesapla({ davaDegeri: 500000, vekaletTuru: "nispi" });
 dok("HARÇ & VEKALET — 500k dava, nispi", hv);
+// İlk dilim: 500.000 × %16 = 80.000
+const nispi500 = hv.kalemler.find((k) => k.ad === "Vekalet ücreti (AAÜT)")?.tutar;
+assert("Nispi 500k = 80.000 (%16 ilk dilim)", nispi500 === 80000, 80000, nispi500);
+
+// AAÜT nispi tam dilim tablosu (TBB 2026 birincil kaynakla doğrulandı).
+// 10.8M kümülatif: 96k+90k+168k+156k+198k+192k+150k = 1.050.000
+// (eski hatalı 4-dilim tablosu 2.4M üstünü sabit %13 alıp 1.446.000 verirdi)
+const nispi108 = nispiVekalet(10_800_000, TARIFE_2026.aaut.nispiDilimler.deger);
+assert("Nispi 10.8M = 1.050.000 (azalan dilimler)", nispi108 === 1_050_000, 1_050_000, nispi108);
+assert("Nispi dilimler doğrulandı (v)", TARIFE_2026.aaut.nispiDilimler.dogrulanmadi === false, false, TARIFE_2026.aaut.nispiDilimler.dogrulanmadi);
 
 console.log(`\n===== SONUÇ: ${gecti} geçti, ${kaldi} kaldı =====`);
 process.exit(kaldi > 0 ? 1 : 0);

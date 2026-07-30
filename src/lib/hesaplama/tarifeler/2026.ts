@@ -20,7 +20,7 @@ export const TARIFE_2026 = {
   YIL: 2026,
   GECERLILIK_TARIHI: "2026-01-01",
   KAYNAK_NOT:
-    "Harç maktu tutarları Harçlar Kanunu Genel Tebliği (Seri No: 98) ile 01.01.2026'dan itibaren %1,95 artışlı. Faiz oranları TCMB/BKK tebliğlerine tabidir.",
+    "Harç maktu tutarları Harçlar Kanunu Genel Tebliği (Seri No: 98, RG 31.12.2025 mük. s.33124) ile 01.01.2026'dan itibaren %18,95 yeniden değerleme oranında artışlı. Faiz oranları TCMB/BKK tebliğlerine tabidir.",
   RESMI_KAYNAK_URL: "https://www.mevzuat.gov.tr/MevzuatMetin/1.5.492.pdf",
 
   // --- İCRA HARÇLARI (492 sayılı Harçlar Kanunu, (1) sayılı tarife) ---
@@ -66,16 +66,23 @@ export const TARIFE_2026 = {
   // --- AVUKATLIK ASGARİ ÜCRET TARİFESİ (2025-2026, RG 04.11.2025) ---
   aaut: {
     icraMaktuGenel: v(9000, "AAÜT 2026 icra takibi maktu (barobirlik.org.tr)"),
-    icraMaktuTahliye: v(20000, "AAÜT 2026 tahliye icra takibi maktu"),
-    // Nispi tarife dilimleri — tam oran tablosu resmi metinle doğrulanmalı
-    nispiDilimler: suphe(
+    icraMaktuTahliye: v(20000, "AAÜT 2026 tahliye icra takibi maktu (TBB karşılaştırma cetveli, İkinci Kısım/İkinci Bölüm md.4)"),
+    // Nispi tarife (Üçüncü Kısım) — TBB resmi 2026 cetvelinin tam 10 dilimi doğrulandı.
+    // ustSinir: kümülatif üst sınır; her dilime kendi marjinal oranı uygulanır.
+    nispiDilimler: v(
       [
         { ustSinir: 600000, oran: 0.16 },
         { ustSinir: 1200000, oran: 0.15 },
         { ustSinir: 2400000, oran: 0.14 },
-        { ustSinir: Infinity, oran: 0.13 },
+        { ustSinir: 3600000, oran: 0.13 },
+        { ustSinir: 5400000, oran: 0.11 },
+        { ustSinir: 7800000, oran: 0.08 },
+        { ustSinir: 10800000, oran: 0.05 },
+        { ustSinir: 14400000, oran: 0.03 },
+        { ustSinir: 18600000, oran: 0.02 },
+        { ustSinir: Infinity, oran: 0.01 },
       ],
-      "AAÜT (2) sayılı kısım nispi dilim oranları — RG tam metniyle doğrulanmalı"
+      "AAÜT 2026 Üçüncü Kısım — TBB resmi karşılaştırma cetveli (d.barobirlik.org.tr/2025/20251103_tbbtablo_karsilastirmacetveli.pdf, RG 04.11.2025 s.33067)"
     ),
   },
 } as const;
