@@ -87,31 +87,31 @@ const ANALYSIS_CARDS: AnalysisCard[] = [
     id: "ses",
     label: "Ses Analizi",
     icon: Mic,
-    description: "Ses kaydı transkripti ve hukuki önem tespiti (fal.ai gerektirir)",
+    description: "Ses kaydı transkripti ve hukuki önem tespiti (ses/video motoru gerektirir)",
     accept: "audio/*",
     maxSizeMB: 50,
     needsFal: true,
-    hint: "MP3, WAV, M4A (max 50MB) — fal.ai gerektirir",
+    hint: "MP3, WAV, M4A (max 50MB) — ses/video motoru gerektirir",
   },
   {
     id: "video",
     label: "Video Analizi",
     icon: Video,
-    description: "Video içerik özeti ve kritik an tespiti (fal.ai gerektirir)",
+    description: "Video içerik özeti ve kritik an tespiti (ses/video motoru gerektirir)",
     accept: "video/*",
     maxSizeMB: 100,
     needsFal: true,
-    hint: "MP4, MOV, AVI (max 100MB) — fal.ai gerektirir",
+    hint: "MP4, MOV, AVI (max 100MB) — ses/video motoru gerektirir",
   },
   {
     id: "ses_karsilastirma",
     label: "Ses Karşılaştırma",
     icon: GitCompare,
-    description: "İki ses kaydını karşılaştırarak konuşmacı analizi (fal.ai gerektirir)",
+    description: "İki ses kaydını karşılaştırarak konuşmacı analizi (ses/video motoru gerektirir)",
     accept: "audio/*",
     maxSizeMB: 50,
     needsFal: true,
-    hint: "MP3, WAV, M4A (max 50MB) — fal.ai gerektirir",
+    hint: "MP3, WAV, M4A (max 50MB) — ses/video motoru gerektirir",
   },
 ];
 
@@ -209,14 +209,14 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* fal.ai bilgisi */}
+      {/* AI motor bilgisi */}
       <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
         <div>
           <p className="font-body text-sm font-semibold text-blue-800">AI Analiz Motoru</p>
           <p className="font-body text-xs text-blue-700 mt-0.5">
             Görüntü, PDF ve ekran görüntüleri Claude AI ile analiz edilir.
-            Ses ve video analizi için fal.ai entegrasyonu gerekir (FAL_KEY ayarlandığında aktive olur).
+            Ses ve video analizi gelişmiş medya işleme motoru gerektirir (yönetici tarafından etkinleştirilir).
           </p>
         </div>
       </div>
@@ -251,7 +251,7 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
                   <p className="font-body text-xs text-muted-foreground leading-relaxed">{card.description}</p>
                   {card.needsFal && (
                     <span className="absolute top-3 right-3 font-body text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                      fal.ai
+                      Gelişmiş
                     </span>
                   )}
                 </button>
