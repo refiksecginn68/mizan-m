@@ -9,11 +9,13 @@ import {
   Film,
   Search,
   FileText,
+  Calculator,
+  Settings,
 } from "lucide-react";
 
-// Sol menüdeki 8 başlığın mobildeki karşılığı (grup başlıkları → ilk sekme).
-// Dar bara 6 madde sığar; Hesaplama ve Ayarlar bilinçli olarak dışarıda tutuldu
-// (bu başlıklara mobilde erişim ayrı bir "Daha fazla" çözümüyle ele alınmalı).
+// Sol menüdeki 8 başlığın mobildeki tam karşılığı (grup başlıkları → ilk sekme).
+// Sekiz madde dar bara sığar (padding daraltıldı); sidebar mobilde gizli olduğundan
+// tüm başlıklara erişim buradan sağlanır.
 const MOBILE_NAV = [
   { href: "/buro", label: "Panel", icon: LayoutDashboard, exact: true, match: ["/buro"] },
   { href: "/buro/davalar", label: "Dosya", icon: FolderOpen, match: ["/buro/davalar", "/buro/muvekkiller", "/buro/finans", "/buro/dava"] },
@@ -21,6 +23,8 @@ const MOBILE_NAV = [
   { href: "/buro/medya", label: "Delil", icon: Film, match: ["/buro/medya"] },
   { href: "/buro/emsal", label: "Araştır", icon: Search, match: ["/buro/emsal", "/buro/mevzuat"] },
   { href: "/buro/dilekce", label: "Dilekçe", icon: FileText, match: ["/buro/dilekce"] },
+  { href: "/buro/hesaplama", label: "Hesap", icon: Calculator, match: ["/buro/hesaplama"] },
+  { href: "/buro/profil", label: "Ayarlar", icon: Settings, match: ["/buro/profil", "/buro/ayarlar"] },
 ];
 
 export default function BuroMobileNav() {
@@ -32,7 +36,7 @@ export default function BuroMobileNav() {
   }
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0f1729] border-t border-white/5 flex items-center justify-around h-14 px-2">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0f1729] border-t border-white/5 flex items-center justify-around h-14 px-1">
       {MOBILE_NAV.map((item) => {
         const Icon = item.icon;
         const active = isActive(item);
@@ -40,7 +44,7 @@ export default function BuroMobileNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
+            className={`flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-[10px] font-medium transition-colors ${
               active ? "text-[#c9a84c]" : "text-white/40 hover:text-white/70"
             }`}
           >
