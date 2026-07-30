@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 
 // Sol menüdeki 8 başlığın mobildeki karşılığı (grup başlıkları → ilk sekme).
-// Hesaplama (yakında) ve Ayarlar dar bara sığması için dışarıda tutuldu.
+// Dar bara 6 madde sığar; Hesaplama ve Ayarlar bilinçli olarak dışarıda tutuldu
+// (bu başlıklara mobilde erişim ayrı bir "Daha fazla" çözümüyle ele alınmalı).
 const MOBILE_NAV = [
   { href: "/buro", label: "Panel", icon: LayoutDashboard, exact: true, match: ["/buro"] },
   { href: "/buro/davalar", label: "Dosya", icon: FolderOpen, match: ["/buro/davalar", "/buro/muvekkiller", "/buro/finans", "/buro/dava"] },
