@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import BuroLeftSidebar from "@/components/buro/BuroLeftSidebar";
 import MizanAIFloating from "@/components/buro/MizanAIFloating";
 import BuroMobileNav from "@/components/buro/BuroMobileNav";
+import BuroMobileDrawer from "@/components/buro/BuroMobileDrawer";
 import BuroContentHeader from "@/components/buro/BuroContentHeader";
 import OnboardingModal from "@/components/buro/OnboardingModal";
 import NotificationBell from "@/components/buro/NotificationBell";
@@ -36,6 +37,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
         additionalQueries={profile.additional_queries}
       />
       <main className="flex-1 overflow-y-auto min-w-0 pb-14 lg:pb-0">
+        <BuroMobileDrawer />
         <TrialBanner
           trial={getTrialDurum(profile)}
           paketVar={(profile.monthly_query_limit ?? 0) > 0 || (profile.additional_queries ?? 0) > 0}

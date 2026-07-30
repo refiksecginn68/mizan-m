@@ -4,21 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  LayoutDashboard,
-  FolderOpen,
-  Building2,
-  Film,
-  Search,
-  FileText,
-  Calculator,
-  Settings,
-  LogOut,
-  Sparkles,
-  Pin,
-  PinOff,
-} from "lucide-react";
+import { LogOut, Sparkles, Pin, PinOff } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
+import { BURO_MENU } from "@/lib/buro-nav";
 
 interface Props {
   lawyerName: string;
@@ -27,19 +15,7 @@ interface Props {
   additionalQueries?: number;
 }
 
-// 8 üst başlık — nihai bilgi mimarisi. Grup başlıkları ilk sekmesine gider;
-// alt sayfalar grup sayfalarındaki BuroTabBar ile gezilir. "match" bir başlığın
-// hangi route'larda aktif görüneceğini belirler.
-const MENU = [
-  { href: "/buro", label: "Panel", icon: LayoutDashboard, exact: true, match: ["/buro"] },
-  { href: "/buro/davalar", label: "Dosya Yönetimi", icon: FolderOpen, match: ["/buro/davalar", "/buro/muvekkiller", "/buro/finans", "/buro/dava"] },
-  { href: "/buro/uyap", label: "UYAP & Tebligat", icon: Building2, match: ["/buro/uyap", "/buro/tebligat"] },
-  { href: "/buro/medya", label: "Medya & Delil", icon: Film, match: ["/buro/medya"] },
-  { href: "/buro/emsal", label: "Araştırma", icon: Search, ai: true, match: ["/buro/emsal", "/buro/mevzuat"] },
-  { href: "/buro/dilekce", label: "Dilekçe & AI", icon: FileText, ai: true, match: ["/buro/dilekce"] },
-  { href: "/buro/hesaplama", label: "Hesaplama & Dönüştürücü", icon: Calculator, match: ["/buro/hesaplama"] },
-  { href: "/buro/profil", label: "Ayarlar", icon: Settings, match: ["/buro/profil", "/buro/ayarlar"] },
-];
+// 8 üst başlık, tek kaynak: @/lib/buro-nav BURO_MENU (mobil drawer ile ortak).
 
 const PIN_KEY = "buro-sidebar-pinned";
 
@@ -132,7 +108,7 @@ export default function BuroLeftSidebar({
 
         {/* Nav — 8 başlık */}
         <nav className="flex-1 overflow-y-auto scrollbar-hide py-3 px-2 space-y-0.5">
-          {MENU.map((item) => {
+          {BURO_MENU.map((item) => {
             const Icon = item.icon;
             const active = isActive(item);
             return (
