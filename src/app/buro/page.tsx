@@ -1,75 +1,18 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import {
-  MessageSquare,
-  FileText,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Search,
-  ExternalLink,
-  Newspaper,
-  Building2,
-  Calendar,
-  Scale,
-  TrendingUp,
-  BookOpen,
-  FolderOpen,
-} from "lucide-react";
-
-// Ana sayfa hızlı kısayol kartları — UYAP ana sayfası referans (kart tabanlı, ferah).
-// tone: ikon çipinin rengi — kartlar arası ince ton farkı için lacivert→mavi geçişi
-const KISAYOLLAR = [
-  { href: "/buro/emsal", label: "Karar Arama", alt: "İçtihat & emsal", icon: Scale, tone: "bg-[#0f1729]" },
-  { href: "/buro/mevzuat", label: "Mevzuat Arama", alt: "Güncel kanunlar", icon: BookOpen, tone: "bg-[#16203a]" },
-  { href: "/buro/dilekce", label: "Yeni Dilekçe", alt: "AI destekli", icon: FileText, tone: "bg-[#1a2744]" },
-  { href: "/buro/asistan", label: "MizanAI", alt: "Hukuki asistan", icon: MessageSquare, tone: "bg-[#20304f]" },
-  { href: "/buro/davalar", label: "Dosyalarım", alt: "Dava dosyaları", icon: FolderOpen, tone: "bg-[#26395c]" },
-  { href: "/buro/takvim", label: "Duruşmalarım", alt: "Takvim & süreler", icon: Calendar, tone: "bg-[#2c4269]" },
-  { href: "/buro/finans", label: "Finans", alt: "Tahsilat & kasa", icon: TrendingUp, tone: "bg-[#324b76]" },
-  { href: "/buro/uyap", label: "UYAP Aktar", alt: "Dosya senkron", icon: Building2, tone: "bg-[#385483]" },
-];
-import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
+import { Search } from "lucide-react";
 import Selamlama from "@/components/buro/Selamlama";
 import DuyuruBar, { type Duyuru } from "@/components/buro/DuyuruBar";
 import BildirimlerPaneli from "@/components/buro/BildirimlerPaneli";
+import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
+import FavorilerBlok from "@/components/buro/FavorilerBlok";
+import TakvimWidget, { type TakvimEtkinlik, type SureUyari } from "@/components/buro/TakvimWidget";
+import { VARSAYILAN_FAVORILER } from "@/lib/buro-favoriler";
+import type { LegalNews } from "@/app/api/haberler/route";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
-
-import type { LegalNews } from "@/app/api/haberler/route";
-
-const KATEGORI_RENK: Record<string, string> = {
-  "İş Hukuku": "bg-blue-100 text-blue-700",
-  "Tüketici Hukuku": "bg-green-100 text-green-700",
-  "Usul Hukuku": "bg-purple-100 text-purple-700",
-  "Borçlar Hukuku": "bg-orange-100 text-orange-700",
-  "Ceza Hukuku": "bg-red-100 text-red-700",
-  "İdare Hukuku": "bg-teal-100 text-teal-700",
-  "Medeni Hukuk": "bg-indigo-100 text-indigo-700",
-  "Veri Koruma": "bg-rose-100 text-rose-700",
-};
-
-const EVENT_TYPE_COLORS: Record<string, string> = {
-  durusma: "bg-red-100 text-red-700",
-  toplanti: "bg-blue-100 text-blue-700",
-  sure: "bg-orange-100 text-orange-700",
-  tebligat: "bg-purple-100 text-purple-700",
-  odeme: "bg-green-100 text-green-700",
-  not: "bg-yellow-100 text-yellow-700",
-  diger: "bg-gray-100 text-gray-600",
-};
-
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  durusma: "Duruşma",
-  toplanti: "Toplantı",
-  sure: "Süre",
-  tebligat: "Tebligat",
-  odeme: "Ödeme",
-  not: "Not",
-  diger: "Diğer",
-};
 
 export default async function BuroPage() {
   const supabase = createClient() as AnyClient;
@@ -78,7 +21,7 @@ export default async function BuroPage() {
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
-  // Profile: session-based client (layout ile aynı yöntem — service role bypass sorununu önler)
+  // Profile: session-based client (layout ile aynı yöntem)
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name, user_type, monthly_query_limit, monthly_query_count, additional_queries")
@@ -86,6 +29,13 @@ export default async function BuroPage() {
     .single();
 
   if (!profile || profile.user_type !== "avukat") redirect("/panel");
+
+  // Favoriler — 028 migration'ı uygulanmadan da kırılmasın diye AYRI/savunmacı çekilir.
+  // Kolon yoksa (favRow null) varsayılan kullanılır; ana profil sorgusu etkilenmez.
+  let favoriler: string[] = VARSAYILAN_FAVORILER;
+  const { data: favRow } = await supabase
+    .from("profiles").select("dashboard_favorites").eq("id", user.id).single();
+  if (favRow?.dashboard_favorites?.length) favoriler = favRow.dashboard_favorites;
 
   const monthlyQueryLimit = profile.monthly_query_limit ?? 0;
   const monthlyQueryCount = profile.monthly_query_count ?? 0;
@@ -96,19 +46,14 @@ export default async function BuroPage() {
   const now = new Date();
 
   const [, upcomingEventsResult, newsResult, pendingPaymentsResult] = await Promise.all([
-    serviceSupabase
-      .from("cases")
-      .select("id")
-      .eq("lawyer_id", user.id)
-      .limit(1),
+    serviceSupabase.from("cases").select("id").eq("lawyer_id", user.id).limit(1),
     serviceSupabase
       .from("calendar_events")
       .select("id, title, event_type, starts_at, location")
       .eq("lawyer_id", user.id)
       .gte("starts_at", now.toISOString())
       .order("starts_at", { ascending: true })
-      .limit(8),
-    // Haberler: legal_news tablosu yoksa fallback demo
+      .limit(12),
     serviceSupabase
       .from("legal_news")
       .select("id, title, source, category, published_at, is_featured")
@@ -116,7 +61,6 @@ export default async function BuroPage() {
       .limit(4)
       .then((r: AnyClient) => r)
       .catch(() => ({ data: null })),
-    // Bekleyen ödemeler/taksitler — vade hatırlatma kartı için
     serviceSupabase
       .from("payments")
       .select("id, description, amount, metadata, created_at")
@@ -125,102 +69,61 @@ export default async function BuroPage() {
       .limit(50),
   ]);
 
-  // Takviminiz: duruşmalar + notlar, tarihe göre sıralı (ödemeler ayrı hatırlatma kartında)
-  interface TakvimItem {
-    id: string;
-    title: string;
-    type: string;
-    date: Date;
-    location?: string | null;
-  }
+  // Takvim etkinlikleri → widget
+  const etkinlikler: TakvimEtkinlik[] = ((upcomingEventsResult?.data ?? []) as AnyClient[]).map((ev) => ({
+    id: `ev-${ev.id}`,
+    title: ev.title,
+    type: ev.event_type ?? "diger",
+    dateISO: ev.starts_at,
+    location: ev.location,
+  }));
 
-  const takvimItems: TakvimItem[] = [];
-
-  for (const ev of ((upcomingEventsResult?.data ?? []) as AnyClient[])) {
-    takvimItems.push({
-      id: `ev-${ev.id}`,
-      title: ev.title,
-      type: ev.event_type ?? "diger",
-      date: new Date(ev.starts_at),
-      location: ev.location,
-    });
-  }
-
-  takvimItems.sort((a, b) => a.date.getTime() - b.date.getTime());
-  const takvim = takvimItems.slice(0, 8);
-
-  // Yaklaşan ödeme hatırlatmaları: vadesine ≤2 gün kalan veya vadesi geçmiş bekleyen ödemeler
-  interface OdemeHatirlatma {
-    id: string;
-    clientName: string;
-    description: string;
-    amount: number;
-    due: Date;
-    gecikti: boolean;
-  }
-
+  // Süre/Görev uyarıları → vadesine ≤7 gün kalan veya geçmiş bekleyen ödemeler
   const bugun = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const odemeHatirlatmalari: OdemeHatirlatma[] = [];
-
+  const uyarilar: SureUyari[] = [];
   for (const p of ((pendingPaymentsResult?.data ?? []) as AnyClient[])) {
     if (!p.metadata?.due_date) continue;
     const due = new Date(p.metadata.due_date);
     const dueGun = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-    const kalanGun = Math.round((dueGun.getTime() - bugun.getTime()) / 86400000);
-    if (kalanGun > 2) continue;
-    odemeHatirlatmalari.push({
+    const kalan = Math.round((dueGun.getTime() - bugun.getTime()) / 86400000);
+    if (kalan > 7) continue;
+    uyarilar.push({
       id: p.id,
-      clientName: p.metadata?.client_name ?? "Müvekkil",
-      description: p.description ?? "Ödeme",
-      amount: p.amount,
-      due,
-      gecikti: kalanGun < 0,
+      label: `${p.metadata?.client_name ?? "Müvekkil"} — ${p.description ?? "Ödeme"}`,
+      dateISO: due.toISOString(),
+      gecikti: kalan < 0,
     });
   }
+  uyarilar.sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
 
-  odemeHatirlatmalari.sort((a, b) => a.due.getTime() - b.due.getTime());
-
-  const formatTL = (v: number) =>
-    new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 2 }).format(v);
-
-  // Dashboard için 4 haber — DB'den veya fallback
+  // DUYURU şeridi — güncel hukuki haberler (tablo yoksa fallback)
   const FALLBACK_NEWS: LegalNews[] = [
     { id: "f1", title: "Yargıtay HGK: Kıdem Tazminatında Ücret Kavramı Genişletildi", source: "Yargıtay HGK", category: "İş Hukuku", published_at: new Date(Date.now() - 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
     { id: "f2", title: "Resmi Gazete: Tüketici Hakem Heyeti Sınırları Güncellendi", source: "Resmi Gazete", category: "Tüketici Hukuku", published_at: new Date(Date.now() - 2 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
     { id: "f3", title: "AYM: Makul Süreyi Aşan Tutukluluk Hak İhlali", source: "Anayasa Mahkemesi", category: "Ceza Hukuku", published_at: new Date(Date.now() - 3 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
     { id: "f4", title: "TBMM: Kira Artış Oranı Sınırlaması Uzatıldı", source: "TBMM", category: "Borçlar Hukuku", published_at: new Date(Date.now() - 4 * 86400000).toISOString(), is_featured: false, summary: null, source_url: null, tags: [] },
   ];
-
   const dashboardNews: LegalNews[] = (newsResult?.data && (newsResult.data as AnyClient[]).length > 0)
-    ? newsResult.data as LegalNews[]
+    ? (newsResult.data as LegalNews[])
     : FALLBACK_NEWS;
-
-  // Kayan duyuru barı: güncel hukuki haberlerden beslenir
   const duyurular: Duyuru[] = dashboardNews.map((h) => ({
-    id: h.id,
-    kategori: h.category,
-    text: h.title,
-    href: "/buro/haberler",
+    id: h.id, kategori: h.category, text: h.title, href: "/buro/haberler",
   }));
 
   const firstName = profile.full_name.split(" ")[0];
   const tarih = now.toLocaleDateString("tr-TR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
-      {/* Üst başlık */}
+      {/* Üst başlık (korunur) */}
       <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <Selamlama firstName={firstName} />
             <p className="text-sm text-gray-500 mt-0.5">{tarih}</p>
           </div>
-          {/* Arama çubuğu */}
           <div className="flex items-center gap-2 bg-[#f4f5f7] border border-gray-200 rounded-xl px-4 py-2.5 w-full sm:w-72">
             <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <Link href="/buro/emsal" className="flex-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
@@ -230,273 +133,50 @@ export default async function BuroPage() {
         </div>
       </div>
 
-      {/* Duyurular — kayan bar */}
+      {/* DUYURU şeridi (korunur) */}
       <div className="px-4 sm:px-6 pt-4">
         <DuyuruBar items={duyurular} />
       </div>
 
-      {/* Hızlı kısayol kartları */}
-      <div className="px-4 sm:px-6 pt-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {KISAYOLLAR.map(({ href, label, alt, icon: Icon, tone }) => (
-            <Link
-              key={href}
-              href={href}
-              className="group flex flex-col items-center gap-2.5 bg-white border border-gray-200 rounded-2xl px-3 py-5 shadow-sm hover:border-[#c9a84c]/60 hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:scale-[0.98] transition-[transform,box-shadow,border-color] duration-200 ease-out"
-            >
-              <div className={`w-10 h-10 rounded-xl ${tone} flex items-center justify-center group-hover:bg-[#c9a84c] transition-colors duration-200`}>
-                <Icon className="w-5 h-5 text-[#c9a84c] group-hover:text-white transition-colors duration-200" />
-              </div>
-              <span className="text-xs font-semibold text-gray-700 group-hover:text-[#0f1729] text-center leading-tight">{label}</span>
-              <span className="text-[10px] text-gray-400 text-center leading-tight -mt-1.5">{alt}</span>
-            </Link>
-          ))}
+      {/* 2 kolon grid — DOM sırası = mobil sıra (favoriler → takvim → kota → bildirimler → yapılacaklar) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 p-4 sm:p-6">
+        {/* Favoriler (sol, 2 kolon) */}
+        <div className="lg:col-span-2">
+          <FavorilerBlok initial={favoriler} />
         </div>
-      </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 p-4 sm:p-6">
-        {/* Sol + Orta */}
-        <div className="flex-1 min-w-0 space-y-6">
+        {/* Takvim widget (sağ kolon, üstte) */}
+        <div className="lg:col-start-3 lg:row-start-1">
+          <TakvimWidget etkinlikler={etkinlikler} uyarilar={uyarilar} />
+        </div>
 
-          {/* Kota Durum Kartı */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Yapay Zeka Sorgu Kotası</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">
-                Kalan Sorgu: <span className="text-[#c9a84c]">{remainingQueries}</span> / {totalQueries}
-              </p>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Mevzuat ve karar aramaları kotanızdan düşmez. MizanAI sohbeti ve AI analizleri dahildir.
-              </p>
-            </div>
-            <Link 
-              href="/kredi" 
-              className="px-4 py-2 bg-[#1a2744] hover:bg-[#0f1729] text-white text-xs font-bold rounded-xl transition-all duration-300 flex-shrink-0"
-            >
-              Ek Paket Satın Al
-            </Link>
+        {/* Kota + Ek Paket (favorilerin altında) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-gray-500 font-medium">Yapay Zeka Sorgu Kotası</p>
+            <p className="text-xl font-bold text-gray-900 mt-1">
+              Kalan Sorgu: <span className="text-[#c9a84c]">{remainingQueries}</span> / {totalQueries}
+            </p>
+            <p className="text-[11px] text-gray-400 mt-0.5">
+              Mevzuat ve karar aramaları kotanızdan düşmez. MizanAI sohbeti ve AI analizleri dahildir.
+            </p>
           </div>
+          <Link
+            href="/kredi"
+            className="px-4 py-2 bg-[#1a2744] hover:bg-[#0f1729] text-white text-xs font-bold rounded-xl transition-all duration-300 flex-shrink-0"
+          >
+            Ek Paket Satın Al
+          </Link>
+        </div>
 
-          {/* Bildirimler — dosya hareketleri, duruşmalar, vadesi gelen ödemeler */}
+        {/* Bildirimler (en altta) */}
+        <div className="lg:col-span-2">
           <BildirimlerPaneli />
-
-          {/* Yaklaşan ödeme hatırlatmaları */}
-          {odemeHatirlatmalari.length > 0 && (
-            <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
-              <div className="flex items-center gap-2 px-5 py-3.5 bg-amber-50 border-b border-amber-100">
-                <Clock className="w-4 h-4 text-amber-600" />
-                <h2 className="font-heading text-sm font-bold text-amber-800">Yaklaşan Ödemeler</h2>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {odemeHatirlatmalari.map((o) => (
-                  <div key={o.id} className={`px-5 py-3 ${o.gecikti ? "bg-red-50" : ""}`}>
-                    <p className={`text-xs font-medium ${o.gecikti ? "text-red-700" : "text-gray-800"}`}>
-                      {o.clientName} — {o.description} son gün{" "}
-                      {o.due.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}, tutar{" "}
-                      {formatTL(o.amount)} TL. {o.gecikti ? "Vadesi geçti — ödeme hatırlatınız!" : "Ödeme hatırlatınız!"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 2 Büyük Kart */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link
-              href="/buro/asistan"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1a2744] to-[#0f1729] p-6 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#c9a84c]/10 rounded-full -translate-y-8 translate-x-8" />
-              <div className="relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-[#c9a84c]/20 flex items-center justify-center mb-4">
-                  <MessageSquare className="w-5 h-5 text-[#c9a84c]" />
-                </div>
-                <h3 className="font-heading text-base font-bold text-white mb-1">MizanAI Hukuki Sohbet</h3>
-                <p className="text-xs text-white/50 leading-relaxed mb-4">
-                  Davaları, müvekkilleri ve takvimi bilen yapay zeka asistanınız
-                </p>
-                <span className="inline-flex items-center gap-1.5 bg-[#c9a84c] text-white text-xs font-semibold px-3 py-1.5 rounded-lg group-hover:bg-[#e7b743] transition-colors">
-                  Sohbet Başlat <ChevronRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </Link>
-
-            <Link
-              href="/buro/dilekce"
-              className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#7c3aed] to-[#5b21b6] p-6 hover:shadow-xl transition-all duration-300"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
-              <div className="relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center mb-4">
-                  <FileText className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="font-heading text-base font-bold text-white mb-1">AI Dilekçe Oluştur</h3>
-                <p className="text-xs text-white/60 leading-relaxed mb-4">
-                  Emsal kararlarla desteklenmiş profesyonel dilekçe hazırlama
-                </p>
-                <span className="inline-flex items-center gap-1.5 bg-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-lg group-hover:bg-white/30 transition-colors">
-                  Dilekçe Oluştur <ChevronRight className="w-3.5 h-3.5" />
-                </span>
-              </div>
-            </Link>
-          </div>
-
-          {/* Son Mevzuatlar + Emsal Kararlar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Son Eklenen Mevzuatlar */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-                <h2 className="font-heading text-sm font-bold text-[#0f1729]">Son Eklenen Mevzuatlar</h2>
-                <Link href="/buro/mevzuat" className="text-xs text-[#c9a84c] hover:underline font-medium">
-                  Tümü
-                </Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {[
-                  { no: "7511", ad: "Türk Medeni Kanunu - Güncel", tarih: "Jun 2026" },
-                  { no: "6098", ad: "Türk Borçlar Kanunu", tarih: "May 2026" },
-                  { no: "4857", ad: "İş Kanunu Tebliğ Değişikliği", tarih: "May 2026" },
-                  { no: "2577", ad: "İdari Yargılama Usulü Kanunu", tarih: "Apr 2026" },
-                ].map((m, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors group cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-[#1a2744]/8 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-[#1a2744]/60">{m.no.slice(0, 4)}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 truncate group-hover:text-[#1a2744]">{m.ad}</p>
-                      <p className="text-[10px] text-gray-400">{m.tarih}</p>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#c9a84c] transition-colors flex-shrink-0" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Son Eklenen Emsal Kararlar */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-                <h2 className="font-heading text-sm font-bold text-[#0f1729]">Son Eklenen Emsal Kararlar</h2>
-                <Link href="/buro/emsal" className="text-xs text-[#c9a84c] hover:underline font-medium">
-                  Tümü
-                </Link>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {[
-                  { mahkeme: "Yargıtay 9. HD", esas: "2024/1234", konu: "İşçi Alacakları - Kıdem Tazminatı" },
-                  { mahkeme: "Danıştay 12. D.", esas: "2024/4471", konu: "İdari Para Cezası İptali" },
-                  { mahkeme: "Yargıtay 4. HD", esas: "2024/8821", konu: "Manevi Tazminat Miktarı" },
-                  { mahkeme: "Bölge AYİM", esas: "2024/2219", konu: "Askerlik Erteleme Kararı" },
-                ].map((k, i) => (
-                  <Link key={i} href="/buro/emsal" className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors group">
-                    <div className="w-8 h-8 rounded-lg bg-[#c9a84c]/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-[10px] font-bold text-[#c9a84c]">K</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-800 truncate group-hover:text-[#1a2744]">{k.konu}</p>
-                      <p className="text-[10px] text-gray-400">{k.mahkeme} · {k.esas}</p>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#c9a84c] transition-colors flex-shrink-0" />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Güncel Hukuki Haberler */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-              <div className="flex items-center gap-2">
-                <Newspaper className="w-4 h-4 text-[#c9a84c]" />
-                <h2 className="font-heading text-sm font-bold text-[#0f1729]">Güncel Hukuki Haberler</h2>
-              </div>
-              <Link href="/buro/haberler" className="text-xs text-[#c9a84c] hover:underline font-medium">
-                Tümü →
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-50">
-              {dashboardNews.map((haber) => (
-                <Link key={haber.id} href="/buro/haberler" className="px-5 py-4 hover:bg-gray-50 transition-colors group">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${KATEGORI_RENK[haber.category] ?? "bg-gray-100 text-gray-600"}`}>
-                      {haber.category}
-                    </span>
-                    <span className="text-[10px] text-gray-400">
-                      {new Date(haber.published_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
-                    </span>
-                  </div>
-                  <p className="text-xs font-medium text-gray-800 group-hover:text-[#1a2744] leading-relaxed line-clamp-2">{haber.title}</p>
-                  <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                    <ExternalLink className="w-2.5 h-2.5" />
-                    {haber.source}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
         </div>
 
-        {/* Sağ Kolon */}
-        <div className="w-full lg:w-72 lg:flex-shrink-0 space-y-4">
-
-          {/* Takviminiz — duruşmalar, toplantılar, süreler, notlar */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-50">
-              <h2 className="font-heading text-sm font-bold text-[#0f1729]">Takviminiz</h2>
-              <Link href="/buro/takvim" className="text-xs text-[#c9a84c] hover:underline font-medium">
-                Takvim
-              </Link>
-            </div>
-            <div className="p-2">
-              {takvim.length === 0 ? (
-                <div className="text-center py-6">
-                  <p className="text-xs text-gray-400">Yaklaşan etkinlik yok</p>
-                  <Link href="/buro/takvim" className="text-xs text-[#c9a84c] hover:underline mt-1 block">
-                    Etkinlik ekle →
-                  </Link>
-                </div>
-              ) : (
-                takvim.map((item) => {
-                  const typeColor = EVENT_TYPE_COLORS[item.type] || EVENT_TYPE_COLORS.diger;
-                  const typeLabel = EVENT_TYPE_LABELS[item.type] || "Diğer";
-                  const evDate = item.date;
-                  return (
-                    <div key={item.id} className="flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-gray-50 transition-colors">
-                      <div className="flex-shrink-0 text-center bg-[#0f1729] rounded-xl w-10 py-1.5">
-                        <p className="text-[10px] font-bold text-[#c9a84c]">
-                          {evDate.toLocaleDateString("tr-TR", { month: "short" }).toUpperCase()}
-                        </p>
-                        <p className="text-sm font-bold text-white leading-none">
-                          {evDate.getDate()}
-                        </p>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{item.title}</p>
-                        <p className="text-[10px] text-gray-400 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-2.5 h-2.5" />
-                          {evDate.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                          {item.location && (
-                            <>
-                              <MapPin className="w-2.5 h-2.5 ml-1" />
-                              <span className="truncate">{item.location}</span>
-                            </>
-                          )}
-                        </p>
-                        <span className={`inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${typeColor}`}>
-                          {typeLabel}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Yapılacaklar */}
+        {/* Yapılacaklar (sağ kolon, takvimin altında) */}
+        <div className="lg:col-start-3 lg:row-start-2">
           <BuroAnaSayfaClient />
-
         </div>
       </div>
     </div>

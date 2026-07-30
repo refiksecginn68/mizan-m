@@ -19,6 +19,21 @@ export async function GET() {
   return Response.json({ sessions: data ?? [] });
 }
 
+export async function PATCH(request: Request) {
+  const supabase = createClient() as Any;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id, title } = await request.json() as { id: string; title: string };
+  const temiz = (title ?? "").trim().slice(0, 120);
+  if (!id || !temiz) return Response.json({ error: "id ve başlık zorunlu" }, { status: 400 });
+
+  const svc = createServiceClient() as Any;
+  const { error } = await svc.from("sessions").update({ title: temiz }).eq("id", id).eq("user_id", user.id);
+  if (error) return Response.json({ error: "Güncellenemedi" }, { status: 500 });
+  return Response.json({ success: true, title: temiz });
+}
+
 export async function DELETE(request: Request) {
   const supabase = createClient() as Any;
   const { data: { user } } = await supabase.auth.getUser();

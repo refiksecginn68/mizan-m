@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles, Send, Plus, Trash2, StopCircle,
   Loader2, Calendar, Users, FileText,
   CheckCircle, Clock, ChevronRight, MessageSquare,
   PanelLeftClose, PanelLeftOpen, AlertCircle,
+  Search, Pencil, Check,
 } from "lucide-react";
 import MarkdownRenderer from "@/components/shared/MarkdownRenderer";
 import MicButton from "@/components/ui/MicButton";
@@ -51,6 +52,8 @@ function cleanResponse(text: string): string {
 
 export default function MizanAIBeyin({ lawyerName }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const chatParam = searchParams.get("chat");
   const firstName = lawyerName.split(" ")[0];
 
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -62,6 +65,9 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
   const [completedActions, setCompletedActions] = useState<Action[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [arama, setArama] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -89,6 +95,18 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     loadSessions();
   }, []);
 
+  // URL ?chat=<id> ↔ aktif oturum senkronu — tarayıcı geri/ileri tutarlı.
+  useEffect(() => {
+    if (chatParam) {
+      if (chatParam !== activeSessionId) loadSession(chatParam);
+    } else if (activeSessionId !== null) {
+      setActiveSessionId(null);
+      setMessages([]);
+      setCompletedActions([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatParam]);
+
   async function loadSessions() {
     setSessionsLoading(true);
     try {
@@ -109,10 +127,17 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     } catch { /* ignore */ }
   }
 
+  // Oturum seç → URL'i güncelle (efekt loadSession'ı çalıştırır).
+  function selectSession(id: string) {
+    if (id === activeSessionId) return;
+    router.push(`/buro/mizanai?chat=${id}`);
+  }
+
   function newChat() {
     setActiveSessionId(null);
     setMessages([]);
     setCompletedActions([]);
+    if (chatParam) router.push("/buro/mizanai");
     inputRef.current?.focus();
   }
 
@@ -126,6 +151,28 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     setSessions((s) => s.filter((s2) => s2.id !== id));
     if (activeSessionId === id) newChat();
   }
+
+  function startRename(s: Session, e: React.MouseEvent) {
+    e.stopPropagation();
+    setRenamingId(s.id);
+    setRenameValue(s.title);
+  }
+
+  async function saveRename(id: string) {
+    const t = renameValue.trim();
+    setRenamingId(null);
+    if (!t) return;
+    setSessions((ss) => ss.map((s) => (s.id === id ? { ...s, title: t } : s)));
+    await fetch("/api/buro/mizanai/sessions", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, title: t }),
+    }).catch(() => {});
+  }
+
+  const filtrelenmisSessions = arama.trim()
+    ? sessions.filter((s) => s.title.toLowerCase().includes(arama.trim().toLowerCase()))
+    : sessions;
 
   const send = useCallback(async (text?: string) => {
     const msg = (text ?? input).trim();
@@ -206,6 +253,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
 
             if (json.sessionId && !activeSessionId) {
               setActiveSessionId(json.sessionId);
+              router.replace(`/buro/mizanai?chat=${json.sessionId}`);
               loadSessions();
             }
 
@@ -239,7 +287,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, activeSessionId, followBottom]);
+  }, [input, loading, messages, activeSessionId, followBottom, router]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -284,13 +332,25 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
             </button>
           </div>
           {sidebarOpen && (
-            <button
-              onClick={newChat}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-white/80 text-xs font-semibold transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Yeni Sohbet
-            </button>
+            <>
+              <button
+                onClick={newChat}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-white/80 text-xs font-semibold transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Yeni Sohbet
+              </button>
+              <div className="mt-2 flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-1.5">
+                <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+                <input
+                  value={arama}
+                  onChange={(e) => setArama(e.target.value)}
+                  placeholder="Sohbetlerde ara…"
+                  aria-label="Sohbetlerde ara"
+                  className="flex-1 bg-transparent text-xs text-white/80 placeholder:text-white/30 focus:outline-none min-w-0"
+                />
+              </div>
+            </>
           )}
         </div>
 
@@ -300,34 +360,81 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
             </div>
-          ) : sessions.length === 0 ? (
-            <p className="text-xs text-white/20 text-center py-8">Henüz sohbet yok</p>
+          ) : filtrelenmisSessions.length === 0 ? (
+            <p className="text-xs text-white/20 text-center py-8">
+              {arama.trim() ? "Eşleşen sohbet yok" : "Henüz sohbet yok"}
+            </p>
           ) : (
-            sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => loadSession(s.id)}
-                className={`w-full flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all group mb-0.5 ${
-                  activeSessionId === s.id
-                    ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 opacity-60" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{s.title}</p>
-                  <p className="text-[10px] opacity-40 mt-0.5">
-                    {new Date(s.updated_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => deleteSession(s.id, e)}
-                  className="hidden group-hover:flex text-white/20 hover:text-red-400 transition-colors flex-shrink-0"
+            filtrelenmisSessions.map((s) => {
+              const aktif = activeSessionId === s.id;
+              const duzenleniyor = renamingId === s.id;
+              return (
+                <div
+                  key={s.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-current={aktif ? "true" : undefined}
+                  onClick={() => !duzenleniyor && selectSession(s.id)}
+                  onKeyDown={(e) => { if (!duzenleniyor && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectSession(s.id); } }}
+                  className={`w-full flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all group mb-0.5 cursor-pointer ${
+                    aktif ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
                 >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </button>
-            ))
+                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 opacity-60" />
+                  <div className="flex-1 min-w-0">
+                    {duzenleniyor ? (
+                      <input
+                        autoFocus
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === "Enter") saveRename(s.id);
+                          if (e.key === "Escape") setRenamingId(null);
+                        }}
+                        onBlur={() => saveRename(s.id)}
+                        aria-label="Sohbet adını düzenle"
+                        className="w-full bg-white/10 rounded-md px-1.5 py-0.5 text-xs text-white focus:outline-none"
+                      />
+                    ) : (
+                      <>
+                        <p className="text-xs font-medium truncate">{s.title}</p>
+                        <p className="text-[10px] opacity-40 mt-0.5">
+                          {new Date(s.updated_at).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  {duzenleniyor ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); saveRename(s.id); }}
+                      aria-label="Adı kaydet"
+                      className="text-white/40 hover:text-[#c9a84c] transition-colors flex-shrink-0"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <div className="hidden group-hover:flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={(e) => startRename(s, e)}
+                        aria-label="Yeniden adlandır"
+                        className="text-white/20 hover:text-white/70 transition-colors"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => deleteSession(s.id, e)}
+                        aria-label="Sohbeti sil"
+                        className="text-white/20 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
 

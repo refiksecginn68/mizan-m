@@ -11,6 +11,7 @@ import {
   FileText,
   Calculator,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 
 export interface BuroTab {
@@ -36,6 +37,7 @@ export const BURO_MENU: BuroMenuItem[] = [
   { href: "/buro/uyap", label: "UYAP & Tebligat", icon: Building2, match: ["/buro/uyap", "/buro/tebligat"] },
   { href: "/buro/medya", label: "Medya & Delil", icon: Film, match: ["/buro/medya"] },
   { href: "/buro/emsal", label: "Araştırma", icon: Search, ai: true, match: ["/buro/emsal", "/buro/mevzuat"] },
+  { href: "/buro/mizanai", label: "MizanAI", icon: MessageSquare, ai: true, match: ["/buro/mizanai", "/buro/asistan"] },
   { href: "/buro/dilekce", label: "Dilekçe & AI", icon: FileText, ai: true, match: ["/buro/dilekce"] },
   { href: "/buro/hesaplama", label: "Hesaplama & Dönüştürücü", icon: Calculator, match: ["/buro/hesaplama"] },
   { href: "/buro/profil", label: "Ayarlar", icon: Settings, match: ["/buro/profil", "/buro/ayarlar"] },
