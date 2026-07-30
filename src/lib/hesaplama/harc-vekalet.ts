@@ -5,8 +5,8 @@ import { tarifeGetir, VARSAYILAN_YIL, type TarifeYili } from "./tarifeler";
 import { yuvarla, format } from "./faiz";
 import { nispiVekalet } from "./icra-kapak";
 
-// Karar ve ilam harcı nispi oranı (492 s.K.) — resmi metinle teyit edilmeli
-const KARAR_ILAM_NISPI = { deger: 0.0683, dogrulanmadi: true };
+// Karar ve ilam harcı nispi oranı — 492 s.K. (1) sayılı tarife A/III-1-a: binde 68,31
+const KARAR_ILAM_NISPI = { deger: 0.0683100, dogrulanmadi: false };
 
 export interface HarcVekaletGirdi {
   davaDegeri: number;
@@ -35,7 +35,7 @@ export function harcVekaletHesapla(girdi: HarcVekaletGirdi): HesapSonucu {
     ad: "Karar ve ilam harcı (peşin ¼)",
     tutar: yuvarla(pesin),
     formul: `(${format(girdi.davaDegeri)} × ‰${(KARAR_ILAM_NISPI.deger * 1000).toFixed(2)}) ÷ 4`,
-    not: "oran doğrulanmadı — resmi tarifeyle teyit edin",
+    not: KARAR_ILAM_NISPI.dogrulanmadi ? "oran doğrulanmadı — resmi tarifeyle teyit edin" : undefined,
   });
 
   // Vekalet ücreti

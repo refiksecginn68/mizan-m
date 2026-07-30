@@ -26,11 +26,11 @@ export const TARIFE_2026 = {
   // --- İCRA HARÇLARI (492 sayılı Harçlar Kanunu, (1) sayılı tarife) ---
   icra: {
     // İcraya başvurma harcı (maktu)
-    basvurmaHarci: suphe(732, "2026 yargı harçları tarifesi (tek kaynak, resmi tebliğ ile teyit edilmeli)"),
+    basvurmaHarci: v(732, "492 s.K. (1) sayılı tarife B/I-1 icraya başvurma harcı 732,00 TL (Harçlar K. Gn. Tebliği 98, RG 31.12.2025 mük. 33124)"),
     // Peşin harç: SADECE ilamsız/kambiyoda, ana para üzerinden ‰5
     pesinHarcOrani: v(0.005, "492 s.K. — ilamsız takipte peşin harç binde 5 (prompt spec + genel uygulama)"),
     // MTS: peşin harç yerine ana para üzerinden %2
-    mtsHarcOrani: v(0.02, "MTS başvuru harcı %2 (prompt spec)"),
+    mtsHarcOrani: v(0.02, "492 s.K. (1) sayılı tarife B/I-5 — 7155 s.K. (MTS) takibe konu alacak üzerinden %2"),
     // Tahsil harcı — aşamaya göre
     tahsilHarci: {
       tebligSonrasiHacizOncesi: v(0.0455, "İcra tahsil harcı %4,55 (492 s.K. (1) sayılı tarife)"),
@@ -49,9 +49,12 @@ export const TARIFE_2026 = {
 
   // --- FAİZ ORANLARI (yıllık) ---
   faiz: {
-    yasalFaiz: v(0.09, "3095 s.K. kanuni faiz %9 (istikrarlı BKK oranı)"),
-    avansFaizi: suphe(0.4575, "TCMB avans faizi — kaynaklar çelişkili, TCMB tebliğiyle teyit edilmeli"),
-    ticariTemerrutFaizi: suphe(0.4875, "Ticari temerrüt (reeskont+8 puan) — TCMB tebliğiyle teyit edilmeli"),
+    yasalFaiz: v(0.09, "3095 s.K. m.1 kanuni faiz %9 (BKK 2005/9831, halen yürürlükte)"),
+    // TCMB kısa vadeli avans faiz oranı (RG 20.12.2025 s.33113 ile %39,75'e indirildi)
+    avansFaizi: v(0.3975, "TCMB avans faizi %39,75 (Reeskont/Avans Tebliği, RG 20.12.2025 s.33113)"),
+    // Ticari temerrüt (3095 s.K. m.2/2): taraf tacir ise TCMB kısa vadeli avans oranı = %39,75.
+    // Not: TTK m.1530/7 mal/hizmet tedarikinde farklı (reeskont+8 puan) olabilir.
+    ticariTemerrutFaizi: v(0.3975, "3095 s.K. m.2/2 — ticari temerrüt = TCMB avans oranı %39,75 (RG 20.12.2025 s.33113)"),
   },
 
   // --- İŞÇİLİK ---

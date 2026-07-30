@@ -97,5 +97,12 @@ const nispi108 = nispiVekalet(10_800_000, TARIFE_2026.aaut.nispiDilimler.deger);
 assert("Nispi 10.8M = 1.050.000 (azalan dilimler)", nispi108 === 1_050_000, 1_050_000, nispi108);
 assert("Nispi dilimler doğrulandı (v)", TARIFE_2026.aaut.nispiDilimler.dogrulanmadi === false, false, TARIFE_2026.aaut.nispiDilimler.dogrulanmadi);
 
+// FAZ 3 — birincil kaynakla doğrulanan tarife değerleri (suphe→v)
+const T = TARIFE_2026;
+assert("Başvurma harcı doğrulandı (732, v)", T.icra.basvurmaHarci.dogrulanmadi === false && T.icra.basvurmaHarci.deger === 732, "732/v", `${T.icra.basvurmaHarci.deger}/${T.icra.basvurmaHarci.dogrulanmadi}`);
+assert("Avans faizi %39,75 doğrulandı (v)", T.faiz.avansFaizi.dogrulanmadi === false && T.faiz.avansFaizi.deger === 0.3975, "0.3975/v", `${T.faiz.avansFaizi.deger}/${T.faiz.avansFaizi.dogrulanmadi}`);
+assert("Ticari temerrüt %39,75 doğrulandı (v)", T.faiz.ticariTemerrutFaizi.dogrulanmadi === false && T.faiz.ticariTemerrutFaizi.deger === 0.3975, "0.3975/v", `${T.faiz.ticariTemerrutFaizi.deger}/${T.faiz.ticariTemerrutFaizi.dogrulanmadi}`);
+assert("Tahsil harcı 4.55/9.10/11.38 doğrulandı", T.icra.tahsilHarci.tebligSonrasiHacizOncesi.deger === 0.0455 && T.icra.tahsilHarci.hacizSonrasiSatisOncesi.deger === 0.091 && T.icra.tahsilHarci.satisSonrasi.deger === 0.1138, "4.55/9.10/11.38", "—");
+
 console.log(`\n===== SONUÇ: ${gecti} geçti, ${kaldi} kaldı =====`);
 process.exit(kaldi > 0 ? 1 : 0);

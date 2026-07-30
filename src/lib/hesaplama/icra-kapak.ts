@@ -85,7 +85,7 @@ export function icraKapakHesapla(girdi: IcraKapakGirdi): HesapSonucu {
       ad: "İşlemiş faiz",
       tutar: islemisF,
       formul: `${format(girdi.anaPara)} × %${(faizOrani * 100).toFixed(2)} × ${gun}/365 gün`,
-      not: girdi.faizTuru !== "yasal" ? "oran doğrulanmadı — tarifeye bakınız" : undefined,
+      not: girdi.faizTuru === "ozel" ? "kullanıcı tanımlı oran" : undefined,
     });
   }
 
