@@ -107,7 +107,6 @@ export default function BuroLeftSidebar({
         onBlurCapture={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node)) closeSoon();
         }}
-        aria-expanded={expanded}
         className={`hidden lg:flex flex-col bg-[#0f1729] border-r border-white/5 transition-[width] duration-200 ease-in-out fixed left-0 top-0 h-screen z-40 overflow-hidden ${
           expanded ? "w-56" : "w-16"
         }`}
