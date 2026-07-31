@@ -196,3 +196,14 @@ html.dark .border-gray-200 { border-color: #2a3550 !important; }
 html.dark input, html.dark textarea, html.dark select {
   background-color: #1a2440; color: #e5e7eb; border-color: #2a3550;
 }
+
+/* ── Dashboard (ana sayfa) — açılış stagger'ı ───────────────── */
+@keyframes dash-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+.dash-block { animation: dash-rise 0.4s ease-out both; }
+/* Tamamlanan görevin listeden yumuşak çıkışı */
+@keyframes todo-leave {
+  to { opacity: 0; transform: translateX(8px); }
+}

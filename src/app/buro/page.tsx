@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { Search } from "lucide-react";
-import Selamlama from "@/components/buro/Selamlama";
 import DuyuruBar, { type Duyuru } from "@/components/buro/DuyuruBar";
 import BildirimlerPaneli from "@/components/buro/BildirimlerPaneli";
 import BuroAnaSayfaClient from "./BuroAnaSayfaClient";
 import FavorilerBlok from "@/components/buro/FavorilerBlok";
 import TakvimWidget, { type TakvimEtkinlik, type SureUyari } from "@/components/buro/TakvimWidget";
+import DashboardHeader from "@/components/buro/DashboardHeader";
+import KotaBar from "@/components/buro/KotaBar";
 import { VARSAYILAN_FAVORILER } from "@/lib/buro-favoriler";
 import type { LegalNews } from "@/app/api/haberler/route";
 
@@ -117,66 +116,36 @@ export default async function BuroPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
-      {/* Üst başlık (korunur) */}
-      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <Selamlama firstName={firstName} />
-            <p className="text-sm text-gray-500 mt-0.5">{tarih}</p>
-          </div>
-          <div className="flex items-center gap-2 bg-[#f4f5f7] border border-gray-200 rounded-xl px-4 py-2.5 w-full sm:w-72">
-            <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            <Link href="/buro/emsal" className="flex-1 text-sm text-gray-400 hover:text-gray-600 transition-colors">
-              Kanun, karar veya içtihat ara...
-            </Link>
-          </div>
+      {/* 1 · HEADER (imza dalgalı başlık) */}
+      <div className="dash-block" style={{ animationDelay: "0ms" }}>
+        <DashboardHeader firstName={firstName} tarih={tarih} />
+      </div>
+
+      <div className="px-4 sm:px-6 pb-6 space-y-5 -mt-2">
+        {/* 2 · DUYURULAR */}
+        <div className="dash-block" style={{ animationDelay: "60ms" }}>
+          <DuyuruBar items={duyurular} />
         </div>
-      </div>
 
-      {/* DUYURU şeridi (korunur) */}
-      <div className="px-4 sm:px-6 pt-4">
-        <DuyuruBar items={duyurular} />
-      </div>
+        {/* 3 · TAKVİM + YAPILACAKLAR */}
+        <div className="dash-block grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ animationDelay: "120ms" }}>
+          <TakvimWidget etkinlikler={etkinlikler} uyarilar={uyarilar} />
+          <BuroAnaSayfaClient />
+        </div>
 
-      {/* 2 kolon grid — DOM sırası = mobil sıra (favoriler → takvim → kota → bildirimler → yapılacaklar) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 p-4 sm:p-6">
-        {/* Favoriler (sol, 2 kolon) */}
-        <div className="lg:col-span-2">
+        {/* 4 · HIZLI ERİŞİM */}
+        <div className="dash-block" style={{ animationDelay: "180ms" }}>
           <FavorilerBlok initial={favoriler} />
         </div>
 
-        {/* Takvim widget (sağ kolon, üstte) */}
-        <div className="lg:col-start-3 lg:row-start-1">
-          <TakvimWidget etkinlikler={etkinlikler} uyarilar={uyarilar} />
-        </div>
-
-        {/* Kota + Ek Paket (favorilerin altında) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Yapay Zeka Sorgu Kotası</p>
-            <p className="text-xl font-bold text-gray-900 mt-1">
-              Kalan Sorgu: <span className="text-[#c9a84c]">{remainingQueries}</span> / {totalQueries}
-            </p>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              Mevzuat ve karar aramaları kotanızdan düşmez. MizanAI sohbeti ve AI analizleri dahildir.
-            </p>
-          </div>
-          <Link
-            href="/kredi"
-            className="px-4 py-2 bg-[#1a2744] hover:bg-[#0f1729] text-white text-xs font-bold rounded-xl transition-all duration-300 flex-shrink-0"
-          >
-            Ek Paket Satın Al
-          </Link>
-        </div>
-
-        {/* Bildirimler (en altta) */}
-        <div className="lg:col-span-2">
+        {/* 5 · BİLDİRİMLER */}
+        <div id="bildirimler" className="dash-block scroll-mt-4" style={{ animationDelay: "240ms" }}>
           <BildirimlerPaneli />
         </div>
 
-        {/* Yapılacaklar (sağ kolon, takvimin altında) */}
-        <div className="lg:col-start-3 lg:row-start-2">
-          <BuroAnaSayfaClient />
+        {/* 6 · YAPAY ZEKA KOTASI */}
+        <div className="dash-block" style={{ animationDelay: "300ms" }}>
+          <KotaBar remaining={remainingQueries} total={totalQueries} />
         </div>
       </div>
     </div>

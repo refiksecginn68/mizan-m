@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, CheckSquare, Square, Trash2, Clock } from "lucide-react";
+import { Plus, CheckSquare, Square, Trash2, Clock, AlertTriangle } from "lucide-react";
 import MicButton from "@/components/ui/MicButton";
 
 type Oncelik = "dusuk" | "orta" | "yuksek";
@@ -26,15 +26,25 @@ function normOncelik(v: unknown): Oncelik {
   return v === "yuksek" || v === "dusuk" || v === "orta" ? v : "orta";
 }
 
+// Göreceli zaman rozeti: "Bugün 14:30", "Yarın 09:00", "3 gün sonra".
 function formatDue(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
-  const diff = d.getTime() - now.getTime();
-  if (diff < 0) return "Gecikmiş";
-  if (diff < 3600000) return `${Math.ceil(diff / 60000)} dk`;
-  if (diff < 86400000) return `${Math.ceil(diff / 3600000)} sa`;
-  return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) +
-    " " + d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const saat = d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const bugun = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const hedef = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const gun = Math.round((hedef.getTime() - bugun.getTime()) / 86400000);
+  if (gun === 0) return `Bugün ${saat}`;
+  if (gun === 1) return `Yarın ${saat}`;
+  if (gun === -1) return `Dün ${saat}`;
+  if (gun < 0) return `${Math.abs(gun)} gün önce`;
+  return `${gun} gün sonra`;
+}
+// Tam tarih (tooltip için).
+function fullDue(iso: string): string {
+  return new Date(iso).toLocaleString("tr-TR", {
+    weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+  });
 }
 
 export default function BuroAnaSayfaClient() {
@@ -61,13 +71,22 @@ export default function BuroAnaSayfaClient() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Sıralama: tamamlananlar en altta. Aktifler arasında geçmiş/gecikmiş EN ÜSTTE,
+  // sonra tarih+saat artan (en yakın önce), aynı ana denk gelende aciliyet yüksek üstte.
+  const simdi = Date.now();
+  const gecikmisMi = (t: Todo) => !t.done && !!t.dueAt && new Date(t.dueAt!).getTime() < simdi;
   const sorted = [...todos].sort((a, b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
-    if (a.priority !== b.priority) return ONCELIK_SIRA[a.priority] - ONCELIK_SIRA[b.priority];
-    if (a.dueAt && b.dueAt) return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+    const ag = gecikmisMi(a), bg = gecikmisMi(b);
+    if (ag !== bg) return ag ? -1 : 1;
+    if (a.dueAt && b.dueAt) {
+      const d = new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+      if (d !== 0) return d;
+      return ONCELIK_SIRA[a.priority] - ONCELIK_SIRA[b.priority];
+    }
     if (a.dueAt) return -1;
     if (b.dueAt) return 1;
-    return 0;
+    return ONCELIK_SIRA[a.priority] - ONCELIK_SIRA[b.priority];
   });
 
   async function add() {
@@ -180,41 +199,63 @@ export default function BuroAnaSayfaClient() {
       {/* Liste */}
       <div className="p-2 space-y-0.5 max-h-52 overflow-y-auto">
         {sorted.length === 0 && (
-          <p className="text-xs text-gray-400 text-center py-4">{loading ? "Yükleniyor..." : "Görev yok"}</p>
+          <p className="text-xs text-gray-400 text-center py-6">
+            {loading ? "Yükleniyor..." : "Bugün için planlanmış bir iş yok. İlk işi ekleyin."}
+          </p>
         )}
-        {sorted.map((todo) => (
-          <div key={todo.id} className="flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 group transition-colors">
-            <button onClick={() => toggle(todo.id)} className="flex-shrink-0 mt-0.5 text-gray-400 hover:text-[#c9a84c] transition-colors">
-              {todo.done
-                ? <CheckSquare className="w-4 h-4 text-[#c9a84c]" />
-                : <Square className="w-4 h-4" />
-              }
-            </button>
-            <div className="flex-1 min-w-0">
-              <span className={`flex items-center gap-1.5 text-xs ${todo.done ? "line-through text-gray-300" : "text-gray-700"}`}>
-                {!todo.done && (
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ONCELIK_CFG[todo.priority].dot}`}
-                    title={`Öncelik: ${ONCELIK_CFG[todo.priority].label}`} />
-                )}
-                <span className="truncate">{todo.text}</span>
-              </span>
-              {todo.dueAt && !todo.done && (
-                <span className={`text-[10px] font-medium ${
-                  new Date(todo.dueAt) < new Date() ? "text-red-400" : "text-[#c9a84c]"
-                }`}>
-                  <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-                  {formatDue(todo.dueAt)}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => remove(todo.id)}
-              className="hidden group-hover:flex text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+        {sorted.map((todo) => {
+          const gecikti = gecikmisMi(todo);
+          return (
+            <div
+              key={todo.id}
+              className={`flex items-start gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 group transition-opacity duration-300 ${
+                todo.done ? "opacity-40" : "opacity-100"
+              }`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
+              <button onClick={() => toggle(todo.id)} className="flex-shrink-0 mt-0.5 text-gray-400 hover:text-[#c9a84c] transition-colors" aria-label={todo.done ? "Tamamlanmadı işaretle" : "Tamamlandı işaretle"}>
+                {todo.done
+                  ? <CheckSquare className="w-4 h-4 text-[#c9a84c]" />
+                  : <Square className="w-4 h-4" />
+                }
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className={`flex items-center gap-1.5 text-xs ${todo.done ? "line-through text-gray-300" : "text-gray-700"}`}>
+                  {!todo.done && (
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${ONCELIK_CFG[todo.priority].dot}`}
+                      title={`Öncelik: ${ONCELIK_CFG[todo.priority].label}`} />
+                  )}
+                  <span className="truncate">{todo.text}</span>
+                </span>
+                {todo.dueAt && !todo.done && (
+                  <span
+                    title={fullDue(todo.dueAt)}
+                    className={`inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 ${
+                      gecikti ? "text-red-600" : "text-[#c9a84c]"
+                    }`}
+                  >
+                    {gecikti ? (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+                        <AlertTriangle className="w-2.5 h-2.5" /> Gecikti
+                      </span>
+                    ) : (
+                      <>
+                        <Clock className="w-2.5 h-2.5" />
+                        {formatDue(todo.dueAt)}
+                      </>
+                    )}
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => remove(todo.id)}
+                className="hidden group-hover:flex text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5"
+                aria-label="Görevi sil"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

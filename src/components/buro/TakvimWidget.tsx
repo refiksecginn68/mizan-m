@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Calendar, Clock, MapPin, Plus, AlertTriangle, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Plus, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface TakvimEtkinlik {
   id: string;
@@ -27,8 +28,13 @@ const TUR_RENK: Record<string, string> = {
   odeme: "bg-green-100 text-green-700", not: "bg-yellow-100 text-yellow-700",
   diger: "bg-gray-100 text-gray-600",
 };
+const GUN_BASLIK = ["Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pz"];
+const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
 
-// Gün farkı (bugün 00:00 esaslı). Negatif = geçmiş.
+// Yerel gün anahtarı (YYYY-MM-DD) — saat dilimi kaymasız gün eşleştirme.
+function gunAnahtar(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 function kalanGun(iso: string): number {
   const now = new Date();
   const bugun = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -42,7 +48,6 @@ function geriSayimEtiket(gun: number): string {
   if (gun === 1) return "Yarın";
   return `${gun} gün`;
 }
-// ≤3 gün (veya geçmiş) → kırmızı vurgulu
 function acilMi(gun: number): boolean {
   return gun <= 3;
 }
@@ -67,32 +72,68 @@ export default function TakvimWidget({
   etkinlikler: TakvimEtkinlik[];
   uyarilar: SureUyari[];
 }) {
-  const bugunTarih = new Date().toLocaleDateString("tr-TR", {
-    day: "numeric", month: "long", year: "numeric",
-  });
+  const bugun = new Date();
+  const [gorunenAy, setGorunenAy] = useState({ yil: bugun.getFullYear(), ay: bugun.getMonth() });
+  const [secili, setSecili] = useState(gunAnahtar(bugun));
 
-  const bugunEtkinlik = etkinlikler.filter((e) => kalanGun(e.dateISO) === 0);
-  const durusmalar = etkinlikler
-    .filter((e) => e.type === "durusma" && kalanGun(e.dateISO) >= 0)
-    .slice(0, 4);
-  // En yakın kritik: ≤3 gün kalan ilk etkinlik
+  // Gün → işaret haritası: kırmızı (duruşma/gecikmiş) öncelikli, yoksa altın.
+  const isaretler = useMemo(() => {
+    const m = new Map<string, "kirmizi" | "altin">();
+    for (const e of etkinlikler) {
+      const k = gunAnahtar(new Date(e.dateISO));
+      if (e.type === "durusma") m.set(k, "kirmizi");
+      else if (!m.has(k)) m.set(k, "altin");
+    }
+    for (const u of uyarilar) {
+      const k = gunAnahtar(new Date(u.dateISO));
+      if (u.gecikti) m.set(k, "kirmizi");
+      else if (!m.has(k)) m.set(k, "altin");
+    }
+    return m;
+  }, [etkinlikler, uyarilar]);
+
+  // Seçili günün kayıtları (etkinlik + uyarı) saat sırasıyla.
+  const seciliKayitlar = useMemo(() => {
+    const ev = etkinlikler
+      .filter((e) => gunAnahtar(new Date(e.dateISO)) === secili)
+      .map((e) => ({ kind: "ev" as const, ...e }));
+    const uy = uyarilar
+      .filter((u) => gunAnahtar(new Date(u.dateISO)) === secili)
+      .map((u) => ({ kind: "uy" as const, ...u }));
+    return [...ev, ...uy].sort((a, b) => new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime());
+  }, [etkinlikler, uyarilar, secili]);
+
+  // En yakın kritik: ≤3 gün kalan ilk etkinlik.
   const kritik = etkinlikler.find((e) => {
     const g = kalanGun(e.dateISO);
     return g >= 0 && g <= 3;
   });
 
-  const bosMu = etkinlikler.length === 0 && uyarilar.length === 0;
+  // Ay ızgarası — pazartesi başlangıçlı 6 satır.
+  const ilkGun = new Date(gorunenAy.yil, gorunenAy.ay, 1);
+  const oncekiBosluk = (ilkGun.getDay() + 6) % 7; // Pazartesi=0
+  const gunSayisi = new Date(gorunenAy.yil, gorunenAy.ay + 1, 0).getDate();
+  const hucreler: (Date | null)[] = [];
+  for (let i = 0; i < oncekiBosluk; i++) hucreler.push(null);
+  for (let g = 1; g <= gunSayisi; g++) hucreler.push(new Date(gorunenAy.yil, gorunenAy.ay, g));
+  while (hucreler.length % 7 !== 0) hucreler.push(null);
+
+  const bugunKey = gunAnahtar(bugun);
+
+  function ayDegistir(delta: number) {
+    setGorunenAy((s) => {
+      const d = new Date(s.yil, s.ay + delta, 1);
+      return { yil: d.getFullYear(), ay: d.getMonth() };
+    });
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Başlık */}
+      {/* Başlık + ay gezinme */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-[#c9a84c]" />
-          <div>
-            <h2 className="font-heading text-sm font-bold text-[#0f1729] leading-tight">Takvim</h2>
-            <p className="text-[10px] text-gray-400">{bugunTarih}</p>
-          </div>
+          <h2 className="font-heading text-sm font-bold text-[#0f1729] leading-tight">Takvim</h2>
         </div>
         <Link
           href="/buro/takvim"
@@ -102,7 +143,6 @@ export default function TakvimWidget({
         </Link>
       </div>
 
-      {/* Kritik uyarı — en yakın ≤3 gün */}
       {kritik && (
         <div className="mx-4 mt-4 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5">
           <div className="flex items-start gap-2">
@@ -118,100 +158,115 @@ export default function TakvimWidget({
         </div>
       )}
 
-      <div className="p-4 space-y-4">
-        {bosMu && (
-          <div className="text-center py-8">
-            <Calendar className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-            <p className="text-xs text-gray-400">Yaklaşan etkinlik yok</p>
-            <Link href="/buro/takvim" className="text-xs text-[#c9a84c] hover:underline mt-1 inline-block">
-              Etkinlik ekle →
-            </Link>
-          </div>
-        )}
+      <div className="p-4">
+        {/* Ay başlığı + oklar */}
+        <div className="flex items-center justify-between mb-3">
+          <button
+            type="button"
+            onClick={() => ayDegistir(-1)}
+            aria-label="Önceki ay"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#0f1729] hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <p className="font-heading text-sm font-bold text-[#0f1729]">
+            {AYLAR[gorunenAy.ay]} {gorunenAy.yil}
+          </p>
+          <button
+            type="button"
+            onClick={() => ayDegistir(1)}
+            aria-label="Sonraki ay"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-[#0f1729] hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
-        {/* Bugün */}
-        {bugunEtkinlik.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Bugün</p>
-            <div className="space-y-1.5">
-              {bugunEtkinlik.map((e) => (
-                <div key={e.id} className="flex items-center gap-2">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${TUR_RENK[e.type] ?? TUR_RENK.diger}`}>
-                    {TUR_ETIKET[e.type] ?? "Diğer"}
-                  </span>
-                  <p className="text-xs font-medium text-[#0f1729] truncate flex-1">{e.title}</p>
-                  <span className="text-[10px] text-gray-400 flex items-center gap-0.5 flex-shrink-0">
-                    <Clock className="w-2.5 h-2.5" />
-                    {new Date(e.dateISO).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Hafta başlıkları */}
+        <div className="grid grid-cols-7 mb-1">
+          {GUN_BASLIK.map((g) => (
+            <span key={g} className="text-center text-[10px] font-semibold text-gray-400">{g}</span>
+          ))}
+        </div>
 
-        {/* Yaklaşan Duruşmalar */}
-        {durusmalar.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Yaklaşan Duruşmalar</p>
-            <div className="space-y-1.5">
-              {durusmalar.map((e) => {
-                const gun = kalanGun(e.dateISO);
-                const d = new Date(e.dateISO);
-                return (
-                  <div key={e.id} className="flex items-start gap-2.5">
-                    <div className="flex-shrink-0 text-center bg-[#0f1729] rounded-lg w-9 py-1">
-                      <p className="text-[9px] font-bold text-[#c9a84c] leading-none">
-                        {d.toLocaleDateString("tr-TR", { month: "short" }).toUpperCase()}
-                      </p>
-                      <p className="text-sm font-bold text-white leading-none mt-0.5">{d.getDate()}</p>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-xs font-semibold text-[#0f1729] truncate">{e.title}</p>
-                        <GeriSayimRozet gun={gun} />
-                      </div>
-                      {e.location && (
-                        <p className="text-[10px] text-gray-400 flex items-center gap-0.5 mt-0.5 truncate">
-                          <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
-                          <span className="truncate">{e.location}</span>
-                        </p>
-                      )}
-                    </div>
+        {/* Gün ızgarası */}
+        <div className="grid grid-cols-7 gap-0.5">
+          {hucreler.map((d, i) => {
+            if (!d) return <span key={`b-${i}`} />;
+            const k = gunAnahtar(d);
+            const isaret = isaretler.get(k);
+            const seciliMi = k === secili;
+            const bugunMu = k === bugunKey;
+            return (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setSecili(k)}
+                aria-label={`${d.getDate()} ${AYLAR[d.getMonth()]}${isaret ? ", kayıt var" : ""}`}
+                aria-pressed={seciliMi}
+                className={`relative h-9 rounded-lg flex flex-col items-center justify-center text-xs tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] ${
+                  seciliMi
+                    ? "bg-[#0f1729] text-white font-bold"
+                    : bugunMu
+                    ? "text-[#c9a84c] font-bold hover:bg-gray-100"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {d.getDate()}
+                {isaret && (
+                  <span
+                    className={`absolute bottom-1 w-1 h-1 rounded-full ${
+                      seciliMi ? "bg-white" : isaret === "kirmizi" ? "bg-red-500" : "bg-[#c9a84c]"
+                    }`}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Seçili günün kayıtları */}
+        <div className="mt-4 pt-3 border-t border-gray-100">
+          <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
+            {(() => {
+              const [, m, g] = secili.split("-").map(Number);
+              return `${g} ${AYLAR[m - 1]}`;
+            })()}
+          </p>
+          {seciliKayitlar.length === 0 ? (
+            <p className="text-xs text-gray-400 py-2">Bu gün için kayıt yok.</p>
+          ) : (
+            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+              {seciliKayitlar.map((k) =>
+                k.kind === "ev" ? (
+                  <div key={`ev-${k.id}`} className="flex items-center gap-2">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${TUR_RENK[k.type] ?? TUR_RENK.diger}`}>
+                      {TUR_ETIKET[k.type] ?? "Diğer"}
+                    </span>
+                    <p className="text-xs font-medium text-[#0f1729] truncate flex-1">{k.title}</p>
+                    <span className="text-[10px] text-gray-400 flex items-center gap-0.5 flex-shrink-0 tabular-nums">
+                      <Clock className="w-2.5 h-2.5" />
+                      {new Date(k.dateISO).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Süre / Görev Uyarıları */}
-        {uyarilar.length > 0 && (
-          <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Süre / Görev Uyarıları</p>
-            <div className="space-y-1.5">
-              {uyarilar.map((u) => {
-                const gun = kalanGun(u.dateISO);
-                return (
-                  <div key={u.id} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${u.gecikti ? "bg-red-50" : "bg-gray-50"}`}>
-                    <p className={`text-xs truncate flex-1 ${u.gecikti ? "text-red-700 font-medium" : "text-gray-700"}`}>{u.label}</p>
-                    <GeriSayimRozet gun={gun} />
+                ) : (
+                  <div key={`uy-${k.id}`} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${k.gecikti ? "bg-red-50" : "bg-gray-50"}`}>
+                    <p className={`text-xs truncate flex-1 ${k.gecikti ? "text-red-700 font-medium" : "text-gray-700"}`}>{k.label}</p>
+                    <GeriSayimRozet gun={kalanGun(k.dateISO)} />
                   </div>
-                );
-              })}
+                )
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {!bosMu && (
-        <Link
-          href="/buro/takvim"
-          className="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-100 text-xs font-semibold text-[#c9a84c] hover:bg-gray-50 transition-colors"
-        >
-          Takvimi Aç <ChevronRight className="w-3.5 h-3.5" />
-        </Link>
-      )}
+      <Link
+        href="/buro/takvim"
+        className="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-100 text-xs font-semibold text-[#c9a84c] hover:bg-gray-50 transition-colors"
+      >
+        Takvimi Aç <ChevronRight className="w-3.5 h-3.5" />
+      </Link>
     </div>
   );
 }

@@ -87,20 +87,21 @@ export default function FavorilerBlok({ initial }: { initial: string[] }) {
   return (
     <section aria-label="Favori kısayollar">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-heading text-base font-bold text-[#0f1729]">Favoriler</h2>
+        <h2 className="font-heading text-base font-bold text-[#0f1729]">Hızlı Erişim</h2>
         <button
           ref={tetikleyiciRef}
           type="button"
           onClick={acModal}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0f1729] px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Kısayolları düzenle"
+          title="Kısayolları düzenle"
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-300 hover:text-[#c9a84c] hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] transition-colors"
         >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-          Favorileri Düzenle
+          <SlidersHorizontal className="w-4 h-4" />
         </button>
       </div>
 
-      {/* 2×2 kart */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Kartlar — mobilde 2×2, masaüstünde tek sıra */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kartlar.map(({ key, label, sublabel, icon: Icon, route }) => (
           <Link
             key={key}
