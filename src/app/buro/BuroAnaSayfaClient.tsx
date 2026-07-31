@@ -129,7 +129,7 @@ export default function BuroAnaSayfaClient() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3.5 border-b border-gray-50">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-50">
         <CheckSquare className="w-4 h-4 text-[#c9a84c]" />
         <h2 className="font-heading text-sm font-bold text-[#0f1729]">Yapılacaklar</h2>
         <span className="ml-auto text-[10px] bg-[#c9a84c]/10 text-[#c9a84c] font-semibold px-2 py-0.5 rounded-full">
@@ -197,7 +197,7 @@ export default function BuroAnaSayfaClient() {
       </div>
 
       {/* Liste */}
-      <div className="p-2 space-y-0.5 max-h-52 overflow-y-auto">
+      <div className="p-2 space-y-0.5 max-h-44 overflow-y-auto">
         {sorted.length === 0 && (
           <p className="text-xs text-gray-400 text-center py-6">
             {loading ? "Yükleniyor..." : "Bugün için planlanmış bir iş yok. İlk işi ekleyin."}

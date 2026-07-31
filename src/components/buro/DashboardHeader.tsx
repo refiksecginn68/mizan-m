@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { Sun, Moon, Bell } from "lucide-react";
 import { selamla } from "@/lib/selamlama";
 
@@ -47,11 +48,16 @@ export default function DashboardHeader({
   return (
     <header className="relative overflow-hidden bg-gradient-to-br from-navy-900 via-navy-900 to-navy-700">
       <div className="relative z-10 flex items-start justify-between gap-4 px-4 sm:px-6 pt-6 pb-16">
-        <div className="min-w-0">
-          <h1 className="font-heading text-xl sm:text-2xl font-bold text-white truncate">
-            {selam ?? "Hoş geldiniz"}, Av. {firstName}
-          </h1>
-          <p className="mt-1 text-sm text-white/60 tabular-nums">{tarih}</p>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 ring-1 ring-white/15 bg-navy-900">
+            <Image src="/logo.png" alt="Mizanım" width={44} height={44} className="w-full h-full object-cover" priority />
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-heading text-xl sm:text-2xl font-bold text-white truncate">
+              {selam ?? "Hoş geldiniz"}, Av. {firstName}
+            </h1>
+            <p className="mt-1 text-sm text-white/60 tabular-nums">{tarih}</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">

@@ -130,7 +130,7 @@ export default function TakvimWidget({
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Başlık + ay gezinme */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-[#c9a84c]" />
           <h2 className="font-heading text-sm font-bold text-[#0f1729] leading-tight">Takvim</h2>
@@ -158,9 +158,9 @@ export default function TakvimWidget({
         </div>
       )}
 
-      <div className="p-4">
+      <div className="p-3">
         {/* Ay başlığı + oklar */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <button
             type="button"
             onClick={() => ayDegistir(-1)}
@@ -204,7 +204,7 @@ export default function TakvimWidget({
                 onClick={() => setSecili(k)}
                 aria-label={`${d.getDate()} ${AYLAR[d.getMonth()]}${isaret ? ", kayıt var" : ""}`}
                 aria-pressed={seciliMi}
-                className={`relative h-9 rounded-lg flex flex-col items-center justify-center text-xs tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] ${
+                className={`relative h-8 rounded-lg flex flex-col items-center justify-center text-xs tabular-nums transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#c9a84c] ${
                   seciliMi
                     ? "bg-[#0f1729] text-white font-bold"
                     : bugunMu
@@ -215,7 +215,7 @@ export default function TakvimWidget({
                 {d.getDate()}
                 {isaret && (
                   <span
-                    className={`absolute bottom-1 w-1 h-1 rounded-full ${
+                    className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
                       seciliMi ? "bg-white" : isaret === "kirmizi" ? "bg-red-500" : "bg-[#c9a84c]"
                     }`}
                   />
@@ -226,7 +226,7 @@ export default function TakvimWidget({
         </div>
 
         {/* Seçili günün kayıtları */}
-        <div className="mt-4 pt-3 border-t border-gray-100">
+        <div className="mt-3 pt-2 border-t border-gray-100">
           <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">
             {(() => {
               const [, m, g] = secili.split("-").map(Number);
@@ -236,7 +236,7 @@ export default function TakvimWidget({
           {seciliKayitlar.length === 0 ? (
             <p className="text-xs text-gray-400 py-2">Bu gün için kayıt yok.</p>
           ) : (
-            <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <div className="space-y-1.5 max-h-28 overflow-y-auto">
               {seciliKayitlar.map((k) =>
                 k.kind === "ev" ? (
                   <div key={`ev-${k.id}`} className="flex items-center gap-2">
@@ -263,7 +263,7 @@ export default function TakvimWidget({
 
       <Link
         href="/buro/takvim"
-        className="flex items-center justify-center gap-1 px-5 py-3 border-t border-gray-100 text-xs font-semibold text-[#c9a84c] hover:bg-gray-50 transition-colors"
+        className="flex items-center justify-center gap-1 px-5 py-2.5 border-t border-gray-100 text-xs font-semibold text-[#c9a84c] hover:bg-gray-50 transition-colors"
       >
         Takvimi Aç <ChevronRight className="w-3.5 h-3.5" />
       </Link>
