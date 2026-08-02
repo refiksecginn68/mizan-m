@@ -558,7 +558,7 @@ export default function DilekceAvukatClient({
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   tab === t ? "bg-[#0f1729] text-white" : "text-gray-500 hover:bg-gray-100"
                 }`}>
-                {t === "ai" && "AI ile Oluştur"}
+                {t === "ai" && "Dilekçe Yazımı"}
                 {t === "evrak" && "Evrak Yükle & Düzenle"}
                 {t === "ornekler" && `Örnek Şablonlar${sablonlarYuklendi ? ` (${ornekSablonlar.length})` : ""}`}
                 {t === "sablonar" && `Şablonlarım (${sablonar.length})`}

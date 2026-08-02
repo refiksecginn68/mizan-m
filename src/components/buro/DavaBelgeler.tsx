@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileText, Upload, Download, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
+import { FileText, Upload, Download, Trash2, Loader2, Image as ImageIcon, Play } from "lucide-react";
+import MedyaOnizle from "./MedyaOnizle";
 
 interface CaseDoc {
   id: string;
@@ -22,12 +23,20 @@ function formatSize(bytes: number): string {
 }
 
 const IMAGE_TYPES = ["png", "jpg", "jpeg", "webp", "gif", "tif", "tiff"];
+// Yerinde açılıp oynatılabilen/önizlenebilen türler
+const ONIZLENEBILIR = [
+  "png", "jpg", "jpeg", "webp", "gif", "tif", "tiff", "bmp",
+  "mp4", "webm", "mov", "m4v", "ogv",
+  "mp3", "wav", "m4a", "ogg", "oga", "aac",
+  "pdf",
+];
 
 export default function DavaBelgeler({ caseId, initialDocuments }: Props) {
   const [documents, setDocuments] = useState<CaseDoc[]>(initialDocuments);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [onizle, setOnizle] = useState<CaseDoc | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleUpload(file: File) {
@@ -104,6 +113,15 @@ export default function DavaBelgeler({ caseId, initialDocuments }: Props) {
                     {doc.file_type && <span className="uppercase ml-1">· {doc.file_type}</span>}
                   </p>
                 </div>
+                {ONIZLENEBILIR.includes(doc.file_type?.toLowerCase()) && (
+                  <button
+                    onClick={() => setOnizle(doc)}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                    title="Aç / Oynat"
+                  >
+                    <Play className="w-4 h-4" />
+                  </button>
+                )}
                 <a
                   href={`/api/buro/dava/belge/${doc.id}`}
                   className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
@@ -123,6 +141,15 @@ export default function DavaBelgeler({ caseId, initialDocuments }: Props) {
             );
           })}
         </div>
+      )}
+
+      {onizle && (
+        <MedyaOnizle
+          docId={onizle.id}
+          name={onizle.name}
+          fileType={onizle.file_type ?? ""}
+          onClose={() => setOnizle(null)}
+        />
       )}
     </div>
   );

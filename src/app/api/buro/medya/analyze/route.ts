@@ -11,61 +11,72 @@ type AnyClient = any;
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Uzman-gözü değerlendirme çerçevesi: her analiz avukat, hâkim, savcı ve
-// bilirkişi perspektifinden delil niteliği + çelişki/tutarlılık içerir.
-const UZMAN_CERCEVE = `
-Analizi DÖRT uzman perspektifiyle yap; her başlığı MUTLAKA yaz (delil değeri düşükse veya perspektif uygulanamıyorsa o başlıkta bunu bir-iki cümleyle gerekçelendir, başlığı atlama):
-- AVUKAT GÖZÜYLE: Bu delil müvekkil lehine/aleyhine nasıl kullanılır? Hangi iddiayı destekler veya çürütür?
-- HÂKİM GÖZÜYLE: Delilin ispat gücü, hükme esas alınabilirliği; HMK/CMK delil değerlendirme ölçütleri.
-- SAVCI GÖZÜYLE: Suç unsuru barındırıyor mu; soruşturmada hangi yönde kullanılır?
-- BİLİRKİŞİ GÖZÜYLE: Teknik bütünlük, manipülasyon/montaj şüphesi, metadata tutarlılığı, orijinallik göstergeleri.
-
-Ayrıca mutlaka değerlendir:
-- DELİL NİTELİĞİ: Hukuka uygun elde edilmiş mi olabilir (özel hayat, gizli kayıt, KVKK)? Kesin delil mi takdiri delil mi?
-- ÇELİŞKİ/TUTARLILIK: İçerikte kendi içinde veya bilinen olgularla çelişen unsurlar var mı? Tarih/saat/mekân tutarlı mı?
-
-Yanıtı Türkçe, profesyonel hukuk diliyle ve DÜZ METİN olarak yaz (markdown sembolü kullanma):
-önce "ÖZET" başlığı, sonra "HUKUKİ DEĞERLENDİRME" (uzman perspektifleri burada), en sonda "ÖNERİLER" (numaralı liste). Başlıklar kendi satırında, büyük harfle.`;
-
-const ANALYSIS_PROMPTS: Record<string, string> = {
-  ses: `Bu ses kaydını hukuki delil açısından analiz et:
-1. Konuşmanın ana konusu, taraflar ve içerik özeti
-2. Hukuki açıdan önemli ifadeler, ikrar/itiraf niteliğindeki beyanlar
-3. Kaydın elde ediliş biçimine göre delil değeri (aleni mi, gizli kayıt mı; TCK m. 132-133 riski)
-4. Olası kullanım alanları (hukuk/ceza yargılaması, arabuluculuk)
-${UZMAN_CERCEVE}`,
-
-  goruntu: `Bu görseli hukuki delil açısından analiz et:
-1. Görselin içeriği, bağlamı ve görünür unsurları
-2. Tarih/saat bilgisi, konum ipuçları, metadata göstergeleri
-3. Olası hukuki önemi (kaza, yaralanma, hasar, hakaret vb.)
-${UZMAN_CERCEVE}`,
-
-  video: `Bu videoyu hukuki delil açısından analiz et:
-1. Video içeriğinin özeti ve kritik anlar
-2. Görsel/ses kalitesi ve bütünlük
-3. Delil değeri ve güvenilirlik
-${UZMAN_CERCEVE}`,
-
-  pdf: `Bu belgeyi hukuki açıdan analiz et:
-1. Belgenin türü, tarafları ve içeriği
-2. Önemli hükümler, yükümlülükler ve şartlar
-3. Risk faktörleri, eksik veya muğlak hükümler
-4. İmza/tarih/şekil şartları yönünden geçerlilik göstergeleri
-${UZMAN_CERCEVE}`,
-
-  ekran: `Bu ekran görüntüsünü hukuki delil açısından analiz et:
-1. Kaynağı ve içeriği (sosyal medya, mesajlaşma, e-posta vb.)
-2. Tarih/saat bilgileri ve kimlik göstergeleri
-3. Dijital delil olarak kullanılabilirlik (değiştirilebilirlik riski, tespit ihtiyacı — noter/e-tespit)
-${UZMAN_CERCEVE}`,
-
-  ses_karsilastirma: `Bu iki ses kaydını karşılaştır ve hukuki açıdan analiz et:
-1. Her iki kaydın içerik özeti
-2. Ses karakteristiklerinin benzerliği/farklılığı, konuşmacı kimliği bulguları
-3. Kayıtlar arasındaki tutarsızlık ve çelişkiler
-${UZMAN_CERCEVE}`,
+// Analiz odakları (tür bazlı) — kısa, maddi.
+const ODAK: Record<string, string> = {
+  ses: "Bu ses kaydında GEÇEN ifadeleri maddi olarak çıkar; ikrar/itiraf, tehdit, borç/ödeme beyanı gibi kritik yerleri işaretle.",
+  ses_karsilastirma: "İki ses kaydında GEÇEN ifadeleri ve konuşmacı farklılık bulgularını maddi olarak çıkar.",
+  video: "Bu videoda GÖRÜLEN/DUYULAN kritik unsurları maddi olarak çıkar.",
+  goruntu: "Bu görselde GÖRÜLEN unsurları (tarih/saat, konum ipuçları, kişi/eşya) maddi olarak çıkar.",
+  ekran: "Bu ekran görüntüsünde GÖRÜLEN içeriği (mesaj metni, tarih/saat, taraf adları) maddi olarak çıkar.",
+  pdf: "Bu belgede GEÇEN kritik hükümleri (taraf, tutar, tarih, yükümlülük) maddi olarak çıkar.",
 };
+
+// Ortak çıktı sözleşmesi — SADECE JSON. Kısa/maddi varsayılan + detaylı ayrı alanda.
+const JSON_TALIMAT = `Yanıtını SADECE geçerli JSON olarak ver, başka hiçbir metin ekleme:
+{
+  "tespitler": [
+    { "zaman": "04:12" veya null, "kategori": "kirmizi|sari|mavi", "etiket": "kısa olgusal etiket", "alinti": "medyada birebir geçen ifade veya görünen unsur", "guven": "yuksek|dusuk" }
+  ],
+  "kaliteNotu": "bulanık/gürültülü/kesik ise tek cümle; sorun yoksa null",
+  "detayli": "Avukat gözüyle / Hâkim gözüyle / Savcı gözüyle / Bilirkişi gözüyle perspektifleri + delil niteliği (hukuka uygunluk, kesin/takdiri) + çelişki-tutarlılık. Düz metin, başlıklar büyük harf, markdown sembolü YOK."
+}
+KURALLAR:
+- "tespitler" KISA ve MADDİ (3-8 madde). YORUM/DEĞERLENDİRME YOK: "kazanılır", "lehe delildir" YAZMA. Sadece medyada NE GEÇTİĞİNİ yaz.
+- kategori: kirmizi = suç teşkil edebilecek/ağır (tehdit, şantaj, cebir, hakaret, rüşvet, iftira, suç ikrarı); sari = borç/sözleşme (borç ikrarı/kabulü, ödeme vaadi, miktar/tarih taahhüdü, sözleşme beyanı); mavi = usul/delil (kaydın nasıl elde edildiği, rıza/gizlilik beyanı, üçüncü kişi beyanı).
+- etiket OLGUSAL olsun ("tehdit içerebilir", "borç ikrarı") — suç İSNADI değil.
+- Emin değilsen guven:"dusuk". Zorlama vurgulama yapma.
+- Okunamayan plaka/isim/rakam: "okunamadı" veya "kısmen: 06 ?? 1234". Tahmin YOK.
+- Yüz tanımayla kimlik atama YOK. Markdown sembolü YOK.`;
+
+interface Tespit {
+  zaman: string | null;
+  kategori: "kirmizi" | "sari" | "mavi";
+  etiket: string;
+  alinti: string;
+  guven: "yuksek" | "dusuk";
+}
+interface YapiliSonuc {
+  tespitler: Tespit[];
+  kaliteNotu: string | null;
+  detayli: string;
+}
+
+// Claude JSON çıktısını güvenli ayrıştır; bozuksa ham metni "detayli"ye koy.
+function sonucAyristir(raw: string): YapiliSonuc {
+  const temiz = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+  try {
+    const j = JSON.parse(temiz) as Partial<YapiliSonuc>;
+    const gecerliKat = new Set(["kirmizi", "sari", "mavi"]);
+    const tespitler = Array.isArray(j.tespitler)
+      ? j.tespitler
+          .filter((t) => t && typeof t.alinti === "string" && gecerliKat.has(t.kategori as string))
+          .map((t) => ({
+            zaman: typeof t.zaman === "string" ? t.zaman : null,
+            kategori: t.kategori as Tespit["kategori"],
+            etiket: typeof t.etiket === "string" ? t.etiket : "tespit",
+            alinti: t.alinti as string,
+            guven: t.guven === "dusuk" ? "dusuk" as const : "yuksek" as const,
+          }))
+      : [];
+    return {
+      tespitler,
+      kaliteNotu: typeof j.kaliteNotu === "string" && j.kaliteNotu.trim() ? j.kaliteNotu.trim() : null,
+      detayli: typeof j.detayli === "string" ? j.detayli.trim() : "",
+    };
+  } catch {
+    return { tespitler: [], kaliteNotu: null, detayli: raw.trim() };
+  }
+}
 
 export async function POST(req: NextRequest) {
   let quotaUserId: string | null = null;
@@ -138,38 +149,37 @@ export async function POST(req: NextRequest) {
         transkript = result?.data?.text?.trim() ?? "";
       }
 
-      // Transkript + Claude ile hukuki analiz
-      const prompt = ANALYSIS_PROMPTS[analysisType] ?? ANALYSIS_PROMPTS.ses;
+      // Transkript + Claude ile yapılı analiz
+      const not = (formData.get("not") as string | null)?.trim();
+      const baglam = (formData.get("baglam") as string | null)?.trim();
+      const prompt = `${ODAK[analysisType] ?? ODAK.ses}\n\n${JSON_TALIMAT}`;
       const claudeRes = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 3000,
         messages: [{
           role: "user",
-          content: transkript
-            ? `${prompt}\n\nTranskript:\n${transkript}`
-            : prompt,
+          content: `${prompt}\n\nTranskript:\n${transkript || "(transkript boş)"}${baglam ? `\n\nAvukatın verdiği bağlam (yalnızca yorumlamaya yardımcı, tespitlerde birebir kullanma): ${baglam}` : ""}`,
         }],
-        system: `Sen Mizanım hukuk platformunun AI asistanısın. Türk hukuku uzmanısın. Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun.` + MIZAN_ORTAK_KURALLAR,
+        system: `Sen adli bilirkişi gibi davranan bir analiz asistanısın. SADECE duyulan/görüleni maddi olarak raporlarsın; hukuki nitelendirme veya suç isnadı yapmazsın.` + MIZAN_ORTAK_KURALLAR,
       });
 
-      const analysisText = aiCiktiTemizle(claudeRes.content
+      const rawText = claudeRes.content
         .filter((b) => b.type === "text")
         .map((b) => (b as { text: string }).text)
-        .join("\n"));
+        .join("\n");
 
-      const sections = parseAnalysisText(analysisText);
+      const yapili = sonucAyristir(rawText);
 
       return NextResponse.json({
         success: true,
         analysisType,
         result: {
-          ozet: sections.ozet || analysisText.substring(0, 300),
-          hukukiDegerlendirme: sections.hukukiDegerlendirme || analysisText,
-          oneriler: sections.oneriler || [],
           transkript: transkript || undefined,
-          kaynak: "Transkripsiyon + Claude AI",
-          rawText: analysisText,
-          demo: false,
+          tespitler: yapili.tespitler,
+          kaliteNotu: yapili.kaliteNotu,
+          detayli: aiCiktiTemizle(yapili.detayli),
+          not: not || undefined,
+          kaynak: "Transkripsiyon (fal.ai Whisper) + Claude AI",
         },
         fileName: file.name,
         fileSize: file.size,
@@ -182,7 +192,9 @@ export async function POST(req: NextRequest) {
     const base64Data = Buffer.from(fileBytes).toString("base64");
     const mimeType = file.type || "application/octet-stream";
 
-    const prompt = ANALYSIS_PROMPTS[analysisType] || ANALYSIS_PROMPTS.goruntu;
+    const not = (formData.get("not") as string | null)?.trim();
+    const baglam = (formData.get("baglam") as string | null)?.trim();
+    const prompt = `${ODAK[analysisType] || ODAK.goruntu}${baglam ? `\n\nAvukatın verdiği bağlam: ${baglam}` : ""}\n\n${JSON_TALIMAT}`;
 
     // Claude desteklediği medya tipleri
     const supportedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -243,24 +255,22 @@ Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun.
 Her analizde kaynakları belirt ve nesnel değerlendirme yap.` + MIZAN_ORTAK_KURALLAR,
     });
 
-    const analysisText = aiCiktiTemizle(response.content
+    const rawText = response.content
       .filter((block) => block.type === "text")
       .map((block) => (block as AnyClient).text)
-      .join("\n"));
+      .join("\n");
 
-    // Analiz metnini yapılandır
-    const sections = parseAnalysisText(analysisText);
+    const yapili = sonucAyristir(rawText);
 
     return NextResponse.json({
       success: true,
       analysisType,
       result: {
-        ozet: sections.ozet || analysisText.substring(0, 300),
-        hukukiDegerlendirme: sections.hukukiDegerlendirme || analysisText,
-        oneriler: sections.oneriler || [],
+        tespitler: yapili.tespitler,
+        kaliteNotu: yapili.kaliteNotu,
+        detayli: aiCiktiTemizle(yapili.detayli),
+        not: not || undefined,
         kaynak: "Claude AI (claude-sonnet-4-6)",
-        rawText: analysisText,
-        demo: false,
       },
       fileName: file.name,
       fileSize: file.size,
@@ -272,46 +282,4 @@ Her analizde kaynakları belirt ve nesnel değerlendirme yap.` + MIZAN_ORTAK_KUR
     if (quotaUserId) await refundQuota(quotaUserId);
     return NextResponse.json({ error: "Analiz sırasında hata oluştu" }, { status: 500 });
   }
-}
-
-function parseAnalysisText(text: string): {
-  ozet?: string;
-  hukukiDegerlendirme?: string;
-  oneriler?: string[];
-} {
-  // Hem eski markdown ("## Özet") hem yeni düz metin ("ÖZET") başlıklarını tanır
-  const lines = text.split("\n");
-  const oneriler: string[] = [];
-  const ozetSatirlari: string[] = [];
-  const degerlendirmeSatirlari: string[] = [];
-
-  let bolum: "ozet" | "degerlendirme" | "oneriler" | "" = "";
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    const baslik = trimmed.replace(/^#+\s*/, "").replace(/:$/, "");
-
-    if (/^(özet|ÖZET|içerik|ana konu)/i.test(baslik) && baslik.length < 30) { bolum = "ozet"; continue; }
-    if (/^(öner|ÖNER|dikkat|tavsiye|sonuç)/i.test(baslik) && baslik.length < 40) { bolum = "oneriler"; continue; }
-    if (/^(hukuki|HUKUKİ|değerlend|analiz)/i.test(baslik) && baslik.length < 40) { bolum = "degerlendirme"; continue; }
-
-    if (!trimmed) continue;
-    if (bolum === "oneriler" && (trimmed.startsWith("-") || trimmed.startsWith("•") || /^\d+\./.test(trimmed))) {
-      oneriler.push(trimmed.replace(/^([-•]|\d+\.)\s*/, "").trim());
-    } else if (bolum === "ozet") {
-      ozetSatirlari.push(trimmed);
-    } else if (bolum === "degerlendirme" || bolum === "oneriler") {
-      degerlendirmeSatirlari.push(line.replace(/\s+$/, ""));
-    } else if (!ozetSatirlari.length && trimmed.length > 50) {
-      // Başlıksız yanıt — ilk uzun paragraf özet sayılır
-      ozetSatirlari.push(trimmed);
-      bolum = "degerlendirme";
-    }
-  }
-
-  const ozet = ozetSatirlari.join(" ").trim();
-  let hukukiDegerlendirme = degerlendirmeSatirlari.join("\n").trim();
-  if (!hukukiDegerlendirme) hukukiDegerlendirme = text;
-
-  return { ozet, hukukiDegerlendirme, oneriler };
 }

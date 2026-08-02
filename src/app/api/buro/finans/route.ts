@@ -164,3 +164,91 @@ export async function PATCH(request: NextRequest) {
   }
   return NextResponse.json({ payment: data });
 }
+
+// Kaydı tam düzenle (tutar/açıklama/durum/tarih/yön/ilişki). Yalnızca kendi kaydı.
+export async function PUT(request: NextRequest) {
+  const { user, error } = await getAuthenticatedLawyer();
+  if (!user) return NextResponse.json({ error }, { status: 401 });
+
+  let body: {
+    id: string;
+    amount?: number;
+    status?: string;
+    description?: string;
+    due_date?: string;
+    direction?: "gelir" | "gider";
+    client_id?: string; client_name?: string;
+    case_id?: string; case_title?: string;
+    muhasebe_turu?: string;
+  };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
+  }
+  if (!body.id) return NextResponse.json({ error: "Kayıt kimliği gerekli" }, { status: 400 });
+  if (body.amount !== undefined && (!body.amount || body.amount <= 0)) {
+    return NextResponse.json({ error: "Geçerli bir tutar giriniz" }, { status: 400 });
+  }
+
+  const svc = createServiceClient() as AnyClient;
+
+  // Mevcut metadata'yı koru, gelen alanları üzerine yaz
+  const { data: mevcut } = await svc
+    .from("payments")
+    .select("metadata")
+    .eq("id", body.id)
+    .eq("user_id", user.id)
+    .single();
+  if (!mevcut) return NextResponse.json({ error: "Kayıt bulunamadı" }, { status: 404 });
+
+  const metadata: Record<string, string> = { ...(mevcut.metadata ?? {}) };
+  if (body.due_date !== undefined) metadata.due_date = body.due_date;
+  if (body.direction !== undefined) metadata.direction = body.direction;
+  if (body.client_id !== undefined) metadata.client_id = body.client_id;
+  if (body.client_name !== undefined) metadata.client_name = body.client_name;
+  if (body.case_id !== undefined) metadata.case_id = body.case_id;
+  if (body.case_title !== undefined) metadata.case_title = body.case_title;
+  if (body.muhasebe_turu !== undefined) metadata.muhasebe_turu = body.muhasebe_turu;
+
+  const guncelle: Record<string, unknown> = { metadata: Object.keys(metadata).length ? metadata : null };
+  if (body.amount !== undefined) guncelle.amount = body.amount;
+  if (body.status !== undefined) guncelle.status = body.status;
+  if (body.description !== undefined) guncelle.description = body.description?.trim() || null;
+
+  const { data, error: dbError } = await svc
+    .from("payments")
+    .update(guncelle)
+    .eq("id", body.id)
+    .eq("user_id", user.id)
+    .select()
+    .single();
+
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+  return NextResponse.json({ payment: data });
+}
+
+// Kayıt sil. { id } → tek kayıt; { ids: [...] } → toplu (tüm taksit planı). Yalnızca kendi kaydı.
+export async function DELETE(request: NextRequest) {
+  const { user, error } = await getAuthenticatedLawyer();
+  if (!user) return NextResponse.json({ error }, { status: 401 });
+
+  let body: { id?: string; ids?: string[] };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek" }, { status: 400 });
+  }
+  const ids = body.ids?.length ? body.ids : body.id ? [body.id] : [];
+  if (!ids.length) return NextResponse.json({ error: "Silinecek kayıt yok" }, { status: 400 });
+
+  const svc = createServiceClient() as AnyClient;
+  const { error: dbError } = await svc
+    .from("payments")
+    .delete()
+    .in("id", ids)
+    .eq("user_id", user.id); // yalnızca kendi kayıtları silinir
+
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+  return NextResponse.json({ success: true, deleted: ids.length });
+}

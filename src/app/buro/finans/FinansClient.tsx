@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, Fragment } from "react";
 import {
   Plus, X, TrendingUp, TrendingDown, Download, CheckCircle, Clock, XCircle,
   RotateCcw, BarChart2, ChevronDown, ChevronRight, Layers, User, FolderOpen,
-  Wallet, ArrowDownCircle, ArrowUpCircle, Loader2,
+  Wallet, ArrowDownCircle, ArrowUpCircle, Loader2, Pencil, Trash2, AlertTriangle,
 } from "lucide-react";
 
 interface PaymentMetadata {
@@ -317,6 +317,22 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
 
     setSaving(true);
     try {
+      // Düzenleme: mevcut "Yeni Kayıt" formu yeniden kullanılır, tek kayıt PUT edilir
+      if (editing) {
+        const res = await fetch("/api/buro/finans", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editing.id, ...common, amount: amt, status: formData.status, description: baseDesc }),
+        });
+        const data = await res.json() as { payment?: Payment; error?: string };
+        if (!res.ok || !data.payment) { setFormError(data.error || "Güncellenemedi"); return; }
+        setPayments((prev) => prev.map((p) => (p.id === editing.id ? data.payment! : p)));
+        setShowModal(false);
+        setFormData(EMPTY_FORM);
+        setEditing(null);
+        return;
+      }
+
       if (formData.taksitli) {
         const taksitTutar = amt / formData.taksit_sayisi;
         const newPayments: Payment[] = [];
@@ -359,6 +375,47 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
       setSaving(false);
     }
   };
+
+  // ── Düzenle / Sil ──
+  const [editing, setEditing] = useState<Payment | null>(null);
+  // Silme onayı: tek kayıt veya taksit (bu taksit / tüm plan seçenekli)
+  const [silHedef, setSilHedef] = useState<{ label: string; thisId: string; planIds?: string[] } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  function startEdit(payment: Payment) {
+    const m = payment.metadata ?? {};
+    setEditing(payment);
+    setFormError("");
+    setFormData({
+      ...EMPTY_FORM,
+      kayitTur: m.direction === "gider" ? "gider" : m.client_id ? "muvekkil" : "serbest",
+      amount: String(payment.amount),
+      currency: payment.currency,
+      status: payment.status,
+      description: payment.description ?? "",
+      clientId: m.client_id ?? "",
+      caseId: m.case_id ?? "",
+      muhasebeTuru: m.muhasebe_turu ?? "",
+    });
+    setShowModal(true);
+  }
+
+  async function performDelete(ids: string[]) {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/buro/finans", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ids.length > 1 ? { ids } : { id: ids[0] }),
+      });
+      if (res.ok) {
+        // Optimistic: listeden çıkar (toplamlar/grafik payments'a bağlı, anında güncellenir)
+        setPayments((prev) => prev.filter((p) => !ids.includes(p.id)));
+        setSilHedef(null);
+      }
+    } catch { /* ignore */ }
+    setDeleting(false);
+  }
 
   // Taksit / bekleyen ödemeyi "Ödendi" işaretle
   async function markPaid(id: string) {
@@ -504,7 +561,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
             <Download className="w-4 h-4" /> CSV
           </button>
           <button
-            onClick={() => { setShowModal(true); setFormData(EMPTY_FORM); setFormError(""); }}
+            onClick={() => { setEditing(null); setShowModal(true); setFormData(EMPTY_FORM); setFormError(""); }}
             className="btn-primary flex items-center gap-2 text-sm"
           >
             <Plus className="w-4 h-4" /> Yeni Kayıt
@@ -528,6 +585,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 <th className="font-body text-xs font-semibold text-muted-foreground text-left px-4 py-3">Açıklama</th>
                 <th className="font-body text-xs font-semibold text-muted-foreground text-right px-4 py-3">Tutar</th>
                 <th className="font-body text-xs font-semibold text-muted-foreground text-center px-4 py-3">Durum</th>
+                <th className="font-body text-xs font-semibold text-muted-foreground text-right px-4 py-3">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -539,7 +597,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                   const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
                   const StatusIcon = statusCfg.icon;
                   return (
-                    <tr key={group.key} className="hover:bg-primary/5 transition-colors">
+                    <tr key={group.key} className="hover:bg-primary/5 transition-colors group">
                       <td className="font-body text-sm text-muted-foreground px-4 py-3 whitespace-nowrap">
                         {new Date(payment.created_at).toLocaleDateString("tr-TR")}
                       </td>
@@ -567,6 +625,18 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                             </button>
                           )}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => startEdit(payment)} title="Düzenle"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => setSilHedef({ label: payment.description || "bu kayıt", thisId: payment.id })} title="Sil"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -604,6 +674,15 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                           Taksitli {group.paidCount}/{group.totalCount}
                         </span>
                       </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSilHedef({ label: group.description || "taksit planı", thisId: group.items[0].id, planIds: group.items.map((i) => i.id) }); }}
+                          title="Taksit planını sil"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
                     </tr>
                     {isOpen && group.items.map((payment) => {
                       const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
@@ -637,6 +716,19 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                               )}
                             </span>
                           </td>
+                          <td className="px-4 py-2 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1">
+                              <button onClick={(e) => { e.stopPropagation(); startEdit(payment); }} title="Bu taksiti düzenle"
+                                className="p-1 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setSilHedef({ label: payment.description || "bu taksit", thisId: payment.id, planIds: group.items.map((i) => i.id) }); }}
+                                title="Sil" className="p-1 rounded-lg text-muted-foreground hover:text-red-600 hover:bg-red-50">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </td>
                         </tr>
                       );
                     })}
@@ -653,8 +745,8 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
           <div className="bg-background rounded-2xl shadow-elevated w-full max-w-md max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 border-b border-border">
-              <h2 className="font-heading text-xl font-bold text-primary">Yeni Kayıt</h2>
-              <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground p-1">
+              <h2 className="font-heading text-xl font-bold text-primary">{editing ? "Kaydı Düzenle" : "Yeni Kayıt"}</h2>
+              <button onClick={() => { setShowModal(false); setEditing(null); }} className="text-muted-foreground hover:text-foreground p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -791,7 +883,8 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 )}
               </div>
 
-              {/* Taksit toggle */}
+              {/* Taksit toggle — düzenleme modunda gizli (tek kayıt düzenlenir) */}
+              {!editing && (
               <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-xl">
                 <button
                   type="button"
@@ -809,8 +902,9 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                   )}
                 </div>
               </div>
+              )}
 
-              {formData.taksitli && (
+              {!editing && formData.taksitli && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="font-body text-xs font-medium text-foreground mb-1.5 block">Taksit Sayısı</label>
@@ -872,19 +966,71 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
               </div>
 
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-outline flex-1" disabled={saving}>
+                <button type="button" onClick={() => { setShowModal(false); setEditing(null); }} className="btn-outline flex-1" disabled={saving}>
                   İptal
                 </button>
                 <button type="submit" className="btn-primary flex-1" disabled={saving}>
                   {saving ? (
                     <span className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      {formData.taksitli ? "Taksitler oluşturuluyor..." : "Kaydediliyor..."}
+                      {editing ? "Güncelleniyor..." : formData.taksitli ? "Taksitler oluşturuluyor..." : "Kaydediliyor..."}
                     </span>
-                  ) : formData.taksitli ? `${formData.taksit_sayisi} Taksit Oluştur` : "Kaydet"}
+                  ) : editing ? "Güncelle" : formData.taksitli ? `${formData.taksit_sayisi} Taksit Oluştur` : "Kaydet"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Silme onayı — para kaydı olduğu için zorunlu; taksitte bu taksit / tüm plan seçimi */}
+      {silHedef && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+          <div className="bg-background rounded-2xl shadow-elevated w-full max-w-sm p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-bold text-primary">Kaydı sil</h3>
+                <p className="font-body text-sm text-muted-foreground mt-0.5">
+                  &ldquo;{silHedef.label}&rdquo; — Bu işlem geri alınamaz.
+                </p>
+              </div>
+            </div>
+
+            {silHedef.planIds && silHedef.planIds.length > 1 ? (
+              <div className="space-y-2">
+                <button
+                  onClick={() => performDelete([silHedef.thisId])}
+                  disabled={deleting}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-border hover:border-primary/40 hover:bg-primary/5 transition-colors disabled:opacity-50"
+                >
+                  <p className="font-body text-sm font-semibold text-foreground">Yalnızca bu taksit</p>
+                  <p className="font-body text-xs text-muted-foreground">Plan kalır, sayaç güncellenir.</p>
+                </button>
+                <button
+                  onClick={() => { if (confirm(`Tüm taksit planı (${silHedef.planIds!.length} kayıt) silinecek. Emin misiniz?`)) performDelete(silHedef.planIds!); }}
+                  disabled={deleting}
+                  className="w-full text-left px-4 py-3 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 transition-colors disabled:opacity-50"
+                >
+                  <p className="font-body text-sm font-semibold text-red-700">Tüm taksit planı ({silHedef.planIds.length} kayıt)</p>
+                  <p className="font-body text-xs text-red-600">Serinin tamamı silinir.</p>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => performDelete([silHedef.thisId])}
+                disabled={deleting}
+                className="w-full px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Sil
+              </button>
+            )}
+
+            <button onClick={() => setSilHedef(null)} disabled={deleting} className="w-full mt-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground">
+              Vazgeç
+            </button>
           </div>
         </div>
       )}

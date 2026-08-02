@@ -3,8 +3,9 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
-// Dava belgesini indir (imzalı URL'ye yönlendirir)
-export async function GET(_request: Request, { params }: { params: { docId: string } }) {
+// Dava belgesini indir/oynat. ?mode=inline → oynatma için taze imzalı URL'yi JSON
+// döndürür (download disposition YOK, medya öğesine src verilir); değilse indirir.
+export async function GET(request: Request, { params }: { params: { docId: string } }) {
   const supabase = createClient() as Any;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "Oturum açmanız gerekiyor" }, { status: 401 });
@@ -17,18 +18,24 @@ export async function GET(_request: Request, { params }: { params: { docId: stri
     .single();
 
   if (!doc) return Response.json({ error: "Belge bulunamadı" }, { status: 404 });
+  // RLS/sahiplik: kullanıcı yalnızca kendi dosyasının medyasını açabilir
   if (doc.lawyer_id !== user.id) return Response.json({ error: "Yetkisiz" }, { status: 403 });
   if (!doc.storage_path) return Response.json({ error: "Bu kayıt bir dosya içermiyor" }, { status: 404 });
 
-  const { data: signed, error } = await svc.storage
-    .from("documents")
-    .createSignedUrl(doc.storage_path, 300, { download: doc.name });
+  const inline = new URL(request.url).searchParams.get("mode") === "inline";
+
+  // İndirme: download disposition ile; Oynatma: disposition olmadan (tarayıcı inline açar,
+  // range request'lerle stream eder — dosya sunucuya çekilmez).
+  const { data: signed, error } = inline
+    ? await svc.storage.from("documents").createSignedUrl(doc.storage_path, 300)
+    : await svc.storage.from("documents").createSignedUrl(doc.storage_path, 300, { download: doc.name });
 
   if (error || !signed?.signedUrl) {
     console.error("Signed URL error:", error);
-    return Response.json({ error: "İndirme bağlantısı oluşturulamadı" }, { status: 500 });
+    return Response.json({ error: "Bağlantı oluşturulamadı" }, { status: 500 });
   }
 
+  if (inline) return Response.json({ url: signed.signedUrl });
   return Response.redirect(signed.signedUrl, 302);
 }
 

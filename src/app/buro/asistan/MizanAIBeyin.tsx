@@ -50,6 +50,25 @@ function cleanResponse(text: string): string {
   return text.replace(/```action:\w+\n[\s\S]*?```/g, "").trim();
 }
 
+// Sohbetleri güncelleme tarihine göre Bugün / Bu Hafta / Daha Eski olarak grupla
+function gruplaSessions(list: Session[]): { baslik: string; items: Session[] }[] {
+  const now = new Date();
+  const bugunBasi = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const haftaBasi = bugunBasi - 6 * 86400000; // son 7 gün
+  const gruplar = [
+    { baslik: "Bugün", items: [] as Session[] },
+    { baslik: "Bu Hafta", items: [] as Session[] },
+    { baslik: "Daha Eski", items: [] as Session[] },
+  ];
+  for (const s of list) {
+    const t = new Date(s.updated_at).getTime();
+    if (t >= bugunBasi) gruplar[0].items.push(s);
+    else if (t >= haftaBasi) gruplar[1].items.push(s);
+    else gruplar[2].items.push(s);
+  }
+  return gruplar.filter((g) => g.items.length > 0);
+}
+
 export default function MizanAIBeyin({ lawyerName }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -335,12 +354,12 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
             <>
               <button
                 onClick={newChat}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/8 hover:bg-white/12 text-white/80 text-xs font-semibold transition-colors"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-gradient-to-br from-[#c9a84c] to-[#e7b743] text-[#0f1729] text-xs font-bold shadow-md hover:opacity-90 active:scale-[0.98] transition-all"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4" />
                 Yeni Sohbet
               </button>
-              <div className="mt-2 flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-1.5">
+              <div className="mt-2 flex items-center gap-2 bg-white/5 rounded-xl px-2.5 py-1.5 border border-transparent focus-within:border-[#c9a84c]/60 focus-within:bg-white/8 transition-colors">
                 <Search className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
                 <input
                   value={arama}
@@ -361,11 +380,21 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
               <Loader2 className="w-5 h-5 text-white/20 animate-spin" />
             </div>
           ) : filtrelenmisSessions.length === 0 ? (
-            <p className="text-xs text-white/20 text-center py-8">
-              {arama.trim() ? "Eşleşen sohbet yok" : "Henüz sohbet yok"}
-            </p>
+            <div className="text-center px-3 py-10">
+              <p className="text-xs text-white/30">
+                {arama.trim() ? "Eşleşen sohbet yok" : "Henüz sohbet yok."}
+              </p>
+              {!arama.trim() && (
+                <button onClick={newChat} className="mt-2 text-[11px] text-[#c9a84c] hover:underline">
+                  İlk sorunuzu sorun →
+                </button>
+              )}
+            </div>
           ) : (
-            filtrelenmisSessions.map((s) => {
+            gruplaSessions(filtrelenmisSessions).map((grup, grupIdx) => (
+              <div key={grup.baslik} className={grupIdx > 0 ? "mt-3" : ""}>
+                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-white/25">{grup.baslik}</p>
+                {grup.items.map((s, itemIdx) => {
               const aktif = activeSessionId === s.id;
               const duzenleniyor = renamingId === s.id;
               return (
@@ -376,8 +405,11 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                   aria-current={aktif ? "true" : undefined}
                   onClick={() => !duzenleniyor && selectSession(s.id)}
                   onKeyDown={(e) => { if (!duzenleniyor && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectSession(s.id); } }}
-                  className={`w-full flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-all group mb-0.5 cursor-pointer ${
-                    aktif ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  style={{ animationDelay: `${Math.min(itemIdx, 6) * 40}ms`, animationFillMode: "both" }}
+                  className={`relative w-full flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-colors duration-150 group mb-0.5 cursor-pointer animate-fade-in ${
+                    aktif
+                      ? "bg-white/10 text-white before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-full before:bg-[#c9a84c]"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
                   }`}
                 >
                   <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 opacity-60" />
@@ -434,7 +466,9 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
                   )}
                 </div>
               );
-            })
+                })}
+              </div>
+            ))
           )}
         </div>
 

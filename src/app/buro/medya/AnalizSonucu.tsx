@@ -10,15 +10,24 @@ import {
   ChevronDown,
   ChevronUp,
   Cpu,
+  StickyNote,
 } from "lucide-react";
 
+interface Tespit {
+  zaman: string | null;
+  kategori: "kirmizi" | "sari" | "mavi";
+  etiket: string;
+  alinti: string;
+  guven: "yuksek" | "dusuk";
+}
+
 interface AnalysisResult {
-  ozet?: string;
-  hukukiDegerlendirme?: string;
-  oneriler?: string[];
+  transkript?: string;
+  tespitler?: Tespit[];
+  kaliteNotu?: string | null;
+  detayli?: string;
+  not?: string;
   kaynak?: string;
-  rawText?: string;
-  demo?: boolean;
 }
 
 interface CaseOption {
@@ -32,7 +41,6 @@ interface AnalizSonucuProps {
   fileName: string;
   analysisType: string;
   onClose: () => void;
-  onSaveToCase?: () => void;
   cases?: CaseOption[];
   initialCaseId?: string;
 }
@@ -46,22 +54,84 @@ const ANALYSIS_TYPE_LABELS: Record<string, string> = {
   ses_karsilastirma: "Ses Karşılaştırma",
 };
 
+const KATEGORI_ETIKET: Record<Tespit["kategori"], string> = {
+  kirmizi: "Suç teşkil edebilecek",
+  sari: "Borç / sözleşme",
+  mavi: "Usul / delil",
+};
+
+// Erişilebilir kontrast + renk körü için metin etiketi (renge tek başına güvenme).
+function kategoriStil(kat: Tespit["kategori"], dusuk: boolean): string {
+  const map = {
+    kirmizi: dusuk ? "bg-red-50 text-red-700 border-red-200" : "bg-red-100 text-red-900 border-red-300",
+    sari: dusuk ? "bg-amber-50 text-amber-800 border-amber-200" : "bg-amber-100 text-amber-900 border-amber-300",
+    mavi: dusuk ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-blue-100 text-blue-900 border-blue-300",
+  };
+  return map[kat];
+}
+
+// Transkriptte tespit alıntılarını kategorik renkle vurgula (çakışmayanları işaretle).
+function vurgulaTranskript(transkript: string, tespitler: Tespit[]) {
+  const lower = transkript.toLowerCase();
+  const araliklar = tespitler
+    .map((t) => {
+      const idx = t.alinti ? lower.indexOf(t.alinti.toLowerCase()) : -1;
+      return idx === -1 ? null : { start: idx, end: idx + t.alinti.length, t };
+    })
+    .filter((a): a is { start: number; end: number; t: Tespit } => a !== null)
+    .sort((a, b) => a.start - b.start);
+
+  const temiz: typeof araliklar = [];
+  let sonEnd = -1;
+  for (const a of araliklar) {
+    if (a.start >= sonEnd) { temiz.push(a); sonEnd = a.end; }
+  }
+  if (!temiz.length) return <>{transkript}</>;
+
+  const nodes: React.ReactNode[] = [];
+  let cur = 0;
+  temiz.forEach((a, i) => {
+    if (a.start > cur) nodes.push(<span key={`n${i}`}>{transkript.slice(cur, a.start)}</span>);
+    const dusuk = a.t.guven === "dusuk";
+    nodes.push(
+      <mark key={`m${i}`} className={`rounded px-1 border ${kategoriStil(a.t.kategori, dusuk)}`} title={KATEGORI_ETIKET[a.t.kategori]}>
+        {transkript.slice(a.start, a.end)}
+        <span className="ml-1 text-[10px] font-semibold opacity-75">[{a.t.etiket}{dusuk ? " ?" : ""}]</span>
+      </mark>,
+    );
+    cur = a.end;
+  });
+  if (cur < transkript.length) nodes.push(<span key="son">{transkript.slice(cur)}</span>);
+  return <>{nodes}</>;
+}
+
 export default function AnalizSonucu({
   result,
   fileName,
   analysisType,
   onClose,
-  onSaveToCase,
   cases = [],
   initialCaseId = "",
 }: AnalizSonucuProps) {
-  const [showRaw, setShowRaw] = useState(false);
+  const [detayAcik, setDetayAcik] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveCaseId, setSaveCaseId] = useState(initialCaseId);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // Analizi seçilen mahkeme dosyasına kaydet (case_documents)
+  const tespitler = result.tespitler ?? [];
+
+  // Rapor metnini (kopya/indir/kayıt) yapılı sonuçtan üret
+  const raporMetni = [
+    result.transkript ? `TRANSKRİPT\n${result.transkript}\n` : "",
+    tespitler.length
+      ? `ÖNEMLİ TESPİTLER\n${tespitler.map((t) => `${t.zaman ? t.zaman + " — " : ""}${t.etiket}: "${t.alinti}"${t.guven === "dusuk" ? " (olası)" : ""}`).join("\n")}\n`
+      : "",
+    result.kaliteNotu ? `KALİTE NOTU\n${result.kaliteNotu}\n` : "",
+    result.not ? `AVUKAT NOTU\n${result.not}\n` : "",
+    result.detayli ? `DETAYLI DEĞERLENDİRME\n${result.detayli}` : "",
+  ].filter(Boolean).join("\n");
+
   const handleSaveToCase = async () => {
     if (!saveCaseId) {
       setSaveMsg({ ok: false, text: "Önce bir dava dosyası seçin" });
@@ -77,7 +147,7 @@ export default function AnalizSonucu({
           caseId: saveCaseId,
           fileName,
           analysisType: ANALYSIS_TYPE_LABELS[analysisType] || analysisType,
-          reportText: result.rawText || result.hukukiDegerlendirme || result.ozet || "",
+          reportText: raporMetni,
         }),
       });
       const data = await res.json() as { success?: boolean; document?: { name: string }; error?: string };
@@ -94,8 +164,7 @@ export default function AnalizSonucu({
   };
 
   const handleCopy = async () => {
-    const text = result.rawText || result.hukukiDegerlendirme || "";
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(raporMetni);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -108,23 +177,11 @@ Analiz Türü: ${ANALYSIS_TYPE_LABELS[analysisType] || analysisType}
 Tarih: ${new Date().toLocaleDateString("tr-TR")}
 Kaynak: ${result.kaynak || "AI Analizi"}
 
-ÖZET
-----
-${result.ozet || ""}
-
-HUKUKİ DEĞERLENDİRME
----------------------
-${result.hukukiDegerlendirme || ""}
-
-ÖNERİLER
----------
-${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
+${raporMetni}
 
 ---
-⚠️ Mizanım hukuki bilgi sunar, hukuki tavsiye niteliği taşımaz.
-   Hukuki durumunuz için bir avukata danışmanız önerilir.
+⚠️ Mizanım hukuki bilgi sunar, hukuki tavsiye niteliği taşımaz. Bu bir çıkarımdır, suç isnadı değildir.
 `;
-
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -149,7 +206,6 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
             <p className="font-body text-xs text-muted-foreground">{fileName}</p>
           </div>
         </div>
-
         {result.kaynak && (
           <div className="flex items-center gap-1.5 bg-primary/5 border border-primary/15 rounded-full px-3 py-1">
             <Cpu className="w-3.5 h-3.5 text-primary" />
@@ -158,68 +214,81 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
         )}
       </div>
 
-      {(
-        <>
-          {/* Özet */}
-          {result.ozet && (
-            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
-              <h4 className="font-heading text-sm font-bold text-primary mb-2 flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Özet
-              </h4>
-              <p className="font-body text-sm text-foreground leading-relaxed">{result.ozet}</p>
-            </div>
-          )}
+      {/* Transkript (vurgulu) */}
+      {result.transkript && (
+        <div>
+          <h4 className="font-heading text-sm font-bold text-primary mb-2 flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Transkript
+          </h4>
+          <p className="font-body text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-xl p-4">
+            {vurgulaTranskript(result.transkript, tespitler)}
+          </p>
+        </div>
+      )}
 
-          {/* Hukuki Değerlendirme */}
-          {result.hukukiDegerlendirme && result.hukukiDegerlendirme !== result.ozet && (
-            <div>
-              <h4 className="font-heading text-sm font-bold text-primary mb-2">Hukuki Değerlendirme</h4>
-              <div className="font-body text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-xl p-4">
-                {result.hukukiDegerlendirme.length > 600
-                  ? (
-                    <>
-                      {showRaw
-                        ? result.hukukiDegerlendirme
-                        : result.hukukiDegerlendirme.substring(0, 600) + "..."}
-                      <button
-                        onClick={() => setShowRaw((p) => !p)}
-                        className="flex items-center gap-1 text-accent text-xs mt-2 font-medium"
-                      >
-                        {showRaw ? <><ChevronUp className="w-3 h-3" />Daha az göster</> : <><ChevronDown className="w-3 h-3" />Tamamını göster</>}
-                      </button>
-                    </>
-                  )
-                  : result.hukukiDegerlendirme
-                }
-              </div>
-            </div>
-          )}
+      {/* Önemli Tespitler */}
+      {tespitler.length > 0 && (
+        <div>
+          <h4 className="font-heading text-sm font-bold text-primary mb-2">Önemli Tespitler</h4>
+          <div className="space-y-1.5">
+            {tespitler.map((t, i) => {
+              const dusuk = t.guven === "dusuk";
+              return (
+                <div key={i} className={`flex items-start gap-2 rounded-lg border px-3 py-2 ${kategoriStil(t.kategori, dusuk)}`}>
+                  {t.zaman && <span className="font-mono text-xs font-semibold flex-shrink-0 mt-0.5">{t.zaman}</span>}
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold">{t.etiket}{dusuk ? " (olası)" : ""}</span>
+                    <span className="text-[10px] ml-1.5 opacity-70">· {KATEGORI_ETIKET[t.kategori]}</span>
+                    <p className="text-sm mt-0.5">&ldquo;{t.alinti}&rdquo;</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">Renkler: kırmızı = suç teşkil edebilecek · sarı = borç/sözleşme · mavi = usul/delil. Bu bir çıkarımdır, suç isnadı değildir.</p>
+        </div>
+      )}
 
-          {/* Öneriler */}
-          {result.oneriler && result.oneriler.length > 0 && (
-            <div>
-              <h4 className="font-heading text-sm font-bold text-primary mb-2">Öneriler</h4>
-              <ul className="space-y-2">
-                {result.oneriler.map((o, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <div className="w-5 h-5 rounded-full bg-accent/20 text-accent text-xs flex items-center justify-center flex-shrink-0 font-semibold mt-0.5">
-                      {i + 1}
-                    </div>
-                    <p className="font-body text-sm text-foreground">{o}</p>
-                  </li>
-                ))}
-              </ul>
+      {/* Kalite notu */}
+      {result.kaliteNotu && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="font-body text-xs text-amber-800"><span className="font-semibold">Kalite notu:</span> {result.kaliteNotu}</p>
+        </div>
+      )}
+
+      {/* Avukat notu */}
+      {result.not && (
+        <div className="bg-muted/30 border border-border rounded-lg p-3">
+          <p className="font-body text-xs text-foreground flex items-start gap-2">
+            <StickyNote className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-muted-foreground" />
+            <span><span className="font-semibold">Not:</span> {result.not}</span>
+          </p>
+        </div>
+      )}
+
+      {/* Detaylı değerlendirme — varsayılanda gizli */}
+      {result.detayli && (
+        <div>
+          <button
+            onClick={() => setDetayAcik((p) => !p)}
+            className="flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+          >
+            {detayAcik ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {detayAcik ? "Detaylı değerlendirmeyi gizle" : "Detaylı göster (Avukat / Hâkim / Savcı / Bilirkişi gözüyle)"}
+          </button>
+          {detayAcik && (
+            <div className="font-body text-sm text-foreground leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-xl p-4 mt-2">
+              {result.detayli}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* Yasal uyarı */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
         <p className="font-body text-xs text-amber-700">
-          ⚠️ Bu analiz genel bilgi amaçlıdır, hukuki tavsiye niteliği taşımaz. Delil değerlendirmesi
-          için mutlaka uzman avukata danışınız.
+          ⚠️ Bu analiz medyada geçenlerin maddi tespitidir, hukuki tavsiye veya suç isnadı değildir. Delil
+          değerlendirmesi için uzman avukata danışınız.
         </p>
       </div>
 
@@ -264,33 +333,15 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
 
       {/* Aksiyonlar */}
       <div className="flex flex-wrap gap-3 pt-2 border-t border-border">
-        <button
-          onClick={handleCopy}
-          className="btn-outline text-sm flex items-center gap-2"
-        >
+        <button onClick={handleCopy} className="btn-outline text-sm flex items-center gap-2">
           <Copy className="w-4 h-4" />
           {copied ? "Kopyalandı!" : "Kopyala"}
         </button>
-        <button
-          onClick={handleDownload}
-          className="btn-outline text-sm flex items-center gap-2"
-        >
+        <button onClick={handleDownload} className="btn-outline text-sm flex items-center gap-2">
           <Download className="w-4 h-4" />
           Raporu İndir
         </button>
-        {onSaveToCase && (
-          <button
-            onClick={onSaveToCase}
-            className="btn-accent text-sm flex items-center gap-2"
-          >
-            <FolderOpen className="w-4 h-4" />
-            Davaya Ekle
-          </button>
-        )}
-        <button
-          onClick={onClose}
-          className="btn-outline text-sm ml-auto"
-        >
+        <button onClick={onClose} className="btn-outline text-sm ml-auto">
           Yeni Analiz
         </button>
       </div>

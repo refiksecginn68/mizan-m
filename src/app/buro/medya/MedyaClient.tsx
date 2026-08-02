@@ -11,7 +11,6 @@ import {
   Upload,
   X,
   AlertCircle,
-  Info,
 } from "lucide-react";
 import AnalizSonucu from "./AnalizSonucu";
 
@@ -21,13 +20,21 @@ interface Case {
   case_number?: string;
 }
 
+interface Tespit {
+  zaman: string | null;
+  kategori: "kirmizi" | "sari" | "mavi";
+  etiket: string;
+  alinti: string;
+  guven: "yuksek" | "dusuk";
+}
+
 interface AnalysisResult {
-  ozet?: string;
-  hukukiDegerlendirme?: string;
-  oneriler?: string[];
+  transkript?: string;
+  tespitler?: Tespit[];
+  kaliteNotu?: string | null;
+  detayli?: string;
+  not?: string;
   kaynak?: string;
-  rawText?: string;
-  demo?: boolean;
 }
 
 interface AnalysisResponse {
@@ -86,31 +93,31 @@ const ANALYSIS_CARDS: AnalysisCard[] = [
     id: "ses",
     label: "Ses Analizi",
     icon: Mic,
-    description: "Ses kaydı transkripti ve hukuki önem tespiti (ses/video motoru gerektirir)",
+    description: "Ses kaydı transkripti ve hukuki önem tespiti",
     accept: "audio/*",
     maxSizeMB: 50,
     needsFal: true,
-    hint: "MP3, WAV, M4A (max 50MB) — ses/video motoru gerektirir",
+    hint: "MP3, WAV, M4A (max 50MB)",
   },
   {
     id: "video",
     label: "Video Analizi",
     icon: Video,
-    description: "Video içerik özeti ve kritik an tespiti (ses/video motoru gerektirir)",
+    description: "Video içerik özeti ve kritik an tespiti",
     accept: "video/*",
     maxSizeMB: 100,
     needsFal: true,
-    hint: "MP4, MOV, AVI (max 100MB) — ses/video motoru gerektirir",
+    hint: "MP4, MOV, AVI (max 100MB)",
   },
   {
     id: "ses_karsilastirma",
     label: "Ses Karşılaştırma",
     icon: GitCompare,
-    description: "İki ses kaydını karşılaştırarak konuşmacı analizi (ses/video motoru gerektirir)",
+    description: "İki ses kaydını karşılaştırarak konuşmacı analizi",
     accept: "audio/*",
     maxSizeMB: 50,
     needsFal: true,
-    hint: "MP3, WAV, M4A (max 50MB) — ses/video motoru gerektirir",
+    hint: "MP3, WAV, M4A (max 50MB)",
   },
 ];
 
@@ -126,6 +133,8 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
   const [error, setError] = useState("");
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [not, setNot] = useState("");
+  const [baglam, setBaglam] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -165,6 +174,8 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
       formData.append("file", file);
       formData.append("analysisType", selectedCard);
       if (caseId) formData.append("caseId", caseId);
+      if (not.trim()) formData.append("not", not.trim());
+      if (baglam.trim()) formData.append("baglam", baglam.trim());
 
       const res = await fetch("/api/buro/medya/analyze", {
         method: "POST",
@@ -208,18 +219,6 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* AI motor bilgisi */}
-      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-body text-sm font-semibold text-blue-800">AI Analiz Motoru</p>
-          <p className="font-body text-xs text-blue-700 mt-0.5">
-            Görüntü, PDF ve ekran görüntüleri Claude AI ile analiz edilir.
-            Ses ve video analizi gelişmiş medya işleme motoru gerektirir (yönetici tarafından etkinleştirilir).
-          </p>
-        </div>
-      </div>
-
       {/* Analiz türü kartları */}
       {!selectedCard && (
         <>
@@ -235,24 +234,13 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
                     setFile(null);
                     setError("");
                   }}
-                  className={`card text-left hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 group relative ${
-                    card.needsFal ? "opacity-80" : ""
-                  }`}
+                  className="card text-left hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200 group relative"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors ${
-                    card.needsFal
-                      ? "bg-muted/70 group-hover:bg-muted"
-                      : "bg-primary/10 group-hover:bg-primary/20"
-                  }`}>
-                    <Icon className={`w-6 h-6 ${card.needsFal ? "text-muted-foreground" : "text-primary"}`} />
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-colors bg-primary/10 group-hover:bg-primary/20">
+                    <Icon className="w-6 h-6 text-primary" />
                   </div>
                   <h3 className="font-heading text-base font-bold text-primary mb-1">{card.label}</h3>
                   <p className="font-body text-xs text-muted-foreground leading-relaxed">{card.description}</p>
-                  {card.needsFal && (
-                    <span className="absolute top-3 right-3 font-body text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                      Gelişmiş
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -353,6 +341,35 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
                 </select>
               </div>
             )}
+
+            {/* Opsiyonel bağlam — zorunlu değil, boş bırakılabilir */}
+            {(selectedCard === "ses" || selectedCard === "video" || selectedCard === "ses_karsilastirma" || selectedCard === "ekran") && (
+              <div>
+                <label className="font-body text-sm font-medium text-foreground block mb-1.5">
+                  Bağlam (opsiyonel)
+                </label>
+                <input
+                  value={baglam}
+                  onChange={(e) => setBaglam(e.target.value)}
+                  placeholder="Örn: kayıtta kimler var, kaydı kim yaptı — boş bırakabilirsiniz"
+                  className="input-field"
+                />
+              </div>
+            )}
+
+            {/* Avukatın kendi notu — kayda işlenir */}
+            <div>
+              <label className="font-body text-sm font-medium text-foreground block mb-1.5">
+                Not (opsiyonel)
+              </label>
+              <textarea
+                value={not}
+                onChange={(e) => setNot(e.target.value)}
+                rows={2}
+                placeholder="Bu delil hakkında kendi notunuz…"
+                className="input-field resize-none"
+              />
+            </div>
 
             {error && (
               <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
