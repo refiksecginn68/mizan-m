@@ -20,6 +20,8 @@ export default function MicButton({ onTranscript, onInterim, onStart, className 
   const [destekli, setDestekli] = useState(false);
   const [dinliyor, setDinliyor] = useState(false);
   const [baslatiliyor, setBaslatiliyor] = useState(false);
+  const [cevriliyor, setCevriliyor] = useState(false);
+  const [sure, setSure] = useState(0);
   const [hata, setHata] = useState("");
   const sessionRef = useRef<SpeechSession | null>(null);
 
@@ -27,6 +29,13 @@ export default function MicButton({ onTranscript, onInterim, onStart, className 
     setDestekli(getSpeechProvider() !== undefined);
     return () => sessionRef.current?.stop();
   }, []);
+
+  // Kayıt süre sayacı (yalnızca dinlerken çalışır)
+  useEffect(() => {
+    if (!dinliyor) { setSure(0); return; }
+    const t = setInterval(() => setSure((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [dinliyor]);
 
   // Hata balonu bir süre sonra kendiliğinden kapansın
   useEffect(() => {
@@ -49,8 +58,9 @@ export default function MicButton({ onTranscript, onInterim, onStart, className 
         {
           onFinal: (t) => onTranscript(t.trim() ? t.trim() + " " : ""),
           onPartial: onInterim,
-          onError: (m) => { setHata(m); setDinliyor(false); },
-          onEnd: () => setDinliyor(false),
+          onTranscribing: (active) => { setCevriliyor(active); if (active) setDinliyor(false); },
+          onError: (m) => { setHata(m); setDinliyor(false); setCevriliyor(false); },
+          onEnd: () => { setDinliyor(false); setCevriliyor(false); },
         },
         { lang: "tr-TR" },
       );
@@ -75,23 +85,36 @@ export default function MicButton({ onTranscript, onInterim, onStart, className 
       <button
         type="button"
         onClick={dinliyor ? durdur : basla}
-        disabled={baslatiliyor}
-        title={hata || title || (dinliyor ? "Kaydı durdur" : "Sesle yaz")}
-        aria-label={dinliyor ? "Kaydı durdur" : "Sesle yaz"}
+        disabled={baslatiliyor || cevriliyor}
+        title={hata || title || (cevriliyor ? "Yazıya çevriliyor" : dinliyor ? "Kaydı durdur" : "Sesle yaz")}
+        aria-label={cevriliyor ? "Yazıya çevriliyor" : dinliyor ? "Kaydı durdur" : "Sesle yaz"}
         className={`inline-flex items-center justify-center rounded-lg transition-colors ${
           dinliyor
             ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
-            : hata
-              ? "bg-red-50 text-red-500 hover:bg-red-100"
-              : "bg-gray-100 text-gray-500 hover:bg-[#7c3aed]/10 hover:text-[#7c3aed]"
+            : cevriliyor
+              ? "bg-[#7c3aed]/10 text-[#7c3aed]"
+              : hata
+                ? "bg-red-50 text-red-500 hover:bg-red-100"
+                : "bg-gray-100 text-gray-500 hover:bg-[#7c3aed]/10 hover:text-[#7c3aed]"
         } ${className}`}
       >
-        {baslatiliyor
+        {baslatiliyor || cevriliyor
           ? <Loader2 className="w-4 h-4 animate-spin" />
           : dinliyor
             ? <Square className="w-4 h-4" />
             : <Mic className="w-4 h-4" />}
       </button>
+      {dinliyor && (
+        <span className="absolute top-full right-0 mt-1.5 z-50 flex items-center gap-1 rounded-md bg-red-600 text-white text-[10px] font-medium px-1.5 py-0.5 shadow tabular-nums">
+          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          {String(Math.floor(sure / 60)).padStart(1, "0")}:{String(sure % 60).padStart(2, "0")}
+        </span>
+      )}
+      {cevriliyor && (
+        <span className="absolute top-full right-0 mt-1.5 z-50 rounded-md bg-[#7c3aed] text-white text-[10px] font-medium px-1.5 py-0.5 shadow">
+          Yazıya çevriliyor…
+        </span>
+      )}
       {hata && (
         <span
           role="alert"

@@ -103,27 +103,13 @@ export async function POST(req: NextRequest) {
 
     const hasFalKey = !!process.env.FAL_KEY;
 
-    // Ses/video için FAL_KEY gerekli; yoksa bilgilendirme döndür
+    // Ses/video transkript motoru (fal.ai) yapılandırılmamışsa sahte "başarı"
+    // değil, açık hata dön — kullanıcı yanlış yönlendirilmesin.
     if ((analysisType === "ses" || analysisType === "video" || analysisType === "ses_karsilastirma") && !hasFalKey) {
-      return NextResponse.json({
-        success: true,
-        analysisType,
-        result: {
-          ozet: "Ses ve video analizi gelişmiş medya işleme motoru gerektirir.",
-          hukukiDegerlendirme: "Bu analiz türü için ses/video işleme motoru henüz yapılandırılmamış. Lütfen sistem yöneticinizle iletişime geçin; etkinleştirildiğinde ses transkripti ve hukuki analiz otomatik yapılacaktır.",
-          oneriler: [
-            "Ses/video işleme motoru yönetici tarafından etkinleştirilmelidir",
-            "Etkinleştirildiğinde ses kaydı otomatik olarak transkripte edilir",
-            "Transkript, Claude AI ile hukuki açıdan değerlendirilir",
-          ],
-          kaynak: "Ses Motoru",
-          demo: true,
-          falKeyGerekildi: true,
-        },
-        fileName: file.name,
-        fileSize: file.size,
-        caseId: caseId || null,
-      });
+      return NextResponse.json(
+        { error: "Ses/video analiz motoru şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin." },
+        { status: 503 },
+      );
     }
 
     // Sorgu kotası harcaması (AI çağrısı = 1 kota) — doğrulamalardan sonra,
@@ -143,18 +129,13 @@ export async function POST(req: NextRequest) {
 
       let transkript = "";
 
-      if (analysisType === "ses" || analysisType === "ses_karsilastirma") {
-        // Whisper ile ses transkripti
+      if (analysisType === "ses" || analysisType === "ses_karsilastirma" || analysisType === "video") {
+        // Whisper ile ses transkripti (video'da ses kanalı çözümlenir).
+        // @fal-ai/client sonucu { data, requestId } sarar; metin data.text altında.
         const result = await fal.subscribe("fal-ai/whisper", {
           input: { audio_url: uploadedUrl, language: "tr", task: "transcribe" },
-        }) as { text?: string };
-        transkript = result?.text ?? "";
-      } else if (analysisType === "video") {
-        // Video için ses çıkar ve transkript al
-        const result = await fal.subscribe("fal-ai/whisper", {
-          input: { audio_url: uploadedUrl, language: "tr", task: "transcribe" },
-        }) as { text?: string };
-        transkript = result?.text ?? "";
+        }) as { data?: { text?: string } };
+        transkript = result?.data?.text?.trim() ?? "";
       }
 
       // Transkript + Claude ile hukuki analiz

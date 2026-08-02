@@ -53,8 +53,11 @@ export const TARIFE_2026 = {
     // TCMB kısa vadeli avans faiz oranı (RG 20.12.2025 s.33113 ile %39,75'e indirildi)
     avansFaizi: v(0.3975, "TCMB avans faizi %39,75 (Reeskont/Avans Tebliği, RG 20.12.2025 s.33113)"),
     // Ticari temerrüt (3095 s.K. m.2/2): taraf tacir ise TCMB kısa vadeli avans oranı = %39,75.
-    // Not: TTK m.1530/7 mal/hizmet tedarikinde farklı (reeskont+8 puan) olabilir.
     ticariTemerrutFaizi: v(0.3975, "3095 s.K. m.2/2 — ticari temerrüt = TCMB avans oranı %39,75 (RG 20.12.2025 s.33113)"),
+    // TTK m.1530/7 — mal/hizmet tedarikinde geç ödeme faizi (mütemerride uygulanan).
+    // 2026 birinci yarı için TCMB tarafından ilan edilen oran ve asgari giderim.
+    ttk1530Faizi: v(0.43, "TTK m.1530/7 geç ödeme faizi 2026 %43 (TCMB ilanı, RG 02.01.2026 s.33125)"),
+    ttk1530AsgariGiderim: v(2020, "TTK m.1530/7 asgari alacak tahsil masrafı 2.020,00 TL (RG 02.01.2026 s.33125)"),
   },
 
   // --- İŞÇİLİK ---

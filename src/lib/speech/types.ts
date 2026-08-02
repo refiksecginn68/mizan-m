@@ -7,6 +7,9 @@ export interface SpeechHandlers {
   onPartial?: (text: string) => void;
   // Kesinleşen metin parçası — hedef alana bu eklenir
   onFinal: (text: string) => void;
+  // Kayıt bitti, ses sunucuya gönderildi, transkript bekleniyor (fal.ai async).
+  // UI "yazıya çevriliyor" göstergesini bununla açıp kapatır.
+  onTranscribing?: (active: boolean) => void;
   onError?: (message: string) => void;
   onEnd?: () => void;
 }

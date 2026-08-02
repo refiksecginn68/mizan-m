@@ -28,7 +28,6 @@ interface AnalysisResult {
   kaynak?: string;
   rawText?: string;
   demo?: boolean;
-  falKeyGerekildi?: boolean;
 }
 
 interface AnalysisResponse {

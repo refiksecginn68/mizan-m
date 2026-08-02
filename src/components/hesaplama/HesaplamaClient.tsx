@@ -1,35 +1,49 @@
 "use client";
 
-import { useState } from "react";
-import { Copy, Printer, Calculator, Percent, Scale, Briefcase, HeartHandshake, TrendingUp, FileStack } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Copy, Printer, Calculator, FileStack } from "lucide-react";
 import {
   icraKapakHesapla, faizHesapla, iscilikHesapla, nafakaTahmin, harcVekaletHesapla,
+  tarifeGetir,
   type HesapSonucu, type TakipTuru, type TahsilAsamasi, type FaizTuru,
 } from "@/lib/hesaplama";
 import type { Kur } from "@/lib/kur/tcmb";
 import Donusturucu from "./Donusturucu";
 
-const SEKMELER = [
-  { id: "icra", ad: "İcra Kapak", ikon: Calculator },
-  { id: "faiz", ad: "Faiz", ikon: Percent },
-  { id: "harc", ad: "Harç & Vekalet", ikon: Scale },
-  { id: "iscilik", ad: "İşçilik", ikon: Briefcase },
-  { id: "nafaka", ad: "Nafaka", ikon: HeartHandshake },
-  { id: "kur", ad: "Kur & Piyasa", ikon: TrendingUp },
+// İki katmanlı sekme: üst (birincil) belirgin/dolu; alt (hesaplayıcılar) hafif/altın çizgi.
+const UST_SEKMELER = [
+  { id: "hesaplamalar", ad: "Hesaplamalar", ikon: Calculator },
   { id: "donusturucu", ad: "Dönüştürücü", ikon: FileStack },
 ] as const;
-type SekmeId = (typeof SEKMELER)[number]["id"];
+type UstId = (typeof UST_SEKMELER)[number]["id"];
+
+const HESAP_SEKMELER = [
+  { id: "icra-kapak", ad: "İcra Kapak" },
+  { id: "faiz", ad: "Faiz" },
+  { id: "harc-vekalet", ad: "Harç & Vekalet" },
+  { id: "iscilik", ad: "İşçilik" },
+  { id: "nafaka", ad: "Nafaka" },
+  { id: "kur-piyasa", ad: "Kur & Piyasa" },
+] as const;
+type HesapId = (typeof HESAP_SEKMELER)[number]["id"];
 
 const fmt = (n: number) => n.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function SonucKart({ sonuc, baslik }: { sonuc: HesapSonucu; baslik: string }) {
+function SonucKart({ sonuc, baslik, tahmin }: { sonuc: HesapSonucu; baslik: string; tahmin?: boolean }) {
   function panoyaKopyala() {
     const satirlar = sonuc.kalemler.map((k) => `${k.ad}: ${fmt(k.tutar)} TL  (${k.formul})`);
     const metin = [baslik, ...satirlar, `TOPLAM: ${fmt(sonuc.toplam)} TL`, "", ...sonuc.uyarilar].join("\n");
     navigator.clipboard.writeText(metin);
   }
   return (
-    <div className="mt-6 bg-white rounded-2xl border border-border shadow-card overflow-hidden print:shadow-none">
+    <div className={`mt-6 bg-white rounded-2xl border overflow-hidden print:shadow-none ${tahmin ? "border-amber-300" : "border-border shadow-card"}`}>
+      {tahmin && (
+        <div className="px-5 py-3 bg-amber-100 border-b border-amber-300">
+          <p className="text-xs font-semibold text-amber-900 leading-snug">
+            Bu tutar tahminidir ve bağlayıcı değildir. Türk hukukunda nafaka için bağlayıcı bir hesaplama formülü yoktur; takdir yetkisi mahkemeye aittir.
+          </p>
+        </div>
+      )}
       <div className="flex items-center justify-between px-5 py-3 border-b border-border">
         <h3 className="font-heading text-base font-bold text-primary">{baslik}</h3>
         <div className="flex gap-2 print:hidden">
@@ -52,10 +66,17 @@ function SonucKart({ sonuc, baslik }: { sonuc: HesapSonucu; baslik: string }) {
           </div>
         ))}
       </div>
-      <div className="px-5 py-3 bg-[#0f1729] flex items-center justify-between">
-        <span className="text-sm font-semibold text-white/70">TOPLAM</span>
-        <span className="text-lg font-bold text-[#c9a84c] tabular-nums">{fmt(sonuc.toplam)} TL</span>
-      </div>
+      {tahmin ? (
+        <div className="px-5 py-3 bg-amber-50 flex items-center justify-between border-t border-amber-200">
+          <span className="text-sm font-medium text-amber-800">Tahmini tutar (bağlayıcı değil)</span>
+          <span className="text-base font-semibold text-amber-800 tabular-nums">≈ {fmt(sonuc.toplam)} TL</span>
+        </div>
+      ) : (
+        <div className="px-5 py-3 bg-[#0f1729] flex items-center justify-between">
+          <span className="text-sm font-semibold text-white/70">TOPLAM</span>
+          <span className="text-lg font-bold text-[#c9a84c] tabular-nums">{fmt(sonuc.toplam)} TL</span>
+        </div>
+      )}
       <div className="px-5 py-3 space-y-1">
         {sonuc.uyarilar.map((u, i) => (
           <p key={i} className="text-[11px] text-amber-700 leading-snug">⚠ {u}</p>
@@ -135,17 +156,40 @@ function IcraForm() {
 }
 
 // ---------- FAİZ ----------
+// Faiz türü ön ayarları — oranlar doğrulanmış tarife config'inden gelir (elle uydurma yok).
+const FAIZ_PRESETLERI = (() => {
+  const t = tarifeGetir().faiz;
+  return {
+    yasal: { ad: "Yasal faiz (%9)", oran: t.yasalFaiz.deger * 100 },
+    avans: { ad: "Ticari temerrüt / avans (%39,75)", oran: t.avansFaizi.deger * 100 },
+    ttk1530: { ad: "TTK m.1530 geç ödeme (%43)", oran: t.ttk1530Faizi.deger * 100 },
+    ozel: { ad: "Özel oran", oran: NaN },
+  } as const;
+})();
+type FaizPreset = keyof typeof FAIZ_PRESETLERI;
+
 function FaizForm() {
-  const [f, setF] = useState({ anaPara: 100000, baslangic: "2025-01-01", bitis: "2026-07-29", oran: 9, tur: "basit" as "basit" | "bilesik" });
+  const [f, setF] = useState({ anaPara: 100000, baslangic: "2025-01-01", bitis: "2026-07-29", oran: 9, tur: "basit" as "basit" | "bilesik", preset: "yasal" as FaizPreset });
   const [sonuc, setSonuc] = useState<HesapSonucu | null>(null);
   return (
     <div>
       <div className="grid sm:grid-cols-2 gap-4">
         <Alan label="Ana para (TL)"><input type="number" className={inputCls} value={f.anaPara} onChange={(e) => setF({ ...f, anaPara: +e.target.value })} /></Alan>
-        <Alan label="Yıllık oran (%)"><input type="number" className={inputCls} value={f.oran} onChange={(e) => setF({ ...f, oran: +e.target.value })} /></Alan>
+        <Alan label="Faiz cinsi">
+          <select className={inputCls} value={f.preset} onChange={(e) => {
+            const p = e.target.value as FaizPreset;
+            const o = FAIZ_PRESETLERI[p].oran;
+            setF({ ...f, preset: p, oran: Number.isNaN(o) ? f.oran : o });
+          }}>
+            {(Object.keys(FAIZ_PRESETLERI) as FaizPreset[]).map((k) => (
+              <option key={k} value={k}>{FAIZ_PRESETLERI[k].ad}</option>
+            ))}
+          </select>
+        </Alan>
+        <Alan label="Yıllık oran (%)"><input type="number" disabled={f.preset !== "ozel"} className={inputCls} value={f.oran} onChange={(e) => setF({ ...f, oran: +e.target.value })} /></Alan>
         <Alan label="Başlangıç"><input type="date" className={inputCls} value={f.baslangic} onChange={(e) => setF({ ...f, baslangic: e.target.value })} /></Alan>
         <Alan label="Bitiş"><input type="date" className={inputCls} value={f.bitis} onChange={(e) => setF({ ...f, bitis: e.target.value })} /></Alan>
-        <Alan label="Faiz türü">
+        <Alan label="Hesap türü">
           <select className={inputCls} value={f.tur} onChange={(e) => setF({ ...f, tur: e.target.value as "basit" | "bilesik" })}>
             <option value="basit">Basit</option>
             <option value="bilesik">Bileşik</option>
@@ -219,7 +263,7 @@ function NafakaForm() {
         <Alan label="Çocuk sayısı"><input type="number" min={0} className={inputCls} value={f.cocukSayisi} onChange={(e) => setF({ ...f, cocukSayisi: +e.target.value })} /></Alan>
       </div>
       <button onClick={() => setSonuc(nafakaTahmin(f))} className="mt-5 bg-[#0f1729] text-white font-semibold text-sm px-6 py-2.5 rounded-xl hover:bg-[#0f1729]/90">Tahmin et</button>
-      {sonuc && <SonucKart sonuc={sonuc} baslik="Nafaka Tahmini (rehber)" />}
+      {sonuc && <SonucKart sonuc={sonuc} baslik="Nafaka Tahmini (rehber)" tahmin />}
     </div>
   );
 }
@@ -256,24 +300,79 @@ function KurTablo({ kurlar, tarih, bayat }: { kurlar: Kur[]; tarih: string | nul
 }
 
 export default function HesaplamaClient({ kurlar, kurTarih, kurBayat }: { kurlar: Kur[]; kurTarih: string | null; kurBayat: boolean }) {
-  const [aktif, setAktif] = useState<SekmeId>("icra");
+  const [ust, setUst] = useState<UstId>("hesaplamalar");
+  const [alt, setAlt] = useState<HesapId>("icra-kapak");
+
+  // Başlangıç sekmesini URL'den mount SONRASI oku — server ve client aynı varsayılanı
+  // render eder, hydration uyuşmazlığı olmaz; sonra URL'e göre senkronlanır.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("tab") === "donusturucu") setUst("donusturucu");
+    const a = p.get("alt");
+    if (HESAP_SEKMELER.some((s) => s.id === a)) setAlt(a as HesapId);
+  }, []);
+
+  // Durumu URL'e yaz — yenileme/paylaşım için. Server component'i tetiklememek adına
+  // navigasyon değil history.replaceState kullanılır (kur yeniden çekilmez).
+  function urlYaz(u: UstId, a: HesapId) {
+    const p = new URLSearchParams();
+    p.set("tab", u);
+    if (u === "hesaplamalar") p.set("alt", a);
+    window.history.replaceState(null, "", `?${p.toString()}`);
+  }
+  function ustSec(u: UstId) { setUst(u); urlYaz(u, alt); }
+  function altSec(a: HesapId) { setAlt(a); urlYaz("hesaplamalar", a); }
+
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide bg-white border border-border rounded-xl p-1 mb-6 print:hidden">
-        {SEKMELER.map((s) => (
-          <button key={s.id} onClick={() => setAktif(s.id)}
-            className={`flex items-center gap-1.5 whitespace-nowrap font-body text-sm font-semibold px-3.5 py-2 rounded-lg transition-colors ${aktif === s.id ? "bg-[#0f1729] text-white" : "text-gray-500 hover:text-[#0f1729]"}`}>
+    <div className={`${ust === "donusturucu" ? "max-w-6xl" : "max-w-3xl"} mx-auto px-4 sm:px-6 py-6`}>
+      {/* ÜST SEKME — birincil, belirgin, aktif dolu lacivert */}
+      <div className="flex items-center gap-2 mb-4 print:hidden">
+        {UST_SEKMELER.map((s) => (
+          <button key={s.id} onClick={() => ustSec(s.id)}
+            aria-current={ust === s.id ? "page" : undefined}
+            className={`flex items-center gap-2 font-heading text-[15px] font-bold px-5 py-2.5 rounded-xl transition-colors ${
+              ust === s.id
+                ? "bg-[#0f1729] text-white shadow-card"
+                : "bg-white border border-border text-gray-500 hover:text-[#0f1729] hover:border-gray-300"
+            }`}>
             <s.ikon className="w-4 h-4" /> {s.ad}
           </button>
         ))}
       </div>
-      {aktif === "icra" && <IcraForm />}
-      {aktif === "faiz" && <FaizForm />}
-      {aktif === "harc" && <HarcForm />}
-      {aktif === "iscilik" && <IscilikForm />}
-      {aktif === "nafaka" && <NafakaForm />}
-      {aktif === "kur" && <KurTablo kurlar={kurlar} tarih={kurTarih} bayat={kurBayat} />}
-      {aktif === "donusturucu" && <Donusturucu />}
+
+      {/* ALT SEKME — sadece Hesaplamalar'da; hafif, altın alt-çizgi, tek satır kaydırmalı */}
+      {ust === "hesaplamalar" && (
+        <div className="relative border-b border-gray-200 mb-6 print:hidden">
+          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide -mb-px" aria-label="Hesaplayıcılar">
+            {HESAP_SEKMELER.map((s) => (
+              <button key={s.id} onClick={() => altSec(s.id)}
+                aria-current={alt === s.id ? "page" : undefined}
+                className={`whitespace-nowrap px-3.5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                  alt === s.id
+                    ? "border-[#c9a84c] text-[#0f1729]"
+                    : "border-transparent text-gray-500 hover:text-[#0f1729] hover:border-gray-300"
+                }`}>
+                {s.ad}
+              </button>
+            ))}
+          </nav>
+          {/* Mobilde "kaydırılabilir" ipucu: sağ kenarda solma efekti (dar ekranda görünür) */}
+          <div className="sm:hidden pointer-events-none absolute top-0 right-0 h-full w-10 bg-gradient-to-l from-[#f4f5f7] to-transparent" />
+        </div>
+      )}
+
+      {ust === "hesaplamalar" ? (
+        <>
+          {alt === "icra-kapak" && <IcraForm />}
+          {alt === "faiz" && <FaizForm />}
+          {alt === "harc-vekalet" && <HarcForm />}
+          {alt === "iscilik" && <IscilikForm />}
+          {alt === "nafaka" && <NafakaForm />}
+          {alt === "kur-piyasa" && <KurTablo kurlar={kurlar} tarih={kurTarih} bayat={kurBayat} />}
+        </>
+      ) : (
+        <Donusturucu />
+      )}
     </div>
   );
 }

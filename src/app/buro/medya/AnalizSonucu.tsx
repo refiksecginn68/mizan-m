@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   CheckCircle,
-  AlertCircle,
   FileText,
   Copy,
   Download,
@@ -20,7 +19,6 @@ interface AnalysisResult {
   kaynak?: string;
   rawText?: string;
   demo?: boolean;
-  falKeyGerekildi?: boolean;
 }
 
 interface CaseOption {
@@ -160,17 +158,7 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
         )}
       </div>
 
-      {result.falKeyGerekildi && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-body text-sm font-semibold text-amber-800">Gelişmiş Motor Gerekli</p>
-            <p className="font-body text-xs text-amber-700 mt-0.5">{result.hukukiDegerlendirme}</p>
-          </div>
-        </div>
-      )}
-
-      {!result.falKeyGerekildi && (
+      {(
         <>
           {/* Özet */}
           {result.ozet && (
@@ -236,7 +224,7 @@ ${(result.oneriler || []).map((o, i) => `${i + 1}. ${o}`).join("\n")}
       </div>
 
       {/* Analizi dosyaya ekle */}
-      {!result.falKeyGerekildi && cases.length > 0 && (
+      {cases.length > 0 && (
         <div className="bg-muted/30 rounded-xl p-4 space-y-3">
           <h4 className="font-heading text-sm font-bold text-primary flex items-center gap-2">
             <FolderOpen className="w-4 h-4" />
