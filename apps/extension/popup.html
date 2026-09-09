@@ -28,14 +28,19 @@
     .header p { font-size: 10px; margin: 2px 0 0; color: rgba(255,255,255,.45); }
     .section { padding: 12px 16px; }
     label { font-size: 11px; color: rgba(255,255,255,.55); display: block; margin-bottom: 4px; }
-    input[type="text"], input[type="password"] {
+    input[type="text"], input[type="password"], input[type="date"], select {
       width: 100%; box-sizing: border-box;
       background: rgba(255,255,255,.07);
       border: 1px solid rgba(255,255,255,.14);
       border-radius: 8px; color: #fff;
       padding: 8px 10px; font-size: 11px;
     }
-    input:focus { outline: none; border-color: #c9a84c; }
+    input:focus, select:focus { outline: none; border-color: #c9a84c; }
+    input[type="date"] { color-scheme: dark; }
+    .scope { background: rgba(255,255,255,.04); border-radius: 8px; padding: 8px 10px; margin-top: 8px; }
+    .scope summary { font-size: 11px; color: rgba(255,255,255,.6); cursor: pointer; }
+    .scope .fld { margin-top: 8px; }
+    .scope .row2 { margin-top: 8px; }
     button {
       width: 100%; border: none; border-radius: 10px;
       padding: 10px; font-size: 12px; font-weight: 600;
@@ -85,15 +90,36 @@
   <div class="section">
     <p class="found"><span id="modeLabel">Bu sayfada bulunanlar</span>: <strong id="count">–</strong></p>
     <div class="list" id="list"></div>
+    <details class="scope">
+      <summary>Kapsam (boş = tüm dosyalar)</summary>
+      <div class="fld">
+        <label for="scopeDurum">Dosya durumu</label>
+        <select id="scopeDurum">
+          <option value="hepsi">Tümü (açık + kapalı)</option>
+          <option value="acik">Yalnız açık</option>
+          <option value="kapali">Yalnız kapalı</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label for="scopeTur">Yargı türü (boş = tümü)</label>
+        <input type="text" id="scopeTur" placeholder="ör. Hukuk / Ceza / İcra" />
+      </div>
+      <div class="row2">
+        <div style="flex:1"><label for="scopeBas">Açılış ≥</label><input type="date" id="scopeBas" /></div>
+        <div style="flex:1"><label for="scopeBit">Açılış ≤</label><input type="date" id="scopeBit" /></div>
+      </div>
+    </details>
     <button class="btn-gold" id="deepScan">Tüm Sayfaları Aktar (Derin Tarama)</button>
     <div id="deepPanel" style="display:none; margin-top:8px; background:rgba(255,255,255,.05); border-radius:8px; padding:8px 10px;">
       <p id="deepPhase" style="font-size:11px; margin:0; color:#e7b743;"></p>
+      <p id="deepProgress" style="font-size:10px; margin:4px 0 0; color:rgba(255,255,255,.8);"></p>
       <p id="deepDetail" style="font-size:10px; margin:4px 0 0; color:rgba(255,255,255,.6);"></p>
       <p id="deepErrors" style="font-size:9px; margin:4px 0 0; color:#f87171; max-height:60px; overflow-y:auto;"></p>
       <div class="row2">
         <button class="btn-ghost" id="deepPause">Duraklat</button>
         <button class="btn-ghost" id="deepStop">Durdur</button>
       </div>
+      <button class="btn-ghost" id="deepRetry" style="display:none;">Hatalıları Tekrar Dene</button>
     </div>
     <button class="btn-gold" id="syncAll">Tümünü Mizanım'a Aktar</button>
     <div class="row2">

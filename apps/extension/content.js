@@ -180,14 +180,20 @@
       const iAd = idx(/ad[ıi]|isim|unvan/);
       const iVekil = idx(/vekil|avukat/);
 
+      // Rol + Adı sütun başlıkları varsa bu KESİN taraf tablosudur → satır bazında rol
+      // beyaz listesi uygulanmaz (nadir/yeni roller — Müdafi, Suça Sürüklenen Çocuk,
+      // Katılan Vekili vb. — beyaz listede olmadığı için kaçmasın)
+      const kesinTarafTablosu = iRol >= 0 && iAd >= 0;
       const dataRows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
       dataRows.forEach((row) => {
-        if (row.querySelector("th")) return; // başlık satırı
+        if (row.querySelector("th") || row.classList.contains("dx-header-row")) return; // başlık satırı
         const cells = Array.from(row.querySelectorAll("td, .dx-data-row td")).map((c) => clean(c.textContent));
         if (cells.length < 2) return;
         const rol = iRol >= 0 ? cells[iRol] : cells[0];
         const ad = iAd >= 0 ? cells[iAd] : cells.find((c) => c && !/^(davac[ıi]|daval[ıi]|vekil)$/i.test(c) && c.length > 2);
-        if (!ad || !/(davac[ıi]|daval[ıi]|vekil|[şs][üu]pheli|san[ıi]k|m[üu][şs]teki|alacakl|bor[çc]lu|kat[ıi]lan)/i.test(rol || cells.join(" "))) return;
+        if (!ad) return;
+        // Başlık sütunları belirsizse rol sinyaliyle doğrula (alakasız tablo satırı sızmasın)
+        if (!kesinTarafTablosu && !/(davac[ıi]|daval[ıi]|vekil|[şs][üu]pheli|san[ıi]k|m[üu][şs]teki|ma[ğg]dur|[şs]ikayet[çc]i|su[çc]tan zarar|ihbar eden|alacakl|bor[çc]lu|kat[ıi]lan)/i.test(rol || cells.join(" "))) return;
         const key = (rol || "") + "|" + ad;
         if (seen.has(key)) return;
         seen.add(key);
@@ -213,7 +219,7 @@
       if (!/safahat|i[şs]lem tarih|a[çc][ıi]klama|evrak tarih/i.test(head)) return;
       const rows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
       rows.forEach((row) => {
-        if (row.querySelector("th")) return;
+        if (row.querySelector("th") || row.classList.contains("dx-header-row")) return;
         const cells = Array.from(row.querySelectorAll("td")).map((c) => clean(c.textContent));
         if (cells.length < 2) return;
         const tarih = cells.find((c) => /\d{2}[./]\d{2}[./]\d{4}/.test(c));
@@ -239,7 +245,7 @@
       if (!/(evrak|belge|karar|tensip|m[üu]talaa|zapt)/i.test(head)) return;
       const rows = tbl.querySelectorAll(".dx-data-row, tbody tr, tr");
       rows.forEach((row) => {
-        if (row.querySelector("th")) return;
+        if (row.querySelector("th") || row.classList.contains("dx-header-row")) return;
         const cells = Array.from(row.querySelectorAll("td")).map((c) => clean(c.textContent));
         const ad = cells.filter(Boolean).sort((a, b) => b.length - a.length)[0];
         if (!ad || ad.length < 4 || seen.has(ad)) return;
@@ -447,13 +453,28 @@
       return { hint: selectorHint(tbl), headerCaptions: caps };
     }).filter(Boolean).slice(0, 3);
 
+    // Safahat/Evrak grid'lerinin ham yapısını da ver (parse tutmazsa DOM'dan düzeltiriz)
+    const dumpTablesBy = (re) => deepQueryAll("table, .dx-datagrid, .dx-treelist").map((tbl) => {
+      const head = clean(tbl.textContent).toLowerCase();
+      if (!re.test(head)) return null;
+      const caps = Array.from(tbl.querySelectorAll(".dx-header-row td, thead th, thead td, tr:first-child th"))
+        .map((c) => clean(c.textContent)).filter(Boolean);
+      const firstRow = tbl.querySelector(".dx-data-row, tbody tr");
+      const firstRowCells = firstRow
+        ? Array.from(firstRow.querySelectorAll("td")).map((c) => clean(c.textContent).slice(0, 40))
+        : [];
+      return { hint: selectorHint(tbl), headerCaptions: caps, firstRowCells };
+    }).filter(Boolean).slice(0, 4);
+
     return {
       tabs: tabs.slice(0, 15),
       tarafParseCount: taraflar.length,
       tarafSample: taraflar.slice(0, 4),
       tarafTables: tarafTablo,
       safahatCount: parseSafahat().length,
+      safahatTables: dumpTablesBy(/safahat|i[şs]lem yapan|i[şs]lem t[üu]r|a[çc][ıi]klama/i),
       evrakCount: parseEvraklar().length,
+      evrakTables: dumpTablesBy(/evrak|belge|tensip|m[üu]talaa|karar/i),
     };
   }
 
@@ -603,13 +624,6 @@
     await sleep(200);
   }
 
-  async function listOptions(box) {
-    const items = await openDropdown(box);
-    const texts = items.map((i) => clean(i.textContent)).filter(Boolean);
-    await closeDropdown();
-    return texts;
-  }
-
   async function selectOption(box, text) {
     const items = await openDropdown(box);
     const hit = items.find((i) => clean(i.textContent) === text);
@@ -627,33 +641,6 @@
   function findSorgulaButton() {
     const btns = deepQueryAll("button, .dx-button, a[role='button']").filter(visible);
     return btns.find((b) => /sorgula|listele|\bara\b/i.test(clean(b.textContent))) || null;
-  }
-
-  // Form alanları türe göre yeniden render olur — kutu referansları bayatlar.
-  // Her kullanımda TAZE bulunmalı (canlı testte birimlerin dolaşılmama kök nedeni buydu).
-  const findBirimBox = () => findSelectboxByLabel(/yarg[ıi]\s*birim|birim/i);
-  const findIlBox = () => findSelectboxByLabel(/^\s*[İIıi]l\s*:?\s*$/);       // Cbs formu: birim yerine İl
-  const findMahkemeBox = () => findSelectboxByLabel(/^\s*mahkeme\s*:?\s*$/i); // 3. seviye (İcra/Satış/Ceza'da görüldü)
-
-  function boxUsable(box) {
-    return box && visible(box) && !box.classList.contains("dx-state-disabled") &&
-      !box.classList.contains("dx-state-readonly");
-  }
-
-  // Bağımlı dropdown ASENKRON dolar: taze referansla, seçenekler gelene dek tekrar dene.
-  async function optionsWithRetry(finder, timeoutMs) {
-    const t0 = Date.now();
-    for (;;) {
-      await gate();
-      const box = finder();
-      if (boxUsable(box)) {
-        const opts = (await listOptions(box))
-          .filter((t) => !/g[öo]sterilecek bilgi yok|se[çc]iniz/i.test(t));
-        if (opts.length > 0) return opts;
-      }
-      if (Date.now() - t0 > timeoutMs) return [];
-      await sleep(700);
-    }
   }
 
   // ── Ana grid yardımcıları ──
@@ -942,7 +929,9 @@
       await rateDelay();
       await gate();
 
-      const evrakPanel = await switchTab(/^evrak$/i) || await switchTab(/evrak/i);
+      // Sekme metni DevExtreme'de çift render ediliyor ("EvrakEvrak"); tekrarlı "evrak"
+      // eşleşir ama "Evrak Gönderme" (boşluk içerir) eşleşmez → sıra bağımsız doğru sekme
+      const evrakPanel = await switchTab(/^(?:evrak)+$/i);
       if (evrakPanel) dava.evraklar = await crawlEvrakPanel(evrakPanel);
       await rateDelay();
       await gate();
@@ -970,10 +959,98 @@
     }
   }
 
+  // UYAP "gösterilecek veri yok" durumunu (gerçek 0 kayıt) ekranda gösterir mi?
+  function gridNoData() {
+    return deepQueryAll(".dx-datagrid-nodata").filter(visible).length > 0;
+  }
+
+  // YARIŞ DURUMU FIX: grid'e veri satırları oturana dek MutationObserver ile bekler.
+  // Sabit setTimeout YOK. >0 satır VE quietMs sessizlik olunca hazır kabul eder (yeniden
+  // render sessizliği sıfırlar). UYAP "kayıt yok" bildirirse gerçek-0 olarak ayırır.
+  function waitForGridReady(timeoutMs = 8000, quietMs = 300) {
+    return new Promise((resolve) => {
+      const t0 = Date.now();
+      let quietTimer = null, obs = null, hardTimer = null, settled = false;
+      const rowCount = () => {
+        const g = mainGrid();
+        return g ? g.querySelectorAll(".dx-datagrid-rowsview .dx-data-row").length : 0;
+      };
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        if (quietTimer) clearTimeout(quietTimer);
+        if (hardTimer) clearTimeout(hardTimer);
+        if (obs) obs.disconnect();
+        resolve(result);
+      };
+      const evaluate = () => {
+        const rows = rowCount();
+        if (rows > 0) {
+          if (quietTimer) clearTimeout(quietTimer);
+          quietTimer = setTimeout(() => finish({ ready: true, rows, empty: false }), quietMs);
+          return;
+        }
+        if (gridNoData()) { finish({ ready: true, rows: 0, empty: true }); return; }
+        if (Date.now() - t0 > timeoutMs) finish({ ready: false, rows: 0, empty: false, timeout: true });
+      };
+      obs = new MutationObserver(evaluate);
+      obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+      hardTimer = setTimeout(() => finish({ ready: rowCount() > 0, rows: rowCount(), empty: gridNoData(), timeout: true }), timeoutMs + 200);
+      evaluate(); // zaten hazırsa hemen çöz
+    });
+  }
+
+  // "dd.mm.yyyy" → "yyyy-mm-dd" (ISO tarih; sözlüksel karşılaştırma için). Okunamazsa undefined.
+  function acilisIso(s) {
+    const m = (s || "").match(/(\d{2})[./](\d{2})[./](\d{4})/);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : undefined;
+  }
+
+  // Kapsam filtresi (istemci tarafı): durum + tarih aralığı. Alan okunamazsa DAHİL eder
+  // (graceful — aşırı filtreleyip dosya kaçırmaz). Yargı türü dropdown ile daraltılır, burada değil.
+  function inScope(fields, scope) {
+    if (!scope) return true;
+    if (scope.durum && scope.durum !== "hepsi") {
+      const d = norm(fields.durumu || "");
+      if (d) {
+        const kapali = /kapal|kesinle[şs]|reddedil|d[üu][şs]t[üu]|i[şs]lemden kald/.test(d);
+        if (scope.durum === "acik" && kapali) return false;
+        if (scope.durum === "kapali" && !kapali) return false;
+      }
+    }
+    if (scope.tarihBaslangic || scope.tarihBitis) {
+      const iso = acilisIso(fields.acilisTarihi);
+      if (iso) {
+        if (scope.tarihBaslangic && iso < scope.tarihBaslangic) return false;
+        if (scope.tarihBitis && iso > scope.tarihBitis) return false;
+      }
+    }
+    return true;
+  }
+
+  // Senkron oturum kaydı: başlangıç/bitiş, çekilen/hata sayısı, kapsam (web'den izlenebilir)
+  function beginSession(scope) {
+    deep.session = { start: Date.now(), end: null, durum: "çalışıyor", scope: scope || {}, islenen: 0, aktarilan: 0, hata: 0, kapsamDisi: 0 };
+    try { chrome.storage.local.set({ mzDeepSession: deep.session }); } catch (_) { /* yoksay */ }
+  }
+  function endSession(durum) {
+    if (!deep.session) return;
+    deep.session.end = Date.now();
+    deep.session.durum = durum;
+    deep.session.islenen = deep.progress.islenen;
+    deep.session.aktarilan = deep.progress.aktarilan || 0;
+    deep.session.hata = (deep.progress.hataliDosyalar || []).length;
+    deep.session.kapsamDisi = deep.progress.kapsamDisi || 0;
+    try { chrome.storage.local.set({ mzDeepSession: deep.session }); } catch (_) { /* yoksay */ }
+  }
+
   // Ekrandaki mevcut sorgu sonucunu derinlemesine tara (tüm satırlar × detay modalı)
   async function crawlCurrentResults(etiket, batch) {
-    const grid = await waitFor(mainGrid, 10000);
-    if (!grid) { deepLog(`${etiket}: sonuç grid'i bulunamadı`); return 0; }
+    const ready = await waitForGridReady(10000);
+    if (ready.empty) { deepLog(`${etiket}: 0 kayıt (UYAP "gösterilecek veri yok" bildirdi)`); return 0; }
+    if (!ready.ready) { deepLog(`${etiket}: sonuç grid'i yüklenemedi (zaman aşımı) — sorgu yapıldığından emin olun`); return 0; }
+    const grid = mainGrid();
+    if (!grid) { deepLog(`${etiket}: grid bulunamadı`); return 0; }
     await setPageSizeMax();
 
     let taranan = 0;
@@ -998,6 +1075,8 @@
         const doneKey = `${fields.esasNo}|${norm(fields.mahkemeAdi || "")}`;
         setPhase("tarama", `${etiket} — ${i + 1}/${keys.length}${fields.esasNo ? " · " + fields.esasNo : ""}`);
         if (fields.esasNo && deep.done[doneKey]) { taranan++; continue; }
+        // Kapsam dışı dosya: çekme, DOKUNMA (mevcut kayıt silinmez/arşiv işareti server'da)
+        if (!inScope(fields, deep.scope)) { deep.progress.kapsamDisi = (deep.progress.kapsamDisi || 0) + 1; continue; }
 
         try {
           const dava = await crawlDosyaDetay(mainGrid() || g, row);
@@ -1012,6 +1091,9 @@
         } catch (e) {
           if (String(e).includes("__DEEP_STOP__")) throw e;
           deepLog(`${fields.esasNo || "?"}: detay hatası — ${String(e).slice(0, 120)}`);
+          // HATA DAYANIKLILIĞI: dosya "hatalı" işaretlenir, senkron durmaz; sonra tekrar denenebilir
+          (deep.progress.hataliDosyalar || (deep.progress.hataliDosyalar = []))
+            .push({ esasNo: fields.esasNo || "?", birim: fields.mahkemeAdi || "", sebep: String(e).slice(0, 120) });
           await closeModal(); // modal açık kalmasın
         }
         await rateDelay();
@@ -1025,122 +1107,55 @@
 
   function norm(s) { return clean(s).toLocaleLowerCase("tr"); }
 
-  // Tam zincir: tüm yargı türleri × birimler → sorgula → tüm sayfalar → her dosya detayı
-  async function runDeepScan() {
+  // TEK SORGU zinciri: filtresiz Sorgula → UYAP tüm kayıtları döker → tüm sayfalar × her
+  // dosya detayı. Kombinasyon kaba kuvveti KALDIRILDI (UYAP "Seçiniz" boşken zaten tümünü
+  // listeler). Kapsam (durum/tarih) istemci tarafında, yargı türü seçilirse tek dropdown ile.
+  async function runDeepScan(scope) {
     if (deep.running) return;
     deep.running = true;
     deep.stopRequested = false;
     deep.paused = false;
-    deep.progress = { phase: "başlıyor", detay: "", islenen: 0, toplam: 0, aktarilan: 0, hatalar: [] };
+    deep.scope = scope || {};
+    deep.progress = { phase: "başlıyor", detay: "", islenen: 0, toplam: 0, aktarilan: 0, kapsamDisi: 0, hatalar: [], hataliDosyalar: [], startTs: Date.now() };
     await loadDeepState();
+    beginSession(deep.scope);
     saveDeepState();
     const batch = [];
 
     try {
-      const turuBox = findSelectboxByLabel(/yarg[ıi]\s*t[üu]r/i);
       const sorgula = findSorgulaButton();
-
-      if (!turuBox || !sorgula) {
-        // Form sürülemiyorsa dürüstçe söyle ve ekrandaki sonuçları derin tara
-        deepLog("Yargı Türü seçicisi/Sorgula butonu bulunamadı — yalnız ekrandaki sorgu sonuçları taranıyor");
-        await crawlCurrentResults("Mevcut sonuçlar", batch);
-      } else {
-        const turler = await listOptions(turuBox);
-        if (turler.length === 0) deepLog("Yargı türü listesi boş geldi");
-        deep.progress.turler = turler;
-        deep.progress.kombIslenen = 0;
-        deep.progress.kombToplam = 0;
-        saveDeepState();
-
-        for (const turu of turler) {
-          await gate();
-          setPhase("sorgu", `${turu} seçiliyor`);
-          const tBox = findSelectboxByLabel(/yarg[ıi]\s*t[üu]r/i) || turuBox;
-          if (!(await selectOption(tBox, turu))) { deepLog(`Yargı türü seçilemedi: ${turu}`); continue; }
-
-          // Birim listesi türe göre ASENKRON dolar ve alan yeniden render olabilir —
-          // taze referansla dolana kadar bekle. HARDCODE liste yok: dropdown gerçekten okunur.
-          const birimler = await optionsWithRetry(findBirimBox, 10000);
-
-          // Özel formlar: Cbs'de birim yerine İl dropdown'ı var; Tazminat Komisyonu'nda
-          // Yargı Birimi alanı hiç yok → birimsiz tek sorgu.
-          let kombinasyonlar;
-          if (birimler.length > 0) {
-            kombinasyonlar = birimler.map((b) => ({ birim: b }));
+      if (sorgula) {
+        // Kapsam: yargı türü verildiyse tek (kanıtlı) dropdown ile daralt; verilmezse tümü
+        if (deep.scope.yargiTuru) {
+          const tBox = findSelectboxByLabel(/yarg[ıi]\s*t[üu]r/i);
+          if (tBox) {
+            if (!(await selectOption(tBox, deep.scope.yargiTuru)))
+              deepLog(`Yargı türü seçilemedi: ${deep.scope.yargiTuru} — tüm türlerle devam ediliyor`);
           } else {
-            const iller = await optionsWithRetry(findIlBox, 4000);
-            kombinasyonlar = iller.length > 0 ? iller.map((il) => ({ il })) : [{}];
-            deepLog(`${turu}: birim listesi yok — ${iller.length > 0 ? iller.length + " il dolaşılacak" : "birimsiz tek sorgu"}`);
-          }
-          deep.progress.kombToplam += kombinasyonlar.length;
-          saveDeepState();
-
-          for (const komb of kombinasyonlar) {
-            await gate();
-            const qKey = `${turu}|${komb.birim || ""}|${komb.il || ""}`;
-            if (deep.doneQueries[qKey]) { deep.progress.kombIslenen++; continue; }
-            if (komb.birim) {
-              const bBox = findBirimBox();
-              if (!bBox || !(await selectOption(bBox, komb.birim))) {
-                deepLog(`Birim seçilemedi: ${turu} / ${komb.birim}`);
-                deep.progress.kombIslenen++;
-                continue;
-              }
-            } else if (komb.il) {
-              const ilBox = findIlBox();
-              if (!ilBox || !(await selectOption(ilBox, komb.il))) {
-                deepLog(`İl seçilemedi: ${turu} / ${komb.il}`);
-                deep.progress.kombIslenen++;
-                continue;
-              }
-            }
-            const etiket = `${turu}${komb.birim ? " / " + komb.birim : komb.il ? " / " + komb.il : ""}`;
-            setPhase("sorgu", `${etiket} sorgulanıyor (${deep.progress.kombIslenen + 1}/${deep.progress.kombToplam} kombinasyon)`);
-            (findSorgulaButton() || sorgula).click();
-            await sleep(1200 + Math.floor(Math.random() * 800));
-            const taranan = await crawlCurrentResults(etiket, batch);
-
-            // 3. seviye Mahkeme dropdown'ı: boş bırakılan sorgu (tüm mahkemeler) 0 dosya
-            // döndürdüyse ve mahkeme listesi doluysa yeterli olmamıştır → tek tek dolaş.
-            if (taranan === 0 && komb.birim) {
-              const mahkemeler = await optionsWithRetry(findMahkemeBox, 3000);
-              if (mahkemeler.length > 0) deepLog(`${etiket}: birim sorgusu boş — ${mahkemeler.length} mahkeme tek tek sorgulanacak`);
-              for (const mahkeme of mahkemeler) {
-                await gate();
-                const mKey = `${qKey}|m:${mahkeme}`;
-                if (deep.doneQueries[mKey]) continue;
-                const mBox = findMahkemeBox();
-                if (!mBox || !(await selectOption(mBox, mahkeme))) {
-                  deepLog(`Mahkeme seçilemedi: ${etiket} / ${mahkeme}`);
-                  continue;
-                }
-                setPhase("sorgu", `${etiket} / ${mahkeme} sorgulanıyor`);
-                (findSorgulaButton() || sorgula).click();
-                await sleep(1200 + Math.floor(Math.random() * 800));
-                await crawlCurrentResults(`${etiket}/${mahkeme}`, batch);
-                deep.doneQueries[mKey] = true;
-                saveDeepState();
-                await rateDelay();
-              }
-            }
-
-            deep.doneQueries[qKey] = true;
-            deep.progress.kombIslenen++;
-            saveDeepState();
-            await rateDelay();
+            deepLog("Yargı türü seçicisi bulunamadı — tüm türlerle devam ediliyor");
           }
         }
+        setPhase("sorgu", "Tüm dosyalar sorgulanıyor (tek sorgu)");
+        (findSorgulaButton() || sorgula).click();
+        await sleep(1200 + Math.floor(Math.random() * 800));
+      } else {
+        deepLog("Sorgula butonu bulunamadı — yalnız ekrandaki mevcut sonuçlar taranıyor");
       }
 
+      await crawlCurrentResults(deep.scope.yargiTuru || "Tüm dosyalar", batch);
+
       await flushBatch(batch);
-      setPhase("bitti", `${deep.progress.islenen} dosya derin tarandı, ${deep.progress.aktarilan || 0} aktarıldı`);
+      endSession("bitti");
+      setPhase("bitti", `${deep.progress.islenen} dosya derin tarandı, ${deep.progress.aktarilan || 0} aktarıldı${deep.progress.hataliDosyalar.length ? `, ${deep.progress.hataliDosyalar.length} hatalı` : ""}${deep.progress.kapsamDisi ? `, ${deep.progress.kapsamDisi} kapsam dışı` : ""}`);
     } catch (e) {
       if (String(e).includes("__DEEP_STOP__")) {
         await flushBatch(batch);
+        endSession("durduruldu");
         setPhase("durduruldu", `${deep.progress.islenen} dosya işlendi (kaldığı yerden devam edilebilir)`);
       } else {
         deepLog("Derin tarama beklenmedik hata: " + String(e).slice(0, 200));
         await flushBatch(batch);
+        endSession("hata");
         setPhase("hata", String(e).slice(0, 150));
       }
     } finally {
@@ -1153,17 +1168,35 @@
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg) return;
     if (msg.type === "MIZANIM_SCAN") {
-      try {
-        sendResponse({ ok: true, davalar: collect(), url: location.href });
-      } catch (e) {
-        sendResponse({ ok: false, error: String(e) });
-      }
-      return true;
+      (async () => {
+        try {
+          // YARIŞ FIX: liste sayfasıysa grid oturana dek bekle; detay sayfasında grid yok, doğrudan oku
+          if (mainGrid() || deepQueryAll(".dx-datagrid").length) {
+            const r = await waitForGridReady();
+            if (r.empty) { sendResponse({ ok: true, davalar: [], empty: true, url: location.href }); return; }
+            if (!r.ready) { sendResponse({ ok: true, davalar: [], notReady: true, url: location.href }); return; }
+          }
+          sendResponse({ ok: true, davalar: collect(), url: location.href });
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e) });
+        }
+      })();
+      return true; // async
     }
     if (msg.type === "MIZANIM_SCAN_ALL") {
-      collectAllPages(40).then((davalar) => {
-        sendResponse({ ok: true, davalar, url: location.href });
-      }).catch((e) => sendResponse({ ok: false, error: String(e) }));
+      (async () => {
+        try {
+          if (mainGrid() || deepQueryAll(".dx-datagrid").length) {
+            const r = await waitForGridReady();
+            if (r.empty) { sendResponse({ ok: true, davalar: [], empty: true, url: location.href }); return; }
+            if (!r.ready) { sendResponse({ ok: true, davalar: [], notReady: true, url: location.href }); return; }
+          }
+          const davalar = await collectAllPages(40);
+          sendResponse({ ok: true, davalar, url: location.href });
+        } catch (e) {
+          sendResponse({ ok: false, error: String(e) });
+        }
+      })();
       return true; // async
     }
     if (msg.type === "MIZANIM_DEEP_START") {
@@ -1172,7 +1205,7 @@
       if (!uygun) { sendResponse({ ok: false, notHere: true }); return true; }
       if (deep.running) { sendResponse({ ok: true, alreadyRunning: true }); return true; }
       if (msg.reset) { deep.done = {}; deep.doneQueries = {}; }
-      runDeepScan(); // arka planda sürer; ilerleme chrome.storage.local.mzDeep'te
+      runDeepScan(msg.scope || {}); // arka planda sürer; ilerleme chrome.storage.local.mzDeep'te
       sendResponse({ ok: true, started: true });
       return true;
     }

@@ -34,10 +34,14 @@ async function scanAllFrames(tabId, msgType, listKey, dedupeKey) {
   const merged = [];
   const seen = new Set();
   let yanitVeren = 0; // içerik betiği yüklü olmayan sekmeyi ayırt etmek için
+  let notReady = false; // grid henüz yüklenmedi (yarış) — gerçek 0'dan ayırt için
+  let empty = false;    // UYAP "kayıt yok" bildirdi (gerçek 0 kayıt)
   for (const f of frames) {
     try {
       const res = await chrome.tabs.sendMessage(tabId, { type: msgType }, { frameId: f.frameId });
       if (res) yanitVeren++;
+      if (res && res.notReady) notReady = true;
+      if (res && res.empty) empty = true;
       if (res && res.ok && Array.isArray(res[listKey])) {
         res[listKey].forEach((item) => {
           const key = item[dedupeKey] || JSON.stringify(item);
@@ -48,7 +52,7 @@ async function scanAllFrames(tabId, msgType, listKey, dedupeKey) {
       }
     } catch (_) { /* bu çerçevede içerik betiği yok */ }
   }
-  return { merged, yanitVeren };
+  return { merged, yanitVeren, notReady, empty };
 }
 
 async function activeTab() {
@@ -87,6 +91,13 @@ async function scan() {
       $("transfer").disabled = true;
       return;
     }
+    // YARIŞ FIX: "henüz yüklenmedi" ile "gerçekten 0 kayıt"ı ayır
+    if (mode === "uyap" && sonuc.merged.length === 0 && sonuc.notReady && !sonuc.empty) {
+      setStatus($("transferStatus"), "Dosya tablosu henüz yüklenmedi. Sorgu yaptığınızdan emin olun; liste geldiğinde tekrar tarayın.", "err");
+      $("count").textContent = "0";
+      $("transfer").disabled = true;
+      return;
+    }
     if (mode === "uyap") { davalar = sonuc.merged; renderList(davalar, (d) => `<b>${d.esasNo}</b> ${d.mahkemeAdi || ""}${d.davaTuru ? " · " + d.davaTuru : ""}${d._detay ? " · detay" : ""}`); }
     else { tebligatlar = sonuc.merged; renderList(tebligatlar, (t) => `<b>${t.tebligTarihi || "?"}</b> ${t.gonderen || ""}<br><span style='color:#888'>${(t.konu || "").slice(0, 70)}</span>`); }
     const n = mode === "uyap" ? davalar.length : tebligatlar.length;
@@ -95,7 +106,9 @@ async function scan() {
     $("transferStatus").className = "status";
     if (n === 0) {
       setStatus($("transferStatus"), mode === "uyap"
-        ? "Bu sayfada dosya bulunamadı. Dosya sorgulama listesini açıp tekrar tarayın."
+        ? (sonuc.empty
+            ? "UYAP bu sorgu için 0 kayıt bildirdi (gösterilecek veri yok)."
+            : "Bu sayfada dosya bulunamadı. Dosya sorgulama listesini açıp tekrar tarayın.")
         : "Bu sayfada tebligat bulunamadı. Tebligat listesini açıp tekrar tarayın.", "info");
     }
   } catch (e) {
@@ -162,10 +175,17 @@ async function syncAll() {
       $("syncAll").disabled = false;
       return;
     }
+    if (davalar.length === 0 && sonuc.notReady && !sonuc.empty) {
+      setStatus($("transferStatus"), "Dosya tablosu henüz yüklenmedi. Sorgu yaptığınızdan emin olun; liste geldiğinde tekrar deneyin.", "err");
+      $("syncAll").disabled = false;
+      return;
+    }
     $("count").textContent = String(davalar.length);
     renderList(davalar, (d) => `<b>${d.esasNo}</b> ${d.mahkemeAdi || ""}${d.davaTuru ? " · " + d.davaTuru : ""}`);
     if (davalar.length === 0) {
-      setStatus($("transferStatus"), "Dosya bulunamadı. Dosya sorgulama sonuç listesini açıp tekrar deneyin. Sorun sürerse 'Teşhis Kopyala' ile bize ulaşın.", "info");
+      setStatus($("transferStatus"), sonuc.empty
+        ? "UYAP bu sorgu için 0 kayıt bildirdi (gösterilecek veri yok)."
+        : "Dosya bulunamadı. Dosya sorgulama sonuç listesini açıp tekrar deneyin. Sorun sürerse 'Teşhis Kopyala' ile bize ulaşın.", "info");
       $("syncAll").disabled = false;
       return;
     }
@@ -183,18 +203,55 @@ async function syncAll() {
 
 let deepPaused = false;
 
+function fmtSure(ms) {
+  if (!ms || ms < 0) return "–";
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} sn`;
+  const dk = Math.floor(s / 60), sn = s % 60;
+  return sn ? `${dk} dk ${sn} sn` : `${dk} dk`;
+}
+
 function renderDeepProgress(st) {
   if (!st) return;
   $("deepPanel").style.display = "block";
   const p = st.progress || {};
   const durum = st.running ? (st.paused ? "⏸ Duraklatıldı" : "⏳ Çalışıyor") : "";
-  const komb = p.kombToplam ? `, ${p.kombIslenen || 0}/${p.kombToplam} kombinasyon` : "";
-  $("deepPhase").textContent = `${durum} ${p.phase || ""} — ${p.islenen || 0} dosya işlendi${komb}, ${p.aktarilan || 0} aktarıldı`;
+  $("deepPhase").textContent = `${durum} ${p.phase || ""}`.trim();
+
+  // Canlı sayaç: X/Y + geçen süre + tahmini kalan (ETA)
+  const islenen = p.islenen || 0;
+  const toplam = p.toplam || 0;
+  const gecen = p.startTs ? Date.now() - p.startTs : 0;
+  const eta = (islenen > 0 && toplam > islenen && st.running && !st.paused)
+    ? (gecen / islenen) * (toplam - islenen) : 0;
+  const sayac = toplam ? `${islenen}/${toplam}` : `${islenen}`;
+  const hataliN = (p.hataliDosyalar || []).length;
+  $("deepProgress").textContent =
+    `${sayac} dosya · ${p.aktarilan || 0} aktarıldı` +
+    (hataliN ? ` · ${hataliN} hatalı` : "") +
+    (p.kapsamDisi ? ` · ${p.kapsamDisi} kapsam dışı` : "") +
+    ` · geçen ${fmtSure(gecen)}` + (eta ? ` · ~kalan ${fmtSure(eta)}` : "");
+
   $("deepDetail").textContent = p.detay || "";
   $("deepErrors").textContent = (p.hatalar || []).slice(-4).join(" · ");
   deepPaused = !!st.paused;
   $("deepPause").textContent = deepPaused ? "Devam Et" : "Duraklat";
   $("deepScan").disabled = !!st.running;
+  // Hatalı dosya varsa ve tarama durmuşsa "Tekrar Dene" göster (resume başarısızları toplar)
+  $("deepRetry").style.display = (!st.running && hataliN > 0) ? "block" : "none";
+}
+
+function readScope() {
+  const durum = $("scopeDurum").value;
+  const tur = $("scopeTur").value.trim();
+  const bas = $("scopeBas").value; // yyyy-mm-dd
+  const bit = $("scopeBit").value;
+  const scope = {};
+  if (durum && durum !== "hepsi") scope.durum = durum;
+  if (tur) scope.yargiTuru = tur;
+  if (bas) scope.tarihBaslangic = bas;
+  if (bit) scope.tarihBitis = bit;
+  return scope;
 }
 
 // Derin tarama komutunu uygun çerçeveye ilet (grid/form hangi frame'deyse orada başlar)
@@ -225,7 +282,7 @@ async function startDeepScan() {
     setStatus($("transferStatus"), "Önce bağlantı kodunu girin (aktarım için gerekli).", "err");
     return;
   }
-  const res = await deepSend("MIZANIM_DEEP_START", {});
+  const res = await deepSend("MIZANIM_DEEP_START", { scope: readScope() });
   if (!res) {
     setStatus($("transferStatus"), "Dosya sorgulama ekranı bulunamadı. UYAP'ta 'Dosya Sorgulama' sayfasını açıp tekrar deneyin.", "err");
     return;
@@ -240,6 +297,11 @@ $("deepPause").addEventListener("click", async () => {
 });
 $("deepStop").addEventListener("click", async () => {
   await deepSend("MIZANIM_DEEP_STOP", {});
+});
+// Tekrar Dene: reset OLMADAN yeniden başlat — başarılılar deep.done'da atlanır, yalnız hatalılar çekilir
+$("deepRetry").addEventListener("click", async () => {
+  const res = await deepSend("MIZANIM_DEEP_START", { scope: readScope() });
+  if (res) setStatus($("transferStatus"), "Hatalı dosyalar yeniden deneniyor...", "info");
 });
 
 // İlerlemeyi canlı izle: storage.onChanged + açılışta mevcut durum
