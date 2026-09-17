@@ -17,13 +17,13 @@ interface PaymentMetadata {
   muhasebe_turu?: string;
 }
 
-// Muhasebe türleri — avukatlık ücreti ve müvekkile ödeme sınıflandırması
-const MUHASEBE_TURLERI = [
-  "Anlaşılan Avukatlık Ücreti",
-  "Alınan Avukatlık Ücreti",
-  "Müvekkile Yapılacak Ödeme",
-  "Müvekkile Yapılan Ödeme",
-] as const;
+// Muhasebe türleri — kayıt türüne (müvekkil ödemesi/serbest gelir/gider) göre AYRI listeler.
+// Gider sekmesinde gelir kalemi (veya tersi) görünmesin diye tek kaynaktan kayıt türüne eşlenir.
+const MUHASEBE_TURLERI_SABIT: Record<KayitTur, readonly string[]> = {
+  muvekkil: ["Anlaşılan Avukatlık Ücreti", "Alınan Avukatlık Ücreti"],
+  serbest: ["Danışmanlık Ücreti", "Arabuluculuk Ücreti", "Diğer Serbest Gelir"],
+  gider: ["Büro Gideri", "Harç/Masraf", "Bilirkişi Ücreti", "Müvekkile Yapılan Ödeme"],
+};
 
 interface Payment {
   id: string;
@@ -45,6 +45,7 @@ interface FinansClientProps {
   clients: ClientOption[];
   cases: CaseOption[];
   preselect?: { clientId?: string; clientName?: string; caseId?: string; caseTitle?: string };
+  ozelMuhasebeTurleri?: Record<string, string[]>;
 }
 
 // Üç kayıt modu: müvekkil ödemesi (gelir), serbest gelir, gider
@@ -100,7 +101,17 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   pending: { label: "Bekliyor", color: "bg-yellow-100 text-yellow-800", icon: Clock },
   failed: { label: "İptal", color: "bg-red-100 text-red-700", icon: XCircle },
   refunded: { label: "İade", color: "bg-gray-100 text-gray-600", icon: RotateCcw },
+  gecikti: { label: "Gecikti", color: "bg-red-100 text-red-700", icon: AlertTriangle },
 };
+
+// Vadesi geçmiş ve ödenmemiş taksit/ödeme otomatik "gecikti" gösterilir — elle işaretlenmez
+function durumGoster(payment: Payment) {
+  const due = payment.metadata?.due_date;
+  if (payment.status === "pending" && due && new Date(due) < new Date()) {
+    return STATUS_CONFIG.gecikti;
+  }
+  return STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+}
 
 function formatCurrency(amount: number, currency = "TRY") {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency }).format(amount);
@@ -203,7 +214,8 @@ function MetaChip({ meta }: { meta: PaymentMetadata | null }) {
   );
 }
 
-export default function FinansClient({ initialPayments, clients, cases, preselect }: FinansClientProps) {
+export default function FinansClient({ initialPayments, clients, cases, preselect, ozelMuhasebeTurleri }: FinansClientProps) {
+  const [ozelTurler, setOzelTurler] = useState<Record<string, string[]>>(ozelMuhasebeTurleri ?? {});
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
@@ -299,6 +311,20 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
       return;
     }
 
+    // Serbest yazılan yeni Muhasebe Türü kalemi bu kullanıcıya kalıcı kaydedilir (sekmeye bağlı)
+    const yeniMuhasebeTuru = formData.muhasebeTuru.trim();
+    if (yeniMuhasebeTuru) {
+      const bilinen = [...MUHASEBE_TURLERI_SABIT[formData.kayitTur], ...(ozelTurler[formData.kayitTur] ?? [])];
+      if (!bilinen.includes(yeniMuhasebeTuru)) {
+        setOzelTurler((p) => ({ ...p, [formData.kayitTur]: [...(p[formData.kayitTur] ?? []), yeniMuhasebeTuru] }));
+        fetch("/api/buro/finans/muhasebe-turu", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kayitTur: formData.kayitTur, ad: yeniMuhasebeTuru }),
+        }).catch(() => { /* kalem yerel state'te zaten var, sessiz geç */ });
+      }
+    }
+
     const client = clients.find((c) => c.id === formData.clientId);
     const kase = cases.find((c) => c.id === formData.caseId);
     const common = {
@@ -334,19 +360,25 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
       }
 
       if (formData.taksitli) {
-        const taksitTutar = amt / formData.taksit_sayisi;
+        // Kuruş bazında böl (float bölme yuvarlarken toplamı kaybeder — bkz. 10.000/3);
+        // kalan kuruş son taksite eklenir ki taksitlerin toplamı GİRİLEN tutara tam eşit olsun.
+        const toplamKurus = Math.round(amt * 100);
+        const tabanKurus = Math.floor(toplamKurus / formData.taksit_sayisi);
+        const kalanKurus = toplamKurus - tabanKurus * formData.taksit_sayisi;
         const newPayments: Payment[] = [];
         for (let i = 0; i < formData.taksit_sayisi; i++) {
           const dueDate = new Date();
           if (formData.taksit_aralik === "haftalik") dueDate.setDate(dueDate.getDate() + 7 * i);
           else dueDate.setMonth(dueDate.getMonth() + i);
+          const isSonTaksit = i === formData.taksit_sayisi - 1;
+          const taksitKurus = tabanKurus + (isSonTaksit ? kalanKurus : 0);
 
           const res = await fetch("/api/buro/finans", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               ...common,
-              amount: Math.round(taksitTutar * 100) / 100,
+              amount: taksitKurus / 100,
               status: i === 0 ? formData.status : "pending",
               description: `${baseDesc || "Taksit"} (${i + 1}/${formData.taksit_sayisi})`,
               due_date: dueDate.toISOString(),
@@ -594,7 +626,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 // Tek kayıt — normal satır
                 if (!group.isTaksit) {
                   const payment = group.items[0];
-                  const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+                  const statusCfg = durumGoster(payment);
                   const StatusIcon = statusCfg.icon;
                   return (
                     <tr key={group.key} className="hover:bg-primary/5 transition-colors group">
@@ -685,7 +717,7 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                       </td>
                     </tr>
                     {isOpen && group.items.map((payment) => {
-                      const statusCfg = STATUS_CONFIG[payment.status] || STATUS_CONFIG.pending;
+                      const statusCfg = durumGoster(payment);
                       const StatusIcon = statusCfg.icon;
                       const due = payment.metadata?.due_date;
                       return (
@@ -768,7 +800,13 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                   <button
                     key={v}
                     type="button"
-                    onClick={() => setFormData((p) => ({ ...p, kayitTur: v }))}
+                    onClick={() => setFormData((p) => {
+                      // Sekme değişince seçili kalem yeni sekmede geçersizse sıfırlanır —
+                      // yanlış sınıflandırma (örn. gelir kalemi gider olarak) kaydedilmesin.
+                      const gecerli = [...MUHASEBE_TURLERI_SABIT[v], ...(ozelTurler[v] ?? [])];
+                      const muhasebeTuru = gecerli.includes(p.muhasebeTuru) ? p.muhasebeTuru : "";
+                      return { ...p, kayitTur: v, muhasebeTuru };
+                    })}
                     className={`flex flex-col items-center gap-1.5 rounded-xl border p-3 text-xs font-semibold transition-all ${
                       formData.kayitTur === v
                         ? v === "gider" ? "border-red-300 bg-red-50 text-red-700" : "border-primary bg-primary/5 text-primary"
@@ -815,21 +853,25 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 </>
               )}
 
-              {/* Muhasebe türü (avukatlık ücreti / müvekkile ödeme sınıfı) */}
+              {/* Muhasebe türü (avukatlık ücreti / müvekkile ödeme sınıfı) — sekmeye göre
+                  filtrelenir + serbest yazıma izin verir (yaz-ara-seç, listede yoksa yeni kalem) */}
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1.5 block">
                   Muhasebe Türü <span className="text-muted-foreground">(opsiyonel)</span>
                 </label>
-                <select
+                <input
+                  type="text"
+                  list="muhasebe-turu-secenekleri"
                   className="input-field w-full"
+                  placeholder="Seçin veya yeni kalem yazın..."
                   value={formData.muhasebeTuru}
                   onChange={(e) => setFormData((p) => ({ ...p, muhasebeTuru: e.target.value }))}
-                >
-                  <option value="">Sınıflandırma yok</option>
-                  {MUHASEBE_TURLERI.map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                />
+                <datalist id="muhasebe-turu-secenekleri">
+                  {[...MUHASEBE_TURLERI_SABIT[formData.kayitTur], ...(ozelTurler[formData.kayitTur] ?? [])].map((t) => (
+                    <option key={t} value={t} />
                   ))}
-                </select>
+                </datalist>
               </div>
 
               {/* Tutar — sabit veya yüzde bazlı hesap */}
@@ -932,18 +974,30 @@ export default function FinansClient({ initialPayments, clients, cases, preselec
                 </div>
               )}
 
-              <div>
-                <label className="font-body text-sm font-medium text-foreground mb-1.5 block">Durum</label>
-                <select
-                  className="input-field w-full"
-                  value={formData.status}
-                  onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
-                >
-                  <option value="success">Ödendi</option>
-                  <option value="pending">Bekliyor</option>
-                  <option value="failed">İptal</option>
-                </select>
-              </div>
+              {/* Taksitli iken tek "Durum" seçimi YANILTICI — sadece ilk taksite uygulanır,
+                  kalanı otomatik "bekliyor" olur (bkz. gönderim mantığı). Bu yüzden taksitli
+                  iken alan gizlenir, salt-okunur otomatik özet gösterilir. */}
+              {!editing && formData.taksitli ? (
+                <div className="p-3 bg-primary/5 rounded-xl">
+                  <p className="font-body text-xs text-muted-foreground">
+                    Durum her taksit için AYRI takip edilir. İlk taksit &quot;{STATUS_CONFIG[formData.status]?.label}&quot;,
+                    kalan {formData.taksit_sayisi - 1} taksit &quot;Bekliyor&quot; olarak oluşturulur — sonradan tek tek işaretlenebilir.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="font-body text-sm font-medium text-foreground mb-1.5 block">Durum</label>
+                  <select
+                    className="input-field w-full"
+                    value={formData.status}
+                    onChange={(e) => setFormData((p) => ({ ...p, status: e.target.value }))}
+                  >
+                    <option value="success">Ödendi</option>
+                    <option value="pending">Bekliyor</option>
+                    <option value="failed">İptal</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="font-body text-sm font-medium text-foreground mb-1.5 block">

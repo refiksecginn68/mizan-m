@@ -18,6 +18,13 @@
   "content_scripts": [
     {
       "matches": ["https://*.uyap.gov.tr/*"],
+      "js": ["uyap-fetch-hook.js"],
+      "world": "MAIN",
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://*.uyap.gov.tr/*"],
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true
@@ -27,6 +34,12 @@
       "js": ["uets-content.js"],
       "run_at": "document_idle",
       "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"],
+      "matches": ["https://*.uyap.gov.tr/*"]
     }
   ],
   "action": {

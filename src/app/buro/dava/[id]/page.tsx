@@ -100,6 +100,21 @@ export default async function DavaDetayPage({
     finansSatirlari.push(`Toplam tahsil edilen: ${fmtTL(tahsil)} | Bekleyen tahsilat: ${fmtTL(bekleyen)}`);
   }
 
+  // UYAP'tan çekilen önemli evrak metinleri (iddianame, karar, mütalaa vb.) — AI'a
+  // toplam ~18K karakter üst sınırıyla verilir, aşarsa kırpılır (token maliyeti).
+  const evrakMetinleri = (caseData.uyap_evrak_metinleri as Record<string, string> | null) ?? null;
+  let belgeIcerikleri = "";
+  if (evrakMetinleri) {
+    const LIMIT = 18000;
+    for (const [anahtar, metin] of Object.entries(evrakMetinleri)) {
+      if (!metin) continue;
+      const ad = anahtar.split("|")[0] || "Evrak";
+      const parca = `--- ${ad} ---\n${metin}\n`;
+      if (belgeIcerikleri.length + parca.length > LIMIT) break;
+      belgeIcerikleri += parca;
+    }
+  }
+
   // Yan bar asistan için dava bağlamı
   const caseContext = [
     `Dava: ${caseData.title}`,
@@ -113,6 +128,7 @@ export default async function DavaDetayPage({
     caseData.notes ? `Notlar: ${caseData.notes}` : "",
     fileDocs.length > 0 ? `Belgeler: ${fileDocs.map((d) => d.name).join(", ")}` : "",
     kararRefs.length > 0 ? `Bağdaştırılan kararlar: ${kararRefs.map((d) => d.name).join("; ")}` : "",
+    belgeIcerikleri ? `Belge İçerikleri (UYAP'tan çekilen önemli evrak metinleri):\n${belgeIcerikleri}` : "",
     finansSatirlari.length > 0
       ? `Ödeme/Taksit Durumu (müvekkilin finans kayıtları):\n${finansSatirlari.join("\n")}`
       : "Ödeme/Taksit Durumu: bu dosya için kayıtlı ödeme yok.",
@@ -159,6 +175,7 @@ export default async function DavaDetayPage({
                 }}
                 taraflar={(caseData.uyap_taraflar as AnyClient[]) ?? []}
                 evraklar={(caseData.uyap_evraklar as AnyClient[]) ?? []}
+                evrakMetinleri={(caseData.uyap_evrak_metinleri as Record<string, string>) ?? undefined}
                 safahat={(caseData.uyap_safahat as AnyClient[]) ?? []}
               />
             )}

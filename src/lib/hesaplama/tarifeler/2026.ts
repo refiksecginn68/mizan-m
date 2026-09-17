@@ -28,7 +28,7 @@ export const TARIFE_2026 = {
     // İcraya başvurma harcı (maktu)
     basvurmaHarci: v(732, "492 s.K. (1) sayılı tarife B/I-1 icraya başvurma harcı 732,00 TL (Harçlar K. Gn. Tebliği 98, RG 31.12.2025 mük. 33124)"),
     // Peşin harç: SADECE ilamsız/kambiyoda, ana para üzerinden ‰5
-    pesinHarcOrani: v(0.005, "492 s.K. — ilamsız takipte peşin harç binde 5 (prompt spec + genel uygulama)"),
+    pesinHarcOrani: suphe(0.005, "492 s.K. — ilamsız takipte peşin harç binde 5 (genel uygulama; resmi tarife maddesiyle BİREBİR teyit edilmedi)"),
     // MTS: peşin harç yerine ana para üzerinden %2
     mtsHarcOrani: v(0.02, "492 s.K. (1) sayılı tarife B/I-5 — 7155 s.K. (MTS) takibe konu alacak üzerinden %2"),
     // Tahsil harcı — aşamaya göre

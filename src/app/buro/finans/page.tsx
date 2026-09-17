@@ -27,6 +27,18 @@ export default async function FinansPage({
 
   const serviceSupabase = createServiceClient() as AnyClient;
 
+  // Ayrı, hataya toleranslı sorgu: migration 030 uygulanmadan bu sütun yoksa sayfanın
+  // TAMAMI çökmesin — özel muhasebe türü listesi sadece boş gelir.
+  let ozelMuhasebeTurleri: Record<string, string[]> = {};
+  try {
+    const { data: ozelData } = await serviceSupabase
+      .from("profiles")
+      .select("ozel_muhasebe_turleri")
+      .eq("id", user.id)
+      .single();
+    if (ozelData?.ozel_muhasebe_turleri) ozelMuhasebeTurleri = ozelData.ozel_muhasebe_turleri;
+  } catch { /* migration henüz uygulanmadıysa sessizce boş liste kullanılır */ }
+
   const [{ data: payments }, { data: clients }, { data: cases }] = await Promise.all([
     serviceSupabase
       .from("payments")
@@ -65,6 +77,7 @@ export default async function FinansPage({
           initialPayments={payments ?? []}
           clients={clients ?? []}
           cases={cases ?? []}
+          ozelMuhasebeTurleri={ozelMuhasebeTurleri}
           preselect={{
             clientId: searchParams?.client,
             clientName: searchParams?.clientName,

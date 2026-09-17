@@ -15,7 +15,7 @@ interface UyapDava {
   durumu?: string;
   acilisTarihi?: string;
   taraflar?: Taraf[];
-  evraklar?: Array<{ ad?: string; tarih?: string; klasor?: string; itemId?: string }>;
+  evraklar?: Array<{ ad?: string; tarih?: string; klasor?: string; itemId?: string; onemli?: boolean; metin?: string; taranmis?: boolean }>;
   safahat?: Array<{ tarih?: string; islem?: string; aciklama?: string }>;
 }
 
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       // grupta >1 satır olunca hata döner ve her taramada yeni kayıt eklenirdi (mükerrer kaçağı).
       const { data: adaylar } = await svc
         .from("cases")
-        .select("id, client_id, court")
+        .select("id, client_id, court, uyap_evrak_metinleri")
         .eq("lawyer_id", verified.userId)
         .eq("case_number", dava.esasNo);
       const birimKey = norm(dava.mahkemeAdi);
@@ -178,6 +178,20 @@ export async function POST(request: Request) {
       const karsiTaraf = karsiTarafBul(dava, profile.full_name ?? "");
       const acilisIso = parseUyapTarih(dava.acilisTarihi);
 
+      // Evrak ağacı HAFİF kalır (metin yok); metinler ayrı kolonda anahtar→metin haritası
+      // olarak tutulur (dava sayfası ağacı şişmesin). Var olan metinler ÜZERİNE YAZILMAZ,
+      // sadece bu turda çekilenlerle birleştirilir (eski turlarda çekilenler kaybolmasın).
+      const evrakAnahtar = (e: { ad?: string; tarih?: string; klasor?: string }) =>
+        `${e.ad ?? ""}|${e.tarih ?? ""}|${e.klasor ?? ""}`;
+      const mevcutMetinler = (existing?.uyap_evrak_metinleri as Record<string, string> | null) ?? {};
+      const yeniMetinler: Record<string, string> = {};
+      for (const e of dava.evraklar ?? []) {
+        if (e.metin) yeniMetinler[evrakAnahtar(e)] = e.metin;
+      }
+      const birlesikMetinler = { ...mevcutMetinler, ...yeniMetinler };
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const evraklarHafif = dava.evraklar?.slice(0, 500).map(({ metin: _metin, ...rest }) => rest);
+
       const uyapAlanlar = {
         court: dava.mahkemeAdi ?? undefined,
         case_type: dava.davaTuru ?? undefined,
@@ -186,7 +200,8 @@ export async function POST(request: Request) {
         uyap_status: dava.durumu ?? undefined,
         is_uyap_synced: true,
         uyap_taraflar: uyapTaraflar.length ? uyapTaraflar : undefined,
-        uyap_evraklar: dava.evraklar?.length ? dava.evraklar.slice(0, 500) : undefined,
+        uyap_evraklar: evraklarHafif?.length ? evraklarHafif : undefined,
+        uyap_evrak_metinleri: Object.keys(birlesikMetinler).length ? birlesikMetinler : undefined,
         uyap_safahat: dava.safahat?.length ? dava.safahat.slice(0, 120) : undefined,
         uyap_acilis_tarihi: dava.acilisTarihi ?? undefined,
         opened_at: acilisIso ? acilisIso.slice(0, 10) : undefined,

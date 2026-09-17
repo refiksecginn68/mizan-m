@@ -828,6 +828,8 @@
   }
 
   // Yaprakları hiyerarşi yoluyla topla (aria-level + data-item-id + üst klasör adları)
+  // _node (DOM referansı) sadece bu sayfa açıkken geçerlidir — içerik çekiminde kullanılıp
+  // gönderim öncesi ayıklanır (bkz. crawlEvrakPanel dönüşü).
   function collectTreeLeaves(tree) {
     const out = [];
     tree.querySelectorAll("li.dx-treeview-node").forEach((node) => {
@@ -856,9 +858,85 @@
         tarih,
         klasor: path.join(" / ") || undefined,
         itemId: node.getAttribute("data-item-id") || undefined,
+        _node: node,
       });
     });
     return out;
+  }
+
+  // ── Evrak İÇERİK çekimi (Strateji B: MAIN-world fetch-hook + pdf.js, bkz. uyap-fetch-hook.js) ──
+  // Sadece önemli türler tam metin alır; taranmış (metin katmanı yok) belgeler OCR YAPILMADAN
+  // atlanır. PDF sunucuya gitmez — metin eklentide (istemci) çıkarılır.
+  const ONEMLI_EVRAK_RE = /iddianame|tensip|gerek[çc]eli karar|\bkarar\b|m[üu]talaa|bilirki[şs]i rapor|esas hakk[ıi]nda|g[öo]zalt[ıi]|tutuklama|\bihtar\b|dava dilek[çc]esi|cevap dilek[çc]esi/i;
+  const MAX_ICERIK_CEKIMI = 30;
+
+  let _pdfjsPromise = null;
+  function loadPdfjs() {
+    if (!_pdfjsPromise) {
+      _pdfjsPromise = import(chrome.runtime.getURL("vendor/pdf.min.mjs")).then((pdfjs) => {
+        pdfjs.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL("vendor/pdf.worker.min.mjs");
+        return pdfjs;
+      });
+    }
+    return _pdfjsPromise;
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+
+  // PDF metin katmanını çıkarır; katman yoksa (taranmış belge) boş döner — OCR YAPMAZ
+  async function extractPdfText(base64) {
+    const pdfjs = await loadPdfjs();
+    const doc = await pdfjs.getDocument({ data: base64ToBytes(base64) }).promise;
+    let text = "";
+    for (let p = 1; p <= doc.numPages; p++) {
+      const page = await doc.getPage(p);
+      const content = await page.getTextContent();
+      text += content.items.map((it) => it.str).join(" ") + "\n";
+      if (text.length > 40000) break; // tek belge için üst sınır
+    }
+    return clean(text);
+  }
+
+  // MAIN-world fetch-hook'un yakaladığı PDF'i bekler (bkz. uyap-fetch-hook.js → CustomEvent)
+  function waitEvrakPdf(timeoutMs = 12000) {
+    return new Promise((resolve) => {
+      let done = false;
+      const onEvt = (e) => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("mizanim:evrak-pdf", onEvt);
+        resolve((e.detail && e.detail.base64) || null);
+      };
+      window.addEventListener("mizanim:evrak-pdf", onEvt);
+      setTimeout(() => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("mizanim:evrak-pdf", onEvt);
+        resolve(null);
+      }, timeoutMs);
+    });
+  }
+
+  // Bir evrak yaprağına tıklar, PDF'i yakalar ve metnini çıkarır. Hata/zaman aşımında
+  // evrakı ATLAR (metin yok) — akışı durdurmaz, sadece log basar.
+  async function cekEvrakIcerigi(evrak) {
+    try {
+      const clickTarget = evrak._node.querySelector(".dx-treeview-item, .dx-treeview-item-content") || evrak._node;
+      const pdfWait = waitEvrakPdf();
+      clickTarget.click();
+      const base64 = await pdfWait;
+      if (!base64) { deepLog(`${evrak.ad}: PDF yakalanamadı (zaman aşımı)`); return; }
+      const metin = await extractPdfText(base64);
+      if (metin && metin.length > 20) evrak.metin = metin.slice(0, 40000);
+      else evrak.taranmis = true; // metin katmanı yok → taranmış kabul, OCR yok
+    } catch (e) {
+      deepLog(`${evrak.ad}: içerik çekilemedi — ${String(e)}`);
+    }
   }
 
   // Ağaç sayfalaması: .evrak-tree-pagination → tüm sayfaları dolaş, yoksa evrak atlanır
@@ -874,14 +952,28 @@
         const key = `${e.ad}|${e.tarih || ""}|${e.klasor || ""}`;
         if (seen.has(key)) return;
         seen.add(key);
+        e.onemli = ONEMLI_EVRAK_RE.test(e.ad);
         all.push(e);
       });
+    };
+    // Önemli evrakların içeriğini SAYFA HÂLÂ DOM'DAYKEN çek — sayfalama _node'u geçersizleştirir
+    let cekilen = 0;
+    const cekOnemliOlanlari = async () => {
+      for (const e of all) {
+        if (cekilen >= MAX_ICERIK_CEKIMI) break;
+        if (!e.onemli || e.metin || e.taranmis || !e._node) continue;
+        await gate();
+        await cekEvrakIcerigi(e);
+        cekilen++;
+        await sleep(300 + Math.floor(Math.random() * 300));
+      }
     };
 
     for (let page = 0; page < 30; page++) {
       await gate();
       await expandTreeAll(tree);
       absorb();
+      await cekOnemliOlanlari();
       const pag = panel.querySelector(".evrak-tree-pagination");
       if (!pag) break;
       const next = pag.querySelector(".dx-next-button");
@@ -894,9 +986,11 @@
       await waitTreeLoaded(tree);
       await expandTreeAll(tree);
       absorb();
+      await cekOnemliOlanlari();
       if (all.length === before) break; // yeni evrak gelmedi → son sayfa
     }
-    return all.slice(0, 500);
+    // _node DOM referansını gönderim öncesi ayıkla (JSON'a taşınamaz, arka plana gitmemeli)
+    return all.slice(0, 500).map(({ _node, ...rest }) => rest);
   }
 
   async function closeModal() {

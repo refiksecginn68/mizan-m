@@ -4,29 +4,49 @@ import { useMemo, useState } from "react";
 import { Scale, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, Info } from "lucide-react";
 
 interface Taraf { rol?: string; tip?: string; ad?: string; vekil?: string; muvekkil?: boolean }
-interface Evrak { ad?: string; tarih?: string; klasor?: string }
+interface Evrak { ad?: string; tarih?: string; klasor?: string; onemli?: boolean; taranmis?: boolean }
 interface Safahat { tarih?: string; islem?: string; aciklama?: string }
 
 interface Props {
   dosyaBilgileri: { esasNo?: string | null; birim?: string | null; tur?: string | null; durum?: string | null; acilis?: string | null };
   taraflar: Taraf[];
   evraklar: Evrak[];
+  evrakMetinleri?: Record<string, string>;
   safahat: Safahat[];
+}
+
+// route.ts / content.js ile AYNI anahtar biçimi — metin haritasında eşleşme için
+function evrakAnahtar(e: Evrak) {
+  return `${e.ad ?? ""}|${e.tarih ?? ""}|${e.klasor ?? ""}`;
 }
 
 const SEKMELER = ["Dosya Bilgileri", "Taraf Bilgileri", "Evrak", "Safahat"] as const;
 
-// Evrak listesini klasör yoluna göre ağaca çevirir (UYAP evrak ağacı görünümü)
-function evrakAgaci(evraklar: Evrak[]) {
-  const kok: Record<string, Evrak[]> = {};
-  for (const e of evraklar) {
-    const k = e.klasor || "Evraklar";
-    (kok[k] ??= []).push(e);
-  }
-  return Object.entries(kok).sort(([a], [b]) => a.localeCompare(b, "tr"));
+// UYAP evrak ağacı bazen aynı klasör yolunu birden fazla düğüm olarak veriyor — çünkü
+// content.js'in okuduğu klasör etiketi lazy-load sırasında değişen bir sayaç içerebilir
+// ("...(3)" → "...(7)" gibi) ya da boşluk/büyük-küçük harf farkı taşıyabilir. Gruplama
+// bu yüzden NORMALİZE edilmiş anahtarla yapılır (Map<anahtar, düğüm>); orijinal metin
+// görüntüleme için saklanır. Farklı esas no'lu klasörler (birleştirilmiş ceza dosyası)
+// normalize sonrası da AYRI kalır — sadece boşluk/harf/sayaç farkı elenir, esas no dokunulmaz.
+function normKlasorAnahtari(k: string) {
+  return k.toLocaleLowerCase("tr").replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ").trim();
 }
 
-export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar, safahat }: Props) {
+// Evrak listesini klasör yoluna göre ağaca çevirir (UYAP evrak ağacı görünümü)
+function evrakAgaci(evraklar: Evrak[]) {
+  const kok: Record<string, { display: string; list: Evrak[] }> = {};
+  for (const e of evraklar) {
+    const raw = e.klasor || "Evraklar";
+    const anahtar = normKlasorAnahtari(raw);
+    if (!kok[anahtar]) kok[anahtar] = { display: raw, list: [] };
+    kok[anahtar].list.push(e);
+  }
+  return Object.values(kok)
+    .map((v) => [v.display, v.list] as [string, Evrak[]])
+    .sort(([a], [b]) => a.localeCompare(b, "tr"));
+}
+
+export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar, evrakMetinleri, safahat }: Props) {
   const [sekme, setSekme] = useState<(typeof SEKMELER)[number]>("Dosya Bilgileri");
   const [acikKlasor, setAcikKlasor] = useState<Record<string, boolean>>({});
   const [seciliEvrak, setSeciliEvrak] = useState<Evrak | null>(null);
@@ -112,7 +132,7 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
                       className="w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-primary/5 text-left">
                       {acik ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />}
                       {acik ? <FolderOpen className="w-4 h-4 text-accent flex-shrink-0" /> : <Folder className="w-4 h-4 text-accent flex-shrink-0" />}
-                      <span className="font-body text-xs font-medium text-foreground truncate">{klasor}</span>
+                      <span title={klasor} className="font-body text-xs font-medium text-foreground truncate">{klasor}</span>
                       <span className="text-[9px] text-muted-foreground ml-auto flex-shrink-0">{list.length}</span>
                     </button>
                     {acik && list.map((e, i) => (
@@ -128,16 +148,33 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
               })}
             </div>
             {/* Sağ: önizleme bölmesi */}
-            <div className="border border-border rounded-xl p-4 flex flex-col items-center justify-center text-center min-h-[160px]">
+            <div className={`border border-border rounded-xl p-4 min-h-[160px] max-h-96 overflow-y-auto ${seciliEvrak ? "" : "flex flex-col items-center justify-center text-center"}`}>
               {seciliEvrak ? (
                 <>
-                  <FileText className="w-8 h-8 text-accent mb-2" />
-                  <p className="font-body text-sm font-medium text-foreground">{seciliEvrak.ad}</p>
-                  {seciliEvrak.tarih && <p className="font-body text-xs text-muted-foreground mt-1">Tarih: {seciliEvrak.tarih}</p>}
-                  {seciliEvrak.klasor && <p className="font-body text-xs text-muted-foreground mt-0.5">Klasör: {seciliEvrak.klasor}</p>}
-                  <p className="font-body text-[11px] text-muted-foreground mt-3 flex items-center gap-1">
-                    <Info className="w-3 h-3" /> Evrak içeriği UYAP&apos;ta; burada üst veri tutulur.
-                  </p>
+                  <div className="flex flex-col items-center text-center mb-3">
+                    <FileText className="w-8 h-8 text-accent mb-2" />
+                    <p className="font-body text-sm font-medium text-foreground">{seciliEvrak.ad}</p>
+                    {seciliEvrak.tarih && <p className="font-body text-xs text-muted-foreground mt-1">Tarih: {seciliEvrak.tarih}</p>}
+                    {seciliEvrak.klasor && <p className="font-body text-xs text-muted-foreground mt-0.5">Klasör: {seciliEvrak.klasor}</p>}
+                  </div>
+                  {(() => {
+                    const metin = evrakMetinleri?.[evrakAnahtar(seciliEvrak)];
+                    if (metin) {
+                      return <p className="font-body text-xs text-foreground whitespace-pre-line text-left border-t border-border pt-3">{metin}</p>;
+                    }
+                    if (seciliEvrak.taranmis) {
+                      return (
+                        <p className="font-body text-[11px] text-muted-foreground flex items-center gap-1 justify-center">
+                          <Info className="w-3 h-3" /> Bu evrak taranmış (metin katmanı yok) — içerik çekilemedi.
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="font-body text-[11px] text-muted-foreground flex items-center gap-1 justify-center">
+                        <Info className="w-3 h-3" /> Evrak içeriği UYAP&apos;ta; burada üst veri tutulur.
+                      </p>
+                    );
+                  })()}
                 </>
               ) : (
                 <p className="font-body text-sm text-muted-foreground">Görüntülemek istediğiniz evrakı yandaki listeden seçiniz</p>

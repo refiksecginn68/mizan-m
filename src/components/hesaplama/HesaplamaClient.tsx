@@ -160,10 +160,10 @@ function IcraForm() {
 const FAIZ_PRESETLERI = (() => {
   const t = tarifeGetir().faiz;
   return {
-    yasal: { ad: "Yasal faiz (%9)", oran: t.yasalFaiz.deger * 100 },
-    avans: { ad: "Ticari temerrüt / avans (%39,75)", oran: t.avansFaizi.deger * 100 },
-    ttk1530: { ad: "TTK m.1530 geç ödeme (%43)", oran: t.ttk1530Faizi.deger * 100 },
-    ozel: { ad: "Özel oran", oran: NaN },
+    yasal: { ad: "Yasal faiz (%9)", oran: t.yasalFaiz.deger * 100, kaynak: t.yasalFaiz.kaynak, dogrulanmadi: t.yasalFaiz.dogrulanmadi },
+    avans: { ad: "Ticari temerrüt / avans (%39,75)", oran: t.avansFaizi.deger * 100, kaynak: t.avansFaizi.kaynak, dogrulanmadi: t.avansFaizi.dogrulanmadi },
+    ttk1530: { ad: "TTK m.1530 geç ödeme (%43)", oran: t.ttk1530Faizi.deger * 100, kaynak: t.ttk1530Faizi.kaynak, dogrulanmadi: t.ttk1530Faizi.dogrulanmadi },
+    ozel: { ad: "Özel oran", oran: NaN, kaynak: "Kullanıcı tanımlı", dogrulanmadi: false },
   } as const;
 })();
 type FaizPreset = keyof typeof FAIZ_PRESETLERI;
@@ -171,6 +171,7 @@ type FaizPreset = keyof typeof FAIZ_PRESETLERI;
 function FaizForm() {
   const [f, setF] = useState({ anaPara: 100000, baslangic: "2025-01-01", bitis: "2026-07-29", oran: 9, tur: "basit" as "basit" | "bilesik", preset: "yasal" as FaizPreset });
   const [sonuc, setSonuc] = useState<HesapSonucu | null>(null);
+  const [oranlarAcik, setOranlarAcik] = useState(false);
   return (
     <div>
       <div className="grid sm:grid-cols-2 gap-4">
@@ -196,6 +197,25 @@ function FaizForm() {
           </select>
         </Alan>
       </div>
+      <button type="button" onClick={() => setOranlarAcik(!oranlarAcik)} className="mt-3 text-xs font-semibold text-accent hover:underline">
+        {oranlarAcik ? "Oranları gizle" : "Oranları Göster"}
+      </button>
+      {oranlarAcik && (
+        <div className="mt-2 p-3 rounded-xl bg-primary/5 text-xs text-muted-foreground space-y-1.5">
+          {(Object.keys(FAIZ_PRESETLERI) as FaizPreset[]).filter((k) => k !== "ozel").map((k) => {
+            const p = FAIZ_PRESETLERI[k];
+            return (
+              <p key={k}>
+                <span className="font-semibold text-foreground">{p.ad}:</span> {p.kaynak}
+                {p.dogrulanmadi && <span className="ml-1 text-amber-600 font-semibold">(doğrulanmadı)</span>}
+              </p>
+            );
+          })}
+        </div>
+      )}
+      {/* Dönem içinde oran değişse de hesap TEK oran kullanır — otomatik dönemsel bölme yok.
+          Farklı dönemleri kendi oranıyla hesaplamak için Başlangıç/Bitiş aralığını bölüp
+          birden çok hesap çalıştırın (bkz. doğrulanamayanlar raporu). */}
       <button
         onClick={() => setSonuc(faizHesapla({ anaPara: f.anaPara, tur: f.tur, donemler: [{ baslangic: f.baslangic, bitis: f.bitis, yillikOran: f.oran / 100 }] }))}
         className="mt-5 bg-[#0f1729] text-white font-semibold text-sm px-6 py-2.5 rounded-xl hover:bg-[#0f1729]/90"
@@ -207,7 +227,13 @@ function FaizForm() {
 
 // ---------- HARÇ & VEKALET ----------
 function HarcForm() {
-  const [f, setF] = useState({ davaDegeri: 500000, vekaletTuru: "nispi" as "nispi" | "maktu" });
+  const [f, setF] = useState({
+    davaDegeri: 500000, vekaletTuru: "nispi" as "nispi" | "maktu",
+    dosyaTuru: "dava" as "dava" | "degisik-is",
+    faizDegeri: 0, mahsupDegeri: 0, tarafSayisi: 2,
+    tanikSayisi: 0, bilirkisiSayisi: 0, vekilSayisi: 1,
+    kesifVar: false, tedbirVar: false,
+  });
   const [sonuc, setSonuc] = useState<HesapSonucu | null>(null);
   return (
     <div>
@@ -219,6 +245,24 @@ function HarcForm() {
             <option value="maktu">Maktu</option>
           </select>
         </Alan>
+        <Alan label="Dosya türü">
+          <select className={inputCls} value={f.dosyaTuru} onChange={(e) => setF({ ...f, dosyaTuru: e.target.value as "dava" | "degisik-is" })}>
+            <option value="dava">Dava</option>
+            <option value="degisik-is">Değişik İş</option>
+          </select>
+        </Alan>
+        <Alan label="Taraf sayısı"><input type="number" min={1} className={inputCls} value={f.tarafSayisi} onChange={(e) => setF({ ...f, tarafSayisi: +e.target.value })} /></Alan>
+        <Alan label="Faiz değeri (TL, bilgi amaçlı)"><input type="number" className={inputCls} value={f.faizDegeri} onChange={(e) => setF({ ...f, faizDegeri: +e.target.value })} /></Alan>
+        <Alan label="Mahsup değeri (TL, bilgi amaçlı)"><input type="number" className={inputCls} value={f.mahsupDegeri} onChange={(e) => setF({ ...f, mahsupDegeri: +e.target.value })} /></Alan>
+        <Alan label="Tanık sayısı"><input type="number" min={0} className={inputCls} value={f.tanikSayisi} onChange={(e) => setF({ ...f, tanikSayisi: +e.target.value })} /></Alan>
+        <Alan label="Bilirkişi sayısı"><input type="number" min={0} className={inputCls} value={f.bilirkisiSayisi} onChange={(e) => setF({ ...f, bilirkisiSayisi: +e.target.value })} /></Alan>
+        <Alan label="Vekil sayısı"><input type="number" min={1} className={inputCls} value={f.vekilSayisi} onChange={(e) => setF({ ...f, vekilSayisi: +e.target.value })} /></Alan>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground mt-6">
+          <input type="checkbox" checked={f.kesifVar} onChange={(e) => setF({ ...f, kesifVar: e.target.checked })} /> Keşif talebi var
+        </label>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground mt-6">
+          <input type="checkbox" checked={f.tedbirVar} onChange={(e) => setF({ ...f, tedbirVar: e.target.checked })} /> Tedbir talebi var
+        </label>
       </div>
       <button onClick={() => setSonuc(harcVekaletHesapla(f))} className="mt-5 bg-[#0f1729] text-white font-semibold text-sm px-6 py-2.5 rounded-xl hover:bg-[#0f1729]/90">Hesapla</button>
       {sonuc && <SonucKart sonuc={sonuc} baslik="Harç & Vekalet Hesabı" />}

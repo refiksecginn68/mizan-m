@@ -56,6 +56,7 @@ export function icraKapakHesapla(girdi: IcraKapakGirdi): HesapSonucu {
       ad: "Peşin harç",
       tutar: yuvarla(pesinHarc),
       formul: `${format(girdi.anaPara)} × ‰${(t.icra.pesinHarcOrani.deger * 1000).toFixed(0)} (ana para)`,
+      not: t.icra.pesinHarcOrani.dogrulanmadi ? "oran doğrulanmadı — resmi tarifeyle teyit edin" : undefined,
     });
   } else if (girdi.takipTuru === "mts") {
     const mts = girdi.anaPara * t.icra.mtsHarcOrani.deger;
