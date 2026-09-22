@@ -35,10 +35,12 @@ interface Props {
 type SearchMode = "akilli" | "kelime" | "anlam" | "dosya";
 type RightTab = "metin" | "ozet" | "sohbet";
 
+// Açıklamalar gerçek backend davranışını yansıtır — "AI destekli" gibi LLM
+// çağrısı olmayan modlar için yanlış iddia kurulmadı (bkz. FAZ 1 raporu).
 const MODES: { id: SearchMode; label: string; icon: React.ElementType; desc: string }[] = [
-  { id: "akilli", label: "Akıllı", icon: Zap, desc: "AI destekli arama" },
+  { id: "akilli", label: "Akıllı", icon: Zap, desc: "Yazım hatası ve madde/kanun normalizasyonuyla en geniş arama" },
   { id: "kelime", label: "Kelime", icon: Search, desc: "Tam kelime eşleşmesi" },
-  { id: "anlam",  label: "Anlam",  icon: BookOpen, desc: "Anlam ve bağlam" },
+  { id: "anlam",  label: "Anlam",  icon: BookOpen, desc: "Terim kombinasyonlarıyla geniş arama" },
   { id: "dosya",  label: "Dosya",  icon: FileUp, desc: "Evrak yükle, içinden ara" },
 ];
 

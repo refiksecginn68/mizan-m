@@ -152,7 +152,7 @@ export function htmlToText(html: string): string {
 }
 
 // Türkçe küçük harfe çevirme (I/İ sorunu için)
-function trLower(s: string): string {
+export function trLower(s: string): string {
   return s.replace(/İ/g, "i").replace(/I/g, "ı").toLowerCase();
 }
 

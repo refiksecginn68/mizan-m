@@ -1,0 +1,1360 @@
+{
+  "timestamp": "2026-09-22T14:43:22.522Z",
+  "metrics": {
+    "exact_match": {
+      "hit1": 0.95,
+      "recall5": 0.95,
+      "recall10": 0.95,
+      "precision5": 0.19,
+      "mrr": 0.95,
+      "ndcg10": 0.95
+    },
+    "topic_search": {
+      "avg_overlap_ratio": 0.6567
+    }
+  },
+  "exact_match_details": [
+    {
+      "id": "kesin_1",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_2",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_3",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_4",
+      "rank": 1,
+      "source": "live",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_5",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_6",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_7",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_8",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_9",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_10",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_11",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_12",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_13",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_14",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_15",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_16",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_17",
+      "rank": 1,
+      "source": "live",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_18",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_19",
+      "rank": 1,
+      "source": "cache",
+      "hit1": 1,
+      "recall5": 1,
+      "recall10": 1,
+      "precision5": 0.2,
+      "mrr": 1,
+      "ndcg10": 1
+    },
+    {
+      "id": "kesin_20",
+      "rank": "N/A",
+      "source": "live",
+      "hit1": 0,
+      "recall5": 0,
+      "recall10": 0,
+      "precision5": 0,
+      "mrr": 0,
+      "ndcg10": 0
+    }
+  ],
+  "topic_search_details": [
+    {
+      "id": "konu_1",
+      "query": "silahlı saldırı",
+      "source": "live",
+      "avg_overlap_ratio": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Danıştay 10. Daire",
+          "case_number": "1991/1943",
+          "decision_number": "1992/1466",
+          "decision_date": "1992-04-19",
+          "subject": "Danıştay · 1991/1943 E. · 1992/1466 K.",
+          "summary": "…sas No : 1943 Karar Tarihi : 20/04/992 İDEOLOJİK GÖRÜŞ AYRILIĞINDAN KAYNAKLANDIĞI ANLAŞILAN SİLAHLİ SALDIRI SONUCU YARALANIP, DAHA SONRA ÖLEN HASTANE YEMEKHANE GÖREVLİSİNİN VAZİFE MALÜLÜ SAYILAMAYACAĞI HK.…",
+          "overlap_ratio": 0.5
+        },
+        {
+          "rank": 2,
+          "court": "Yerel Hukuk Mahkemesi İzmir 4. Asliye Ticaret Mahkemesi",
+          "case_number": "2023/42",
+          "decision_number": "2024/515",
+          "decision_date": "2024-07-01",
+          "subject": "Yerel Hukuk Mahkemesi · 2023/42 E. · 2024/515 K.",
+          "summary": "…lı arasında, güvenli hayat sigorta poliçesi imzalandığını, primlerin zamanında yatırıldığı. Murisin silahlı saldırı sonucunda yaralandıktan sonra hastanede tedavisi sırasında ölmüş olduğu, sigorta bedelinin ödenmesi için davalı sigorta şirketine başvurulduğu, ancak başvurunun sonuçsuz kaldığı, davanın 120.000 TL. bedel…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Danıştay 12. Daire",
+          "case_number": "2020/895",
+          "decision_number": "2020/4515",
+          "decision_date": "2020-12-20",
+          "subject": "Danıştay · 2020/895 E. · 2020/4515 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 4,
+          "court": "Danıştay 10. Daire",
+          "case_number": "2016/255",
+          "decision_number": "2021/2201",
+          "decision_date": "2021-04-28",
+          "subject": "Danıştay · 2016/255 E. · 2021/2201 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 5,
+          "court": "Danıştay 10. Daire",
+          "case_number": "2016/2351",
+          "decision_number": "2021/2442",
+          "decision_date": "2021-05-19",
+          "subject": "Danıştay · 2016/2351 E. · 2021/2442 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        }
+      ]
+    },
+    {
+      "id": "konu_2",
+      "query": "kıdem tazminatı zamanaşımı",
+      "source": "cache",
+      "avg_overlap_ratio": 0.8667,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 9. Hukuk Dairesi",
+          "case_number": "2011/25532",
+          "decision_number": "2013/24551",
+          "decision_date": "2013-09-29",
+          "subject": "Yargıtay · 2011/25532 E. · 2013/24551 K.",
+          "summary": "…ise de, aradaki boşluklarda 10 yıllık zamanaşımı süresi dolmamıştır. Kesintili çalışmalar yönünden kıdem tazminatı zamanaşımı hesaplanırken, her bir boşluk döneminde 10 yıllık sürenin geçip geçmediğine bakılmalı, 10 yıl geçmemiş ise toplam çalışma süresi üzerinden kıdem tazminatı alacağı hesaplanmalıdır. Davacının ilk…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 9. Hukuk Dairesi",
+          "case_number": "2025/7320",
+          "decision_number": "2025/8399",
+          "decision_date": "2025-11-02",
+          "subject": "Yargıtay · 2025/7320 E. · 2025/8399 K.",
+          "summary": "…ıklarının söz konusu iddiaları doğrulamadıkları dikkate alındığında her bir çalışma dönemi arasında kıdem tazminatı zamanaşımı süresi kadar sürenin geçmemiş olması nazara alınarak her bir çalışma döneminin kıdem tazminatı hesaplaması bakımından birleştirilmesi yoluna gidilmek suretiyle 1 yıl 5 ay 26 günlük çalışması ka…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 10. Asliye Ticaret Mahkemesi",
+          "case_number": "2025/580",
+          "decision_number": "2026/259",
+          "decision_date": "2026-03-10",
+          "subject": "Yerel Hukuk Mahkemesi · 2025/580 E. · 2026/259 K.",
+          "summary": "…ıklarına dair bir kayıt olmadığını, Kıdem tazminatı talebi, bir zamanaşımı süresine tabii olduğunu, Kıdem tazminatı zamanaşımı süresi iş akdinin feshinden itibaren 5 yıl olduğunu, -----tarihinde sona eren personel sözleşmeleri zaman aşımına uğradığından, rücu hakkı kalmadığını, Kanunlara uygun olarak tasfiye süreci son…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 10. Asliye Ticaret Mahkemesi",
+          "case_number": "2025/1078",
+          "decision_number": "2026/256",
+          "decision_date": "2026-03-10",
+          "subject": "Yerel Hukuk Mahkemesi · 2025/1078 E. · 2026/256 K.",
+          "summary": "…ıklarına dair bir kayıt olmadığını, Kıdem tazminatı talebi, bir zamanaşımı süresine tabii olduğunu, Kıdem tazminatı zamanaşımı süresi iş akdinin feshinden itibaren 5 yıl olduğunu, -----tarihinde sona eren personel sözleşmeleri zaman aşımına uğradığından, rücu hakkı kalmadığını, Kanunlara uygun olarak tasfiye süreci son…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 9. Hukuk Dairesi",
+          "case_number": "2016/17382",
+          "decision_number": "2020/5955",
+          "decision_date": "2020-06-17",
+          "subject": "Yargıtay · 2016/17382 E. · 2020/5955 K.",
+          "summary": "…celendi, gereği konuşulup düşünüldü: YARGITAY KARARI 1-Davacının ücret alacağının süresinde yapılan zamanaşımı defi nedeniyle reddine karar verilmesi gerekirken, esastan reddine karar verilmesi sonuca etkili görülmemiştir. 2-Davacı dava dilekçesinde işe başlama tarihini belirtmiş ise de işin sona erme tarihini “2005 yı…",
+          "overlap_ratio": 0.3333
+        }
+      ]
+    },
+    {
+      "id": "konu_3",
+      "query": "kira tespit davası",
+      "source": "cache",
+      "avg_overlap_ratio": 0.6667,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 6. Hukuk Dairesi",
+          "case_number": "2011/14674",
+          "decision_number": "2012/2648",
+          "decision_date": "2012-02-20",
+          "subject": "Yargıtay · 2011/14674 E. · 2012/2648 K.",
+          "summary": "…uk Dairesi 2011/14674 E. , 2012/2648 K. \"İçtihat Metni\" MAHKEMESİ :Sulh Hukuk Mahkemesi DAVA TÜRÜ : Kira tespiti Dava, kira tespiti istemine ilişkindir. Yargılama konusu dava kira tespiti istemine ilişkin olup, Dairemizin yargılama konusuna girmediği, dosyanın temyiz incelemesi yapılmak üzere Yargıtay 3.Hukuk Dairesi'n…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 6. Hukuk Dairesi",
+          "case_number": "2009/10893",
+          "decision_number": "2010/660",
+          "decision_date": "2010-01-27",
+          "subject": "Yargıtay · 2009/10893 E. · 2010/660 K.",
+          "summary": "…lh Hukuk Mahkemesi Mahalli mahkemesinden verilmiş bulunan yukarıda tarih ve numarası yazılı tahliye-kira tesbiti davasına dair karar davacı ve müdahil davacılar tarafından süresi içinde temyiz edilmiş olmakla dosyadaki bütün kağıtlar okunup gereği görüşülüp düşünüldü. Uyuşmazlık işyeri ihtiyacı nedeni ile kiralananın t…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 17. Hukuk Dairesi",
+          "case_number": "2010/1086",
+          "decision_number": "2010/5946",
+          "decision_date": "2010-06-27",
+          "subject": "Yargıtay · 2010/1086 E. · 2010/5946 K.",
+          "summary": "…rdiği gerekçesiyle görevsizlik kararı vermiştir. Sulh Hukuk Mahkemesi de, kira parası belli değilse kira tespit davası açılamıyacağı gerekçesi ile dava miktarına göre görevsizlik yönünde hüküm kurmuştur. Dava kira sözleşmesinden kaynaklanan kira bedelinin tespiti istemine ilişkindir. Kira bedelinin tespitine ilişkin da…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "İstinaf Hukuk Mahkemesi Ankara Bölge Adliye Mahkemesi 21. Hukuk Dairesi",
+          "case_number": "2021/552",
+          "decision_number": "2021/455",
+          "decision_date": "2021-03-30",
+          "subject": "İstinaf Hukuk Mahkemesi · 2021/552 E. · 2021/455 K.",
+          "summary": "…:... DAVA : ALACAK KARAR TARİHİ : 31/ 03/2021 GEREKÇELİ KARARIN YAZILDIĞI TARİH : 31/ 03/2021 Dava, kira sözleşmesinden kaynaklanan alacak istemine ilişkindir. Hakimler Savcılar Kurulu 1. Dairesinin 25/06/2020 tarihli 564 ve 586 sayılı Ankara Bölge Adliye Mahkemesi İş Bölümüne ilişkin kararı uyarınca 15. Hukuk Dairesin…",
+          "overlap_ratio": 0.3333
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 6. Hukuk Dairesi",
+          "case_number": "2012/1126",
+          "decision_number": "2012/5410",
+          "decision_date": "2012-04-04",
+          "subject": "Yargıtay · 2012/1126 E. · 2012/5410 K.",
+          "summary": "…zın İptali Mahalli mahkemesinden verilmiş bulunan yukarıda tarih ve numarası yazılı itirazın iptali davasına dair karar, davalı ve davacı tarafından süresi içinde temyiz edilmiş olmakla, dosyadaki bütün kağıtlar okunup gereği görüşülüp düşünüldü. Davacı alacaklının davalı borçlu hakkında kira farkı alacağının tahsili a…",
+          "overlap_ratio": 0.6667
+        }
+      ]
+    },
+    {
+      "id": "konu_4",
+      "query": "velayet hakkının kötüye kullanılması",
+      "source": "cache",
+      "avg_overlap_ratio": 1,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2015/69",
+          "decision_number": "2015/204",
+          "decision_date": "2015-01-12",
+          "subject": "Yargıtay · 2015/69 E. · 2015/204 K.",
+          "summary": "…İHİ : 11/06/2014 NUMARASI : 2013/194-2014/291 -KARAR- Mahkeme kararındaki nitelendirmeye göre dava; velayet hakkının kötüye kullanılması istemine ilişkindir. Yargıtay Büyük Genel Kurulunun 24.01.2014 tarih ve 1 sayılı kararı ile aynen kabul edilen ve 29.01.2014 günü Resmi Gazetede yayımlanarak 01.02.2014 tarihinde yürü…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 2. Hukuk Dairesi",
+          "case_number": "2014/13538",
+          "decision_number": "2014/20565",
+          "decision_date": "2014-10-22",
+          "subject": "Yargıtay · 2014/13538 E. · 2014/20565 K.",
+          "summary": "…österilen hüküm, davalı tarafından temyiz edilmekle, evrak okunup gereği görüşülüp düşünüldü: Dava, velayet hakkının kötüye kullanılması nedeniyle tapu iptali ve tescil işlemine ilişkin olup, mahkemece davanın kabulüne karar verilmiştir. Yapılan soruşturma ve toplanan delillerden, uyuşmazlık konusu ... ada .. parsel sa…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 14. Hukuk Dairesi",
+          "case_number": "2006/2381",
+          "decision_number": "2006/5522",
+          "decision_date": "2006-05-08",
+          "subject": "Yargıtay · 2006/2381 E. · 2006/5522 K.",
+          "summary": "…iresi 2006/2381 E. , 2006/5522 K. \"İçtihat Metni\" MAHKEMESİ :Asliye Hukuk Mahkemesi K A R A R Dava, velayet hakkının kötüye kullanılması nedeniyle tapu iptali ve tescil ile araçların iadesi mümkün olmadığı takdirde tazminat istemine ilişkin olup, 2797 sayılı Yargıtay K.nun 14.maddesi gereğince temyiz incelemesi 2.Hukuk…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 14. Hukuk Dairesi",
+          "case_number": "2008/5383",
+          "decision_number": "2008/6668",
+          "decision_date": "2008-05-26",
+          "subject": "Yargıtay · 2008/5383 E. · 2008/6668 K.",
+          "summary": "…esi 2008/5383 E. , 2008/6668 K. \"İçtihat Metni\" MAHKEMESİ :Asliye Hukuk Mahkemesi KARAR Uyuşmazlık, velayet hakkının kötüye kullanılması nedenine dayalı tapu iptal tescil istemine ilişkin bulunduğundan, hükme yöneltilen temyiz itirazlarının incelenmesi Yüksek 2.Hukuk Dairesine ait bulunmaktadır. Açıklanan nedenle dosya…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 8. Hukuk Dairesi",
+          "case_number": "2011/6340",
+          "decision_number": "2011/5123",
+          "decision_date": "2011-10-13",
+          "subject": "Yargıtay · 2011/6340 E. · 2011/5123 K.",
+          "summary": "…AHKEMESİ :Aile Mahkemesi DAVA TÜRÜ : Tapu İptali ve Tescil K A R A R Taraflar arasındaki uyuşmazlık velayet hakkının kötüye kullanılması nedeniyle muvazaalı şekilde devredilen taşınmazlara yönelik tapu iptali ve tescil, olmadığı takdirde tazminat isteğine ilişkin bulunduğuna ve davada zilyetliğe dayanılmadığına göre, h…",
+          "overlap_ratio": 1
+        }
+      ]
+    },
+    {
+      "id": "konu_5",
+      "query": "haksız işgal ecrimisil tazminatı",
+      "source": "live",
+      "avg_overlap_ratio": 0,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 17. Hukuk Dairesi",
+          "case_number": "2015/11140",
+          "decision_number": "2015/9710",
+          "decision_date": "2015-09-27",
+          "subject": "Yargıtay · 2015/11140 E. · 2015/9710 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 3. Hukuk Dairesi",
+          "case_number": "2012/12334",
+          "decision_number": "2012/19040",
+          "decision_date": "2012-09-17",
+          "subject": "Yargıtay · 2012/12334 E. · 2012/19040 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2016/4873",
+          "decision_number": "2016/6853",
+          "decision_date": "2016-06-12",
+          "subject": "Yargıtay · 2016/4873 E. · 2016/6853 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 14. Hukuk Dairesi",
+          "case_number": "2019/3343",
+          "decision_number": "2020/3311",
+          "decision_date": "2020-06-02",
+          "subject": "Yargıtay · 2019/3343 E. · 2020/3311 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 5. Hukuk Dairesi",
+          "case_number": "2017/11658",
+          "decision_number": "2018/8595",
+          "decision_date": "2018-05-06",
+          "subject": "Yargıtay · 2017/11658 E. · 2018/8595 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        }
+      ]
+    },
+    {
+      "id": "konu_6",
+      "query": "murisin mal kaçırması tapu iptal",
+      "source": "cache",
+      "avg_overlap_ratio": 0.48,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2025/3098",
+          "decision_number": "2025/6267",
+          "decision_date": "2025-12-24",
+          "subject": "Yargıtay · 2025/3098 E. · 2025/6267 K.",
+          "summary": "…AVA Davacılar vekili dava dilekçesinde; tarafların babaları olan muris ...'ın ölmeden önce mirastan mal kaçırma amaçlı ve muvazaalı olarak Afyonkarahisar ili, .... ilçesi, ... köyündeki 1 36... parsel sayılı taşınmazını davalı oğlu ...'e sattığını, bedel ödenmediğini, murisin taşınmaz satmaya ihtiyacı olmadığını, daval…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2016/7347",
+          "decision_number": "2019/1724",
+          "decision_date": "2019-03-10",
+          "subject": "Yargıtay · 2016/7347 E. · 2019/1724 K.",
+          "summary": "…k Dairesi 2016/7347 E. , 2019/1724 K. \"İçtihat Metni\" MAHKEMESİ :ASLİYE HUKUK MAHKEMESİ DAVA TÜRÜ : TAPU İPTALİ VE TESCİL Taraflar arasında görülen davada; Davacı, mirasbırakanı ...'ın 6 parsel sayılı taşınmazdaki payını kardeşi ...'a satış suretiyle temlik ettiğini, yapılan temlikin muvazaalı ve mirasçılardan mal kaçı…",
+          "overlap_ratio": 0.6
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2021/1230",
+          "decision_number": "2021/2400",
+          "decision_date": "2021-04-18",
+          "subject": "Yargıtay · 2021/1230 E. · 2021/2400 K.",
+          "summary": "…k Dairesi 2021/1230 E. , 2021/2400 K. \"İçtihat Metni\" MAHKEMESİ :ASLİYE HUKUK MAHKEMESİ DAVA TÜRÜ : TAPU İPTALİ VE TESCİL Taraflar arasında görülen davada; Davacı, mirasbırakan annesi ...'ın 132, 189, 1614 parsel sayılı taşınmazlardaki paylarını, davalı damadı Selahattin'e satış suretiyle temlik ettiğini, işlemin miras…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2020/1697",
+          "decision_number": "2021/6329",
+          "decision_date": "2021-11-01",
+          "subject": "Yargıtay · 2020/1697 E. · 2021/6329 K.",
+          "summary": "…, 2021/6329 K. \"İçtihat Metni\" MAHKEMESİ : ... BÖLGE ADLİYE MAHKEMESİ 1. HUKUK DAİRESİ DAVA TÜRÜ : TAPU İPTALİ VE TESCİL-TENKİS Taraflar arasında görülen davada; Davacı, mirasbırakan babaannesi ...'un maliki olduğu ... ada ... parsel sayılı taşınmazdaki 2 nolu bağımsız bölümünü ölünceye kadar bakım akdi ile davalıya d…",
+          "overlap_ratio": 0.6
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2016/12536",
+          "decision_number": "2019/5095",
+          "decision_date": "2019-10-06",
+          "subject": "Yargıtay · 2016/12536 E. · 2019/5095 K.",
+          "summary": "…Dairesi 2016/12536 E. , 2019/5095 K. \"İçtihat Metni\" MAHKEMESİ :ASLİYE HUKUK MAHKEMESİ DAVA TÜRÜ : TAPU İPTALİ VE TESCİL Taraflar arasında görülen tapu iptali ve tescil davası sonunda, yerel mahkemece davanın kabulüne ilişkin olarak verilen karar bir kısım davalılar vekili tarafından yasal süre içerisinde temyiz edilm…",
+          "overlap_ratio": 0.4
+        }
+      ]
+    },
+    {
+      "id": "konu_7",
+      "query": "ayıplı araç satışı iade",
+      "source": "live",
+      "avg_overlap_ratio": 0.4,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 13. Hukuk Dairesi",
+          "case_number": "2012/8793",
+          "decision_number": "2012/11405",
+          "decision_date": "2012-04-25",
+          "subject": "Yargıtay · 2012/8793 E. · 2012/11405 K.",
+          "summary": "…incelendi gereği konuşulup düşünüldü. K A R A R Davacı davalıdan 07.12.2009 tarihinde sözleşme ile araç satın aldığını aracın arıza çıkardığını ve ayıplı olduğunu belirterek, araç bedelinin en yüksek faiziyle iadesini maddi ve manevi zaralarının davalıdan tazminine karar verilmesini istemiştir. Davalılar aracın ayıplı…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 2,
+          "court": "Yerel Hukuk Mahkemesi Bakırköy 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2021/971",
+          "decision_number": "2023/32",
+          "decision_date": "2023-01-16",
+          "subject": "Yerel Hukuk Mahkemesi · 2021/971 E. · 2023/32 K.",
+          "summary": "…t (Ticari Satımdan Kaynaklanan) davasının yapılan açık yargılaması sonunda, GEREĞİ DÜŞÜNÜLDÜ: Dava, ayıplı araç nedeniyle uğranılan zararın ve yoksun kalınan karın tazmini talebine ilişkindir. Davacı, dava dilekçesi ile özetle; davalıdan ikinci el araç satın aldığını, ekspertiz raporunu davalının aldığını, aracın satış…",
+          "overlap_ratio": 0.5
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 13. Hukuk Dairesi",
+          "case_number": "2009/1655",
+          "decision_number": "2009/9811",
+          "decision_date": "2009-07-12",
+          "subject": "Yargıtay · 2009/1655 E. · 2009/9811 K.",
+          "summary": "…iresi 2009/1655 E. , 2009/9811 K. \"İçtihat Metni\" MAHKEMESİ :Tüketici Mahkemesi Taraflar arasındaki ayıplı mal davasının yapılan yargılaması sonunda ilamda yazılı nedenlerden dolayı davanın kısmen kabulüne, kısmen reddine yönelik olarak verilen hükmün davacı avukatınca duruşmalı, davalılar avukatınca duruşmasız olarak…",
+          "overlap_ratio": 0.25
+        },
+        {
+          "rank": 4,
+          "court": "İstinaf Hukuk Mahkemesi Konya Bölge Adliye Mahkemesi 6. Hukuk Dairesi",
+          "case_number": "2022/191",
+          "decision_number": "2023/1436",
+          "decision_date": "2023-06-19",
+          "subject": "İstinaf Hukuk Mahkemesi · 2022/191 E. · 2023/1436 K.",
+          "summary": "…nin, davalılardan ...'ın yetkilisi ve sahibi olduğu galeri tarafından bir sitede ilan ile ... marka araç gördüğünü ve ilanda araç için kazasız hasarsız orijinal araç denildiğinden ötürü ayrıca davalılardan ...'ın ve ailesinin uzun yıllardır bu işi yapmasından kaynaklı güvenilerek aracı satın almak için görüşmeye gittiğ…",
+          "overlap_ratio": 0.25
+        },
+        {
+          "rank": 5,
+          "court": "İstinaf Hukuk Mahkemesi Konya Bölge Adliye Mahkemesi 6. Hukuk Dairesi",
+          "case_number": "2022/517",
+          "decision_number": "2023/1393",
+          "decision_date": "2023-06-11",
+          "subject": "İstinaf Hukuk Mahkemesi · 2022/517 E. · 2023/1393 K.",
+          "summary": "…nin, davalılardan ...'ın yetkilisi ve sahibi olduğu galeri tarafından bir sitede ilan ile ... marka araç gördüğünü ve ilanda araç için kazasız hasarsız orijinal araç denildiğinden ötürü ayrıca davalılardan ...'ın ve ailesinin uzun yıllardır bu işi yapmasından kaynaklı güvenilerek aracı satın almak için görüşmeye gittiğ…",
+          "overlap_ratio": 0.25
+        }
+      ]
+    },
+    {
+      "id": "konu_8",
+      "query": "nitelikli dolandırıcılık bilişim sistemleri",
+      "source": "live",
+      "avg_overlap_ratio": 0.85,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 15. Ceza Dairesi",
+          "case_number": "2016/4031",
+          "decision_number": "2016/9028",
+          "decision_date": "2016-11-27",
+          "subject": "Yargıtay · 2016/4031 E. · 2016/9028 K.",
+          "summary": "15. Ceza Dairesi 2016/4031 E. , 2016/9028 K. \"İçtihat Metni\" MAHKEMESİ :Ağır Ceza Mahkemesi SUÇ : Nitelikli dolandırıcılık, bilişim sistemlerindeki verileri bozma, yok etme, değiştirme veya erişilmez kılma HÜKÜM : TCK’nın 158/1-f-son, 168/2, 62, 52, 53. maddeleri gereğince mahkumiyet TCK’nın 244/2, 62, 50, 52. maddeler…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 15. Ceza Dairesi",
+          "case_number": "2017/15688",
+          "decision_number": "2019/15288",
+          "decision_date": "2019-12-18",
+          "subject": "Yargıtay · 2017/15688 E. · 2019/15288 K.",
+          "summary": "…k amacıyla örgüt kurma, suç işlemek amacıyla kurulan örgüte üye olma, kişisel verileri ele geçirme, bilişim sisteminin işleyişini engelleme veya bozma, bilişim sistemine girme, nitelikli dolandırıcılık HÜKÜM : 1-Sanıklar ...,..., ...,..., ..., ..., ..., ..., ..., ..., ..., ..., ... ve ... hakkında üzerlerine atılı suçl…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 15. Ceza Dairesi",
+          "case_number": "2015/8950",
+          "decision_number": "2016/5553",
+          "decision_date": "2016-05-29",
+          "subject": "Yargıtay · 2015/8950 E. · 2016/5553 K.",
+          "summary": "15. Ceza Dairesi 2015/8950 E. , 2016/5553 K. \"İçtihat Metni\" SUÇ : Nitelikli dolandırıcılık, bilişim sistemine girme HÜKÜM : TCK’nın 158/f-son, 62, 52/2 (7 kez), 158/1-f-son, 62, 52/2 (bir kez), 243/1, 62, 52/2 (8 kez) maddeleri gereğince mahkumiyet Dosya incelenerek gereği düşünüldü: Sanığın............havale tarihli…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 15. Ceza Dairesi",
+          "case_number": "2014/3571",
+          "decision_number": "2014/17241",
+          "decision_date": "2014-10-26",
+          "subject": "Yargıtay · 2014/3571 E. · 2014/17241 K.",
+          "summary": "15. Ceza Dairesi 2014/3571 E. , 2014/17241 K. \"İçtihat Metni\" MAHKEMESİ :Ağır Ceza Mahkemesi SUÇ : Nitelikli dolandırıcılık, bilişim sistemini engelleme HÜKÜM : Mahkumiyet Dosya incelenerek gereği düşünüldü; Katılan vekilinin, sanık hakkında bilişim sistemlerini bozma suçundan verilen mahkumiyet kararlarını da temyiz e…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 15. Ceza Dairesi",
+          "case_number": "2013/168",
+          "decision_number": "2014/14298",
+          "decision_date": "2014-09-09",
+          "subject": "Yargıtay · 2013/168 E. · 2014/14298 K.",
+          "summary": "15. Ceza Dairesi 2013/168 E. , 2014/14298 K. \"İçtihat Metni\" MAHKEMESİ :Ağır Ceza Mahkemesi SUÇ : Nitelikli dolandırıcılık bilişim sistemini engelleme, bozma, verileri yok etme veya değiştirme, suç eşyasının satın alınması veya kabul edilmesi HÜKÜM : Mahkumiyet Dosya incelenerek gereği düşünüldü; Sanık ... müdafiinin 2…",
+          "overlap_ratio": 0.75
+        }
+      ]
+    },
+    {
+      "id": "konu_9",
+      "query": "kat karşılığı inşaat sözleşmesi fesih",
+      "source": "cache",
+      "avg_overlap_ratio": 0.96,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 6. Hukuk Dairesi",
+          "case_number": "2021/4527",
+          "decision_number": "2022/2235",
+          "decision_date": "2022-04-18",
+          "subject": "Yargıtay · 2021/4527 E. · 2022/2235 K.",
+          "summary": "…ılması nedeni ile Ankara 3. Noterliğinin 19.07.2017 tarihli 14150 yevmiye nolu fesih sözleşmesi ile kat karşılığı inşaat sözleşmesi fesih edildiğini, anılan fesih sözleşmesinde tüm malikler tarafından verilen vekâletnameye istinaden akdedildiğini, anılan fesih sözleşmesinin 2. maddesinin \"Arsa sahiplerinin eski sözleşm…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 3. Hukuk Dairesi",
+          "case_number": "2010/5940",
+          "decision_number": "2010/9136",
+          "decision_date": "2010-05-23",
+          "subject": "Yargıtay · 2010/5940 E. · 2010/9136 K.",
+          "summary": "…ği düşünüldü. Davada, dava dışı müteahhitten satın aldığı dairenin arsa maliki davalılar tarafından Kat Karşılığı İnşaat Sözleşmesi fesih edilerek adlarına kayıt ettirildiği ileri sürülerek daire için yapılan iyileştirme bedelinden şimdilik 7000,00 TL’nin tahsili istenilmiştir. Davalı, davanın reddini savunmuştur. Mahk…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "İstinaf Hukuk Mahkemesi İstanbul Bölge Adliye Mahkemesi 17. Hukuk Dairesi",
+          "case_number": "2017/1422",
+          "decision_number": "2018/158",
+          "decision_date": "2018-01-30",
+          "subject": "İstinaf Hukuk Mahkemesi · 2017/1422 E. · 2018/158 K.",
+          "summary": "…in 2009/444 esas sayılı dosyasında açılmamış sayılmasına karar verildiğini, yüklenici ile imzalanan kat karşılığı inşaat sözleşmesi fesih edilmişken eğitim ve spor alanlarının yükleniciye neden verilip, tapuda devir edildiğinin, kat karşılığı inşaat sözleşmesinin 11. maddesindeki % 3'lük arazinin akıbetinin ne olduğu,…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay Hukuk Genel Kurulu",
+          "case_number": "2011/141",
+          "decision_number": "2011/293",
+          "decision_date": null,
+          "subject": "Yargıtay · 2011/141 E. · 2011/293 K.",
+          "summary": "…amı ile; (\"...Davada, dava dışı müteahhitten satın aldığı dairenin arsa maliki davalılar tarafından Kat Karşılığı İnşaat Sözleşmesi fesih edilerek adlarına kayıt ettirildiği ileri sürülerek daire için yapılan iyileştirme bedelinden şimdilik 7000,00 TL'nin tahsili istenilmiştir. Davalı, davanın reddini savunmuştur. Mahk…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 3. Hukuk Dairesi",
+          "case_number": "2015/11968",
+          "decision_number": "2016/4837",
+          "decision_date": "2016-03-28",
+          "subject": "Yargıtay · 2015/11968 E. · 2016/4837 K.",
+          "summary": "…R G I T A Y K A R A R I Davacılar vekili dilekçesinde; davacıların, arsa sahibi olan davalı ... ile kat karşılığı inşaat sözleşmesi yapan dava dışı yükleniciye ait daireleri kaba inşaat halinde iken satın aldıklarını, dairelerin diğer imalatlarının davacılar tarafından tamamlandığını, ancak davalının açtığı dava ile ka…",
+          "overlap_ratio": 0.8
+        }
+      ]
+    },
+    {
+      "id": "konu_10",
+      "query": "trafik kazası destekten yoksun kalma",
+      "source": "cache",
+      "avg_overlap_ratio": 1,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "İstinaf Hukuk Mahkemesi İstanbul Bölge Adliye Mahkemesi 8. Hukuk Dairesi",
+          "case_number": "2019/2457",
+          "decision_number": "2021/874",
+          "decision_date": "2021-06-02",
+          "subject": "İstinaf Hukuk Mahkemesi · 2019/2457 E. · 2021/874 K.",
+          "summary": "…5. ASLİYE TİCARET MAHKEMESİ TARİHİ: 05/03/2019 NUMARASI: 2017/1129 E. - 2019/277 K. DAVANIN KONUSU: Trafik kazası-destekten yoksun kalma maddi tazminatı İSTİNAF KARAR TARİHİ : 03/06/2021 Yukarıda yazılı ilk derece mahkemesi kararına karşı, istinaf yasa yoluna başvurulması üzerine yapılan inceleme sonucunda; GEREĞİ DÜŞÜ…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yerel Hukuk Mahkemesi İstanbul 15. Asliye Ticaret Mahkemesi",
+          "case_number": "2023/267",
+          "decision_number": "2024/566",
+          "decision_date": "2024-10-15",
+          "subject": "Yerel Hukuk Mahkemesi · 2023/267 E. · 2024/566 K.",
+          "summary": "…İSTANBUL 15. ASLİYE TİCARET MAHKEMESİ ESAS NO : 2023/267 Esas KARAR NO : 2024/566 DAVA : Tazminat (Trafik Kazası/Destekten Yoksun Kalma Tazminatı) DAVA TARİHİ : 12/04/2023 KARAR TARİHİ : 16/10/2024 GEREKÇE TARİHİ : 12/11/2024 Mahkememizde görülmekte olan Tazminat (Ölüm Ve Cismani Zarar Sebebiyle Açılan Tazminat) davas…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yerel Hukuk Mahkemesi İstanbul 15. Asliye Ticaret Mahkemesi",
+          "case_number": "2024/359",
+          "decision_number": "2024/622",
+          "decision_date": "2024-11-05",
+          "subject": "Yerel Hukuk Mahkemesi · 2024/359 E. · 2024/622 K.",
+          "summary": "…İSTANBUL 15. ASLİYE TİCARET MAHKEMESİ ESAS NO : 2023/267 Esas KARAR NO : 2024/566 DAVA : Tazminat (Trafik Kazası/Destekten Yoksun Kalma Tazminatı) DAVA TARİHİ : 12/04/2023 KARAR TARİHİ : 16/10/2024 GEREKÇE TARİHİ : 12/11/2024 Mahkememizde görülmekte olan Tazminat (Ölüm Ve Cismani Zarar Sebebiyle Açılan Tazminat) davas…",
+          "overlap_ratio": 1
+        }
+      ]
+    },
+    {
+      "id": "konu_11",
+      "query": "iş kazası maddi manevi tazminat",
+      "source": "live",
+      "avg_overlap_ratio": 0.8,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2023/12634",
+          "decision_number": "2024/6091",
+          "decision_date": "2024-05-29",
+          "subject": "Yargıtay · 2023/12634 E. · 2024/6091 K.",
+          "summary": "…çılan davanın kısmi dava niteliğinde olduğu sonuç ve kanaatine varılmıştır. Bu nedenle her ne kadar iş kazası maddi manevi tazminat davaları belirsiz alacak davası olarak açılabilecek nitelikteyse de, eldeki davanın kısmi dava olarak açıldığı anlaşıldığından davacı tarafa HMK 107/2 uyarınca talebini belirli hale getirm…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 21. Hukuk Dairesi",
+          "case_number": "2007/24528",
+          "decision_number": "2008/8276",
+          "decision_date": "2008-05-28",
+          "subject": "Yargıtay · 2007/24528 E. · 2008/8276 K.",
+          "summary": "…1. Hukuk Dairesi 2007/24528 E., 2008/8276 K. 21. Hukuk Dairesi 2007/24528 E., 2008/8276 K. İBRANAME İŞ GÖREMEZLİK ORANININ TESPİTİ İŞ KAZASI MADDİ-MANEVİ TAZMİNAT 506 S. SOSYAL SİGORTALAR KANUNU(MÜLGA) [ Madde 27 ] \"İçtihat Metni\" Davacı, iş kazası sonucu maluliyetinden doğan maddi ve manevi tazminatın ödetilmesine kar…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2024/5502",
+          "decision_number": "2024/6060",
+          "decision_date": "2024-05-28",
+          "subject": "Yargıtay · 2024/5502 E. · 2024/6060 K.",
+          "summary": "10. Hukuk Dairesi 2024/5502 E. , 2024/6060 K. \"İçtihat Metni\" MAHKEMESİ :İş Mahkemesi SAYISI : 2021/265 E., 2023/513 K. KARAR : Kısmen Kabul Taraflar arasında İlk Derece Mahkemesinde görülen rücuan tazminat davasında verilen karar hakkında yapılan temyiz incelemesi sonucunda, Dairece İlk Derece Mahkemesi kararının bozu…",
+          "overlap_ratio": 0.4
+        }
+      ]
+    },
+    {
+      "id": "konu_12",
+      "query": "kamulaştırmasız el atma tazminat",
+      "source": "cache",
+      "avg_overlap_ratio": 1,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 3. Hukuk Dairesi",
+          "case_number": "2011/22205",
+          "decision_number": "2012/4762",
+          "decision_date": "2012-02-26",
+          "subject": "Yargıtay · 2011/22205 E. · 2012/4762 K.",
+          "summary": "…22205 E. , 2012/4762 K. \"İçtihat Metni\" MAHKEMESİ:ASLİYE HUKUK MAHKEMESİ Dava dilekçesinde 7.100,00 kamulaştırmasız el atma tazminatı ile 43.916,71 TL ecrimisilin faiz ve masraflarla birlikte davalı taraftan tahsili istenilmiştir. Mahkemece davanın kamulaştırmasız el atma tazminatı yönünden konusuz kaldığından red, ecr…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 5. Hukuk Dairesi",
+          "case_number": "2013/21265",
+          "decision_number": "2014/5943",
+          "decision_date": "2014-03-04",
+          "subject": "Yargıtay · 2013/21265 E. · 2014/5943 K.",
+          "summary": "…, kamulaştırmasız el atılan taşınmaz bedelinin tahsili ile ecrimisil istemine ilişkindir. Mahkemece kamulaştırmasız el atma tazminatı yönünden davanın feragat nedeniyle reddine, ecrimisil bakımından ise kabulüne karar verilmiş; hüküm, davalı idare vekilince temyiz edilmiştir. Dosyada bulunan kanıt ve belgelere, kararın…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 5. Hukuk Dairesi",
+          "case_number": "2013/16539",
+          "decision_number": "2014/758",
+          "decision_date": "2014-01-15",
+          "subject": "Yargıtay · 2013/16539 E. · 2014/758 K.",
+          "summary": "…, kamulaştırmasız el atılan taşınmaz bedelinin tahsili ile ecrimisil istemine ilişkindir. Mahkemece kamulaştırmasız el atma tazminatı yönünden davanın feragat nedeniyle reddine, ecrimisil bakımından ise kabulune karar verilmiş; hüküm, davalı idare vekilince temyiz edilmiştir. Dosyada bulunan kanıt ve belgelere, kararın…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 5. Hukuk Dairesi",
+          "case_number": "2016/17360",
+          "decision_number": "2017/21716",
+          "decision_date": "2017-10-10",
+          "subject": "Yargıtay · 2016/17360 E. · 2017/21716 K.",
+          "summary": "…2016/17360 E. , 2017/21716 K. \"İçtihat Metni\" MAHKEMESİ :Asliye Hukuk Mahkemesi Taraflar arasındaki kamulaştırmasız el atma tazminatı davasından dolayı yapılan yargılama sonunda: Davanın reddine dair verilen yukarıda gün ve sayıları yazılı hükmün Yargıtay'ca incelenmesi, taraf vekillerince verilen dilekçeler ile isteni…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 5. Hukuk Dairesi",
+          "case_number": "2019/6932",
+          "decision_number": "2019/18207",
+          "decision_date": "2019-11-12",
+          "subject": "Yargıtay · 2019/6932 E. · 2019/18207 K.",
+          "summary": "…. Ancak; Maddi hata sonucu hüküm fıkrasında ecrimisil bedeli üzerinden hükmedilen vekalet ücretinin kamulaştırmasız el atma tazminatına ait olduğunun yazılması, Doğru değil ise de; bu yanılgının giderilmesi yeniden yargılama yapılmasını gerektirmediğinden, Gerekçeli kararın hüküm fıkrasının; 8 numaralı bendindeki (kamu…",
+          "overlap_ratio": 1
+        }
+      ]
+    },
+    {
+      "id": "konu_13",
+      "query": "marka tecavüzünün önlenmesi",
+      "source": "cache",
+      "avg_overlap_ratio": 0.6667,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yerel Hukuk Mahkemesi İzmir Fikri ve Sınai Haklar Hukuk Mahkemesi",
+          "case_number": "2018/14",
+          "decision_number": "2020/5",
+          "decision_date": "2020-03-02",
+          "subject": "Yerel Hukuk Mahkemesi · 2018/14 E. · 2020/5 K.",
+          "summary": "T.C. İZMİR FİKRÎ VE SINAÎ HAKLAR HUKUK MAHKEMESİ ESAS NO : 2018/14 Esas KARAR NO : 2020/5 DAVA : Markaya Tecavüzün Önlenmesi DAVA TARİHİ : 12/01/2018 KARAR TARİHİ : 03/03/2020 Davacı vekili tarafından davalı aleyhine 12/01/2018 tarihinde açılan dava, mahkememizin esas defterine kaydedilmiş olup, yapılan açık yargılamas…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2007/15032",
+          "decision_number": "2007/13658",
+          "decision_date": "2007-10-31",
+          "subject": "Yargıtay · 2007/15032 E. · 2007/13658 K.",
+          "summary": "…resi 2007/15032 E. , 2007/13658 K. \"İçtihat Metni\" MAHKEMESİ :Ticaret Mahkemesi Taraflar arasındaki markaya tecavüzün önlenmesine ilişkin davada İzmir 4. Asliye Ticaret ile 3. Asliye Hukuk (F.S.H.H.) Mahkemelerince ayrı ayrı görevsizlik kararı verilmesi nedeni ile yargı yerinin belli edilmesi için gönderilen dosya için…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 3,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu Fikrî ve Sınaî Haklar Hukuk Mahkemesi",
+          "case_number": "2010/148",
+          "decision_number": "2018/296",
+          "decision_date": "2018-10-10",
+          "subject": "Yerel Hukuk Mahkemesi · 2010/148 E. · 2018/296 K.",
+          "summary": "…dolu FİKRÎ VE SINAÎ HAKLAR HUKUK MAHKEMESİ KARAR ESAS NO : 2010/148 Esas KARAR NO : 2018/296 DAVA : Markaya Tecavüzün Önlenmesi ve Men'i ile Manevi Tazminat DAVA TARİHİ : 26/07/2010 KARAR TARİHİ : 11/10/2018 Davacı vekili tarafından davalı aleyhine açılan markaya tecavüzün önlenmesi ve men'i ile manevi tazminat davasın…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 4,
+          "court": "Yerel Hukuk Mahkemesi Ankara 3. Fikri ve Sınaî Haklar Hukuk Mahkemesi",
+          "case_number": "2020/212",
+          "decision_number": "2021/282",
+          "decision_date": "2021-09-08",
+          "subject": "Yerel Hukuk Mahkemesi · 2020/212 E. · 2021/282 K.",
+          "summary": "…FİKRİ VE SINAÎ HAKLAR HUKUK MAHKEMESİ GEREKÇELİ KARAR ESAS NO : 2020/212 KARAR NO : 2021/282 DAVA : Markaya Tecavüzün Önlenmesi, Maddi ve Manevi Tazminat DAVA TARİHİ : 17/07/2020 KARAR TARİHİ : 09/09/2021 GEREKÇELİ KARARIN YAZILDIĞI TARİH : 09/09/2021 Yukarıda açık kimliği yazılı bulunan davacı vekili tarafından mahkem…",
+          "overlap_ratio": 0.6667
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 1. Hukuk Dairesi",
+          "case_number": "2010/10733",
+          "decision_number": "2010/9823",
+          "decision_date": "2010-10-04",
+          "subject": "Yargıtay · 2010/10733 E. · 2010/9823 K.",
+          "summary": "…010/10733 E. , 2010/9823 K. \"İçtihat Metni\" MAHKEMESİ :ASLİYE HUKUK MAHKEMESİ DAVA TÜRÜ : ELATMANIN ÖNLENMESİ -KARAR- Dava, markaya tecavüzün önlenmesi isteğine ilişkindir. Davanın açıklanan bu nitelendirmesine göre, 2797 Sayılı Yargıtay Yasasının 14.maddesi uyarınca temyiz incelemesi Yüksek 11.Hukuk Dairesine ait bulu…",
+          "overlap_ratio": 0.6667
+        }
+      ]
+    },
+    {
+      "id": "konu_14",
+      "query": "tüketici hakem heyeti kararına itiraz",
+      "source": "cache",
+      "avg_overlap_ratio": 1,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2017/459",
+          "decision_number": "2017/1119",
+          "decision_date": "2017-02-12",
+          "subject": "Yargıtay · 2017/459 E. · 2017/1119 K.",
+          "summary": "…si için gönderilen dosya içindeki tüm belgeler incelendi gereği düşünüldü: K A R A R Dava, ... İlçe Tüketici Hakem Heyeti kararına itirazına ilişkindir. ... Tüketici Mahkemesince, kararına itiraz olunan ... Tüketici Sorunları Hakem Heyetinin, ... Tüketici Mahkemeleri yetki alanı/yargı çevresinde olmadığı gerekçesiyle y…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2017/8635",
+          "decision_number": "2017/7146",
+          "decision_date": "2017-10-01",
+          "subject": "Yargıtay · 2017/8635 E. · 2017/7146 K.",
+          "summary": "…önderilen dosya içindeki tüm belgeler incelendi, gereği düşünüldü: K A R A R Dava, ... Kaymakamlığı Tüketici Hakem Heyeti kararına itiraza ilişkindir. ... 3. Tüketici Mahkemesince, ... İl Tüketici Hakem Heyeti kararlarına itirazlarda yetkili mahkemenin, kararı veren yerdeki tüketici mahkemesi ya da tüketici mahkemesini…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2017/6466",
+          "decision_number": "2017/4407",
+          "decision_date": "2017-05-14",
+          "subject": "Yargıtay · 2017/6466 E. · 2017/4407 K.",
+          "summary": "…çin gönderilen dosya içindeki tüm belgeler incelendi gereği düşünüldü: KARAR Dava, ... Kaymakamlığı Tüketici Hakem Heyeti kararına itirazına ilişkindir. ... 4. Asliye Hukuk (Tüketici Mahkemesi sıfatıyla) Mahkemesince,...Tüketici Hakem Heyeti kararlarına itirazlarda yetkili mahkemenin, kararı veren yerdeki tüketici mahk…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2017/7726",
+          "decision_number": "2017/6205",
+          "decision_date": "2017-07-04",
+          "subject": "Yargıtay · 2017/7726 E. · 2017/6205 K.",
+          "summary": "…enmesi için gönderilen dosya içindeki tüm belgeler incelendi, gereği düşünüldü: K A R A R Dava, ... Tüketici Hakem Heyeti kararına itirazına ilişkindir. ... 2. Asliye Hukuk (Tüketici Mahkemesi sıfatıyla) Mahkemesince, ... Kaymakamlığı ilçe Tüketici Hakem Heyeti kararlarına itirazlarda yetkili mahkemenin, kararı veren y…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 20. Hukuk Dairesi",
+          "case_number": "2017/7603",
+          "decision_number": "2017/5608",
+          "decision_date": "2017-06-18",
+          "subject": "Yargıtay · 2017/7603 E. · 2017/5608 K.",
+          "summary": "…önderilen dosya içindeki tüm belgeler incelendi, gereği düşünüldü: K A R A R Dava, ... Kaymakamlığı Tüketici Hakem Heyeti kararına itiraza ilişkindir. ... 3. Asliye Hukuk (Tüketici Mahkemesi sıfatıyla) Mahkemesince, ... Kaymakamlığı Tüketici Hakem Heyeti kararlarına itirazlarda yetkili mahkemenin, kararı veren yerdeki…",
+          "overlap_ratio": 1
+        }
+      ]
+    },
+    {
+      "id": "konu_15",
+      "query": "hizmet tespiti davalarında hak düşürücü süre",
+      "source": "live",
+      "avg_overlap_ratio": 0.1333,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 21. Hukuk Dairesi",
+          "case_number": "2017/4944",
+          "decision_number": "2018/4771",
+          "decision_date": "2018-05-13",
+          "subject": "Yargıtay · 2017/4944 E. · 2018/4771 K.",
+          "summary": "…ki değeri tespit edilerek ve 3.000,00 TL tazminatın faiziyle birlikte davalıdan alınmasına, yine bu süreçte kendisine herhangi bir sigorta kaydı yapılmadığı için acentelik görevlerine ilişin sürenin tespitine karar verilmesini istemiştir. Mahkeme ilamında belirtildiği şekilde, isteğin reddine karar vermiştir. Hükmün, d…",
+          "overlap_ratio": 0.3333
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2025/2050",
+          "decision_number": "2025/15909",
+          "decision_date": "2025-11-23",
+          "subject": "Yargıtay · 2025/2050 E. · 2025/15909 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2025/2049",
+          "decision_number": "2025/15908",
+          "decision_date": "2025-11-23",
+          "subject": "Yargıtay · 2025/2049 E. · 2025/15908 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2025/5709",
+          "decision_number": "2025/11529",
+          "decision_date": "2025-09-08",
+          "subject": "Yargıtay · 2025/5709 E. · 2025/11529 K.",
+          "summary": "",
+          "overlap_ratio": 0
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 10. Hukuk Dairesi",
+          "case_number": "2011/5029",
+          "decision_number": "2012/8533",
+          "decision_date": "2012-05-09",
+          "subject": "Yargıtay · 2011/5029 E. · 2012/8533 K.",
+          "summary": "…hkemesi :İş Mahkemesi No :775-43 Dava, 506 sayılı Kanun hükümleri kapsamındaki zorunlu sigortalılık sürelerinin tespiti istemine ilişkindir. Mahkemece, davanın kısmen kabulüne karar verilmiştir. Hükmün, davacı avukatı ile davalı ... Başkanlığı avukatı tarafından temyiz edilmesi üzerine, temyiz isteklerinin süresinde ol…",
+          "overlap_ratio": 0.3333
+        }
+      ]
+    },
+    {
+      "id": "konu_16",
+      "query": "çek şikayeti karşılıksız çek",
+      "source": "live",
+      "avg_overlap_ratio": 0.75,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yerel Hukuk Mahkemesi Bursa 3. Asliye Ticaret Mahkemesi",
+          "case_number": "2024/574",
+          "decision_number": "2024/1134",
+          "decision_date": "2024-11-06",
+          "subject": "Yerel Hukuk Mahkemesi · 2024/574 E. · 2024/1134 K.",
+          "summary": "…zdindeki,... IBAN Nolu ,31.05.3023 keşide, 09.06.2023 ibraz tarihli,... seri nolu,90.000 TL bedelli karşılıksız çekin bankaların ödemekle yükümlü olduğu yasal sorumluluk bedelinin ödenmesi talebi ile 23.10.2023 tarihinde yazılı olarak müracaat edildiğini, davalı tarafın talep edilen banka sorumluluk tutarını çeki yasal…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 2,
+          "court": "Kanun Yararına Bozma Kararları 19. Hukuk Dairesi",
+          "case_number": "2017/1189",
+          "decision_number": "2017/2913",
+          "decision_date": "2017-03-29",
+          "subject": "Kanun Yararına Bozma Kararları · 2017/1189 E. · 2017/2913 K.",
+          "summary": "19. Hukuk Dairesi 2017/1189 E. , 2017/2913 K. KARŞILIKSIZ ÇEK DÜZENLEME SUÇLARINDAN 6728 SAYILI KANUNUN 62.MADDESIYLE DEĞIŞTIRILEN 5941 SAYILI ÇEK KANUNUN 3. MADDESI GEREĞINCE ICRA CEZA MAHKEMELERININ YETKILI OLACAĞINA DAIR ILAM. ÇEK KANUNU (5941) Madde 5 YATIRIM ORTAMININ İYİLEŞTİRİLMESİ AMACIYLA BAZI KANUNLARDA DEĞİŞ…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 3,
+          "court": "Danıştay 4. Daire",
+          "case_number": "1993/1556",
+          "decision_number": "1994/291",
+          "decision_date": "1994-01-20",
+          "subject": "Danıştay · 1993/1556 E. · 1994/291 K.",
+          "summary": "…e ait vergi borçlarının tecil ve taksitlendirilmesi sonucu 30.11.1992 tarihli … Tarsus Şubesine ait çekin … Bankası Tarsus Şubesine 3.11.1992 tarihinde teslim edildiği ve söz konusu çekin karşılıksız olduğunun tespiti üzerine 3167 sayılı Kanunun 16 ıncı maddesi uyarınca hesaplanan % 10 tazminat ve gecikme zammının tahs…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 4,
+          "court": "Danıştay 7. Daire",
+          "case_number": "1993/2406",
+          "decision_number": "1995/4351",
+          "decision_date": "1995-11-08",
+          "subject": "Danıştay · 1993/2406 E. · 1995/4351 K.",
+          "summary": "…lı : 1993 Esas No : 2406 Karar Tarihi : 09/11/995 YÜKÜMLÜCE, KDV BORCU İÇİN VERGİ DAİRESİNE VERİLEN ÇEKİN KARŞILIKSIZ ÇIKMASI SEBEBİYLE 3167 SAYILI KANUN UYARINCA HESAPLANAN TAZMİNATIN, 6183 SAYILI KANUN KAPSAMINDA KAMU ALACAĞI OLMADIĞI, DOLAYISIYLA ÖDEME EMRİ İLE İSTENEMEYECEĞİ HK.…",
+          "overlap_ratio": 0.75
+        },
+        {
+          "rank": 5,
+          "court": "Yerel Hukuk Mahkemesi Ankara Batı Asliye Ticaret Mahkemesi",
+          "case_number": "2021/648",
+          "decision_number": "2022/183",
+          "decision_date": "2022-02-23",
+          "subject": "Yerel Hukuk Mahkemesi · 2021/648 E. · 2022/183 K.",
+          "summary": "…i mahkememize sunduğu dava dilekçesinde özetle; müvekkilinin borçlu dava dışı ... A.Ş'den dört adet çek aldığını, çeklerin davalı bankaya süresinde ibraz edildiğini, banka tarafından imza tutmadığı gerekçesiyle çeklerin ödenmediğini, karşılıksızdır işleminin de yapılmadığını, daha sonra gerekli hukuki yollara başvuruld…",
+          "overlap_ratio": 0.75
+        }
+      ]
+    },
+    {
+      "id": "konu_17",
+      "query": "önalım şufa davası hak düşürücü süre",
+      "source": "live",
+      "avg_overlap_ratio": 0.3,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay Hukuk Genel Kurulu",
+          "case_number": "2009/162",
+          "decision_number": "2009/267",
+          "decision_date": "2009-06-16",
+          "subject": "Yargıtay · 2009/162 E. · 2009/267 K.",
+          "summary": "…iye Hukuk Mahkemesi TARİHİ : 07.09.2007 NUMARASI : 2007/785 E-2007/25 K. Taraflar arasındaki &ldquo;Şufa(Önalım)&rdquo; davasından dolayı yapılan yargılama sonunda; Bakırköy 11.Asliye Ticaret Mahkemesince davanın reddine dair verilen 07.09.2007 gün ve 2007/758 E-2009/25 K. sayılı kararın incelenmesi davacılardan İ. ve…",
+          "overlap_ratio": 0.5
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay Hukuk Genel Kurulu",
+          "case_number": "2005/230",
+          "decision_number": "2005/244",
+          "decision_date": "2005-04-12",
+          "subject": "Yargıtay · 2005/230 E. · 2005/244 K.",
+          "summary": "…e Hukuk Mahkemesi Günü : 23.11.2004 Sayısı : 315-380 Taraflar arasındaki &ldquo; şuf&rsquo;a&rdquo; davasından dolayı yapılan yargılama sonunda; Seferihisar Asliye Hukuk Mahkemesince davanın kabulüne dair verilen 29.01.2004 gün ve 2003/245-2004/25 sayılı kararın incelenmesi davalı vekili tarafından istenilmesi üzerine,…",
+          "overlap_ratio": 0.1667
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 14. Hukuk Dairesi",
+          "case_number": "2015/18958",
+          "decision_number": "2016/5114",
+          "decision_date": "2016-04-25",
+          "subject": "Yargıtay · 2015/18958 E. · 2016/5114 K.",
+          "summary": "…ye Hukuk Mahkemesi Davacı vekili tarafından, davalı aleyhine 10.11.2014 gününde verilen dilekçe ile önalım hakkına dayalı tapu iptali ve tescil istenmesi üzerine yapılan muhakeme sonunda; davanın reddine dair verilen 28.04.2015 günlü hükmün Yargıtayca, duruşmalı olarak incelenmesi davacı vekili tarafından istenilmekle,…",
+          "overlap_ratio": 0.3333
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay Hukuk Genel Kurulu",
+          "case_number": "2005/358",
+          "decision_number": "2005/470",
+          "decision_date": "2005-09-20",
+          "subject": "Yargıtay · 2005/358 E. · 2005/470 K.",
+          "summary": "…hkemesi Günü : 23.11.2004 Sayısı : 2004/316 E- 381 K. Taraflar arasındaki &ldquo;şuf&rsquo;a&rdquo; davasından dolayı yapılan yargılama sonunda; Seferihisar Asliye Hukuk Mahkemesince davanın kabulüne dair verilen 29.01.2004 gün ve 2003/246 esas-2004/26 karar sayılı kararın incelenmesi davalılar vekili tarafından isteni…",
+          "overlap_ratio": 0.1667
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 14. Hukuk Dairesi",
+          "case_number": "2015/15864",
+          "decision_number": "2016/3268",
+          "decision_date": "2016-03-14",
+          "subject": "Yargıtay · 2015/15864 E. · 2016/3268 K.",
+          "summary": "…Hukuk Mahkemesi Davacılar vekili tarafından, davalı aleyhine 23.05.2011 gününde verilen dilekçe ile önalım nedeniyle tapu iptali ve tescil istenmesi üzerine yapılan muhakeme sonunda; davanın reddine dair verilen 13.07.2015 günlü hükmün Yargıtayca, duruşmalı olarak incelenmesi davacı ... vekili tarafından istenilmekle,…",
+          "overlap_ratio": 0.3333
+        }
+      ]
+    },
+    {
+      "id": "konu_18",
+      "query": "tasarrufun iptali davası mal kaçırma",
+      "source": "live",
+      "avg_overlap_ratio": 0.4,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2014/1243",
+          "decision_number": "2021/527",
+          "decision_date": "2021-04-28",
+          "subject": "Yerel Hukuk Mahkemesi · 2014/1243 E. · 2021/527 K.",
+          "summary": "T.C. İstanbul Anadolu 6. ASLİYE TİCARET MAHKEMESİ ESAS N : 2013/223 Esas KARAR NO: 2021/673 DAVA : Tasarrufun İptali (İİK 277 Ve Devamı) DAVA TARİHİ : 04/02/2013 KARAR TARİHİ : 17/06/2021 ------ adına yargılama yetkisini kullanan bağımsız -------- tarafça açılan dava üzerine yapılan yargılama nihayetinde; I.GEREĞİ DÜŞÜ…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 2,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2014/1136",
+          "decision_number": "2021/475",
+          "decision_date": "2021-04-19",
+          "subject": "Yerel Hukuk Mahkemesi · 2014/1136 E. · 2021/475 K.",
+          "summary": "T.C. İstanbul Anadolu 6. ASLİYE TİCARET MAHKEMESİ ESAS N : 2013/223 Esas KARAR NO: 2021/673 DAVA : Tasarrufun İptali (İİK 277 Ve Devamı) DAVA TARİHİ : 04/02/2013 KARAR TARİHİ : 17/06/2021 ------ adına yargılama yetkisini kullanan bağımsız -------- tarafça açılan dava üzerine yapılan yargılama nihayetinde; I.GEREĞİ DÜŞÜ…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 3,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2013/245",
+          "decision_number": "2021/707",
+          "decision_date": "2021-06-22",
+          "subject": "Yerel Hukuk Mahkemesi · 2013/245 E. · 2021/707 K.",
+          "summary": "T.C. İstanbul Anadolu 6. ASLİYE TİCARET MAHKEMESİ ESAS N : 2013/223 Esas KARAR NO: 2021/673 DAVA : Tasarrufun İptali (İİK 277 Ve Devamı) DAVA TARİHİ : 04/02/2013 KARAR TARİHİ : 17/06/2021 ------ adına yargılama yetkisini kullanan bağımsız -------- tarafça açılan dava üzerine yapılan yargılama nihayetinde; I.GEREĞİ DÜŞÜ…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 4,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2013/223",
+          "decision_number": "2021/673",
+          "decision_date": "2021-06-16",
+          "subject": "Yerel Hukuk Mahkemesi · 2013/223 E. · 2021/673 K.",
+          "summary": "T.C. İstanbul Anadolu 6. ASLİYE TİCARET MAHKEMESİ ESAS N : 2013/223 Esas KARAR NO: 2021/673 DAVA : Tasarrufun İptali (İİK 277 Ve Devamı) DAVA TARİHİ : 04/02/2013 KARAR TARİHİ : 17/06/2021 ------ adına yargılama yetkisini kullanan bağımsız -------- tarafça açılan dava üzerine yapılan yargılama nihayetinde; I.GEREĞİ DÜŞÜ…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 5,
+          "court": "Yerel Hukuk Mahkemesi İstanbul Anadolu 6. Asliye Ticaret Mahkemesi",
+          "case_number": "2023/451",
+          "decision_number": "2024/245",
+          "decision_date": "2024-04-03",
+          "subject": "Yerel Hukuk Mahkemesi · 2023/451 E. · 2024/245 K.",
+          "summary": "T.C.İstanbul Anadolu 6. ASLİYE TİCARET MAHKEMESİ ESAS NO: 2023/451 Esas KARAR NO: 2024/245 DAVA: Tasarrufun İptali (İİK 277 Ve Devamı) DAVA TARİHİ: 04/02/2013 KARAR TARİHİ: 04/04/2024 -----maddesine göre Türk Milleti adına yargılama yetkisini kullanan bağımsız ----- Mahkemesince, tarafça açılan dava üzerine yapılan yar…",
+          "overlap_ratio": 0.4
+        }
+      ]
+    },
+    {
+      "id": "konu_19",
+      "query": "yıllık ücretli izin hakkı ispatı",
+      "source": "live",
+      "avg_overlap_ratio": 0.56,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yargıtay 9. Hukuk Dairesi",
+          "case_number": "2025/9525",
+          "decision_number": "2026/757",
+          "decision_date": "2026-02-02",
+          "subject": "Yargıtay · 2025/9525 E. · 2026/757 K.",
+          "summary": "…lıştığını, ulusal bayram ve genel tatil günlerinde çalıştığını, son 6 aylık çalışmasında hafta sonu izinlerini de kullanmadığını, müvekkilinin hiç izin kullanmadığını belirterek ihbar tazminatı, fazla çalışma, hafta tatili, ulusal bayram ve genel tatil ücreti ile yıllık ücretli izin alacaklarının davalıdan tahsiline ka…",
+          "overlap_ratio": 0.6
+        },
+        {
+          "rank": 2,
+          "court": "Yargıtay 7. Hukuk Dairesi",
+          "case_number": "2013/6695",
+          "decision_number": "2013/16215",
+          "decision_date": "2013-10-02",
+          "subject": "Yargıtay · 2013/6695 E. · 2013/16215 K.",
+          "summary": "…dığını aynı iş yerine tabi işlerdeki hizmet sürelerinin birleştirilmesi ve tam yıla uyarlanması ile yıllık izinlerini hesaplanması gerektiğini beyanla yıllık izin ücreti alacağının davalıdan tahsilini talep etmiştir. Davalı vekili, davacının başlangıçta mevsim ve kampanya işçisi olarak çalıştığını, bu nedenle yıllık üc…",
+          "overlap_ratio": 0.4
+        },
+        {
+          "rank": 3,
+          "court": "Yargıtay 22. Hukuk Dairesi",
+          "case_number": "2013/875",
+          "decision_number": "2013/29280",
+          "decision_date": "2013-12-15",
+          "subject": "Yargıtay · 2013/875 E. · 2013/29280 K.",
+          "summary": "…n emeklilikle sona erdiğini, işyerinde işe başladığı tarihten itibaren 2002 yılına kadar hak ettiği yıllık ücretli izin haklarının kullandırılmadığını, işe giriş tarihinden 2002 yılına kadar kullandırılmayan yıllık ücretli izin alacağı, hafta tatili ücreti, ulusal ... ve genel tatil alacaklarının davalıdan tahsiline ka…",
+          "overlap_ratio": 0.6
+        },
+        {
+          "rank": 4,
+          "court": "Yargıtay 22. Hukuk Dairesi",
+          "case_number": "2017/7387",
+          "decision_number": "2017/9192",
+          "decision_date": "2017-04-18",
+          "subject": "Yargıtay · 2017/7387 E. · 2017/9192 K.",
+          "summary": "…i arasında çalıştığını, iş sözleşmesini emeklilik nedeniyle feshettiğini beyanla kıdem tazminatı ve yıllık ücretli izin alacaklarının tahsilini talep etmiştir. Davalı cevabının özeti: Davalı vekili, davanın reddini savunmuştur. Mahkeme kararının özeti: Mahkemece, toplanan delillere ve bilirkişi raporuna göre, yazılı ge…",
+          "overlap_ratio": 0.6
+        },
+        {
+          "rank": 5,
+          "court": "Yargıtay 9. Hukuk Dairesi",
+          "case_number": "2014/4290",
+          "decision_number": "2015/16311",
+          "decision_date": "2015-05-04",
+          "subject": "Yargıtay · 2014/4290 E. · 2015/16311 K.",
+          "summary": "…i ücretlerinin ödenmemesi nedeniyle feshettiğini ileri sürerek kıdem ve kötü niyet tazminatları ile yıllık ücretli izin, fazla çalışma ve ücret alacaklarının davalılardan tahsiline karar verilmesini istemiştir. B) Davalı Cevabının Özeti: Davalılar, davanın reddine karar verilmesini istemiştir. C) Yerel Mahkeme Kararını…",
+          "overlap_ratio": 0.6
+        }
+      ]
+    },
+    {
+      "id": "konu_20",
+      "query": "haksız ihtiyati tedbir tazminat",
+      "source": "live",
+      "avg_overlap_ratio": 1,
+      "top5": [
+        {
+          "rank": 1,
+          "court": "Yerel Hukuk Mahkemesi Konya 4. Asliye Ticaret Mahkemesi",
+          "case_number": "2022/797",
+          "decision_number": "2025/3",
+          "decision_date": "2025-01-06",
+          "subject": "Yerel Hukuk Mahkemesi · 2022/797 E. · 2025/3 K.",
+          "summary": "…nusu olduğundan, davalı yararına icra veznesine yatan 23.874,04 TL alacağın %20 si olan 4.774,80 TL haksız ihtiyati tedbir tazminatının davacıdan alınarak davalılardan takip alacaklısı ...'a verilmesi için aşağıdaki şekilde hüküm kurulmuştur. Ayrıca İİK'nın 72/4. maddesi; \"Dava alacaklı lehine neticelenirse ihtiyati te…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 2,
+          "court": "İstinaf Hukuk Mahkemesi Konya Bölge Adliye Mahkemesi 6. Hukuk Dairesi",
+          "case_number": "2025/1635",
+          "decision_number": "2026/235",
+          "decision_date": "2026-02-16",
+          "subject": "İstinaf Hukuk Mahkemesi · 2025/1635 E. · 2026/235 K.",
+          "summary": "…ğı...\" gerekçesiyle davacının davasının tüm davalılar yönünden esastan reddine, davalının tazminat (haksız ihtiyati tedbir tazminatı) talebinin şartları oluştuğundan kabulü ile, icra veznesine yatan 18.345,09 TL alacağın %20 si olan 3.669,02 TL haksız ihtiyati tedbir tazminatının davacıdan alınarak davalılardan takip a…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 3,
+          "court": "Yerel Hukuk Mahkemesi İstanbul 1. Asliye Ticaret Mahkemesi",
+          "case_number": "2021/107",
+          "decision_number": "2021/663",
+          "decision_date": "2021-10-07",
+          "subject": "Yerel Hukuk Mahkemesi · 2021/107 E. · 2021/663 K.",
+          "summary": "…an davalı müvekkiline, haksız ihtiyati tedbir nedeniyle alacağın yüzde yirmisinden az olmamak üzere haksız ihtiyati tedbir tazminatı ödemenmesini, yargılama giderinin karşı tarafa yükletilmesine karar verilmesini talep etmiştir. DELİLLER VE GEREKÇE Dava, 2004 sayılı İİK. m.72/3 kapsamında icra takibinden sonra açılan,…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 4,
+          "court": "İstinaf Hukuk Mahkemesi Gaziantep Bölge Adliye Mahkemesi 11. Hukuk Dairesi",
+          "case_number": "2022/1330",
+          "decision_number": "2023/1407",
+          "decision_date": "2023-12-24",
+          "subject": "İstinaf Hukuk Mahkemesi · 2022/1330 E. · 2023/1407 K.",
+          "summary": "…ki alacaklarını müvekkiline ödenmemesi yönündeki tedbir kararının hukuka aykırı olduğunu, davacıdan haksız ihtiyati tedbir tazminatı taleplerinin bulunduğunu, bu nedenle tedbir kararının kaldırılmasına, davanın reddine karar verilmesini istemiştir. Mahkemece, ...Asıl dava yönünden; taraflar arasında hizmet alımı sözleş…",
+          "overlap_ratio": 1
+        },
+        {
+          "rank": 5,
+          "court": "Yerel Hukuk Mahkemesi Konya 4. Asliye Ticaret Mahkemesi",
+          "case_number": "2022/621",
+          "decision_number": "2023/33",
+          "decision_date": "2023-01-16",
+          "subject": "Yerel Hukuk Mahkemesi · 2022/621 E. · 2023/33 K.",
+          "summary": "…talebi yerinde görülmediğinden davacının davasının ve tüm taleplerinin reddine, davalının tazminat (haksız ihtiyati tedbir tazminatı) talebinin şartları oluşmadığından reddine karar vermek gerekmiş ve aşağıdaki hüküm kurulmuştur. (IV) HÜKÜM SONUCU, YARGILAMA GİDERLERİ VE KANUN YOLU: Yukarıda açıklanan nedenlerle; 1-Dav…",
+          "overlap_ratio": 1
+        }
+      ]
+    }
+  ]
+}

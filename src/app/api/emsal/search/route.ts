@@ -6,10 +6,17 @@ import {
   scoreAndSnippet,
   extractTerms,
   daireToBirimAdi,
+  trLower,
   EMSAL_COURT_TYPES,
   type BedestenEmsalItem,
 } from "@/lib/services/bedesten";
 import { topluKararMetni } from "@/lib/services/emsal-doc-cache";
+import {
+  extractMaddeAtfi,
+  maddeAtfindanTerim,
+  kavramdanMaddeTerimi,
+  normalizeQuery,
+} from "@/lib/arama/query-parser";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -168,10 +175,25 @@ function normalizeNo(s: string): string {
   return s.replace(/\s/g, "").toLowerCase();
 }
 
+// Bedesten'e giden phrase'te KULLANILIR — normalizeNo'dan AYRI: Bedesten API'si
+// "/" içeren phrase'leri sessizce reddediyor (HTTP 200, FMTY≠SUCCESS → null).
+// Canlı doğrulandı: '"2014/20050"' → null, '"2014 20050"' → 50 sonuç.
+// Post-filter eşleşmesi (normalizeNo) buna DOKUNULMADI — r.case_number "/" içerir.
+function bedestenIcinNo(s: string): string {
+  return normalizeNo(s).replace(/\//g, " ");
+}
+
 // Serbest metindeki esas/karar no'yu ayıklayıp kesin-eşleşme yoluna sokar.
 // "2019/1234 E." | "esas no: 2019/1234" | "2020/5678 K." | "karar no 2020/5678"
+// | bare "2023/1342" (FAZ 1 düzeltmesi — bkz. src/lib/arama/query-parser.ts)
 function preprocessQuery(f: Filters): void {
   if (!f.q) return;
+  // Sorgu YALNIZCA "2023/1342" ise (etiketsiz bare esas no) — FAZ 0'da tespit
+  // edilen "0 sonuç" hatasının kök nedeni buydu.
+  if (!f.esas && !f.karar) {
+    const bare = f.q.trim().match(/^(\d{4}\/\d{1,6})$/);
+    if (bare) { f.esas = bare[1]; f.q = ""; return; }
+  }
   let q = f.q;
   const take = (re: RegExp): string | null => {
     const m = q.match(re);
@@ -202,8 +224,8 @@ function preprocessQuery(f: Filters): void {
 // kesin ifade → AND(+"terim") kademesi kullanılır, o da yoksa yerel fallback devreye girer.
 function buildPhrases(f: Filters): string[] {
   const noTerms: string[] = [];
-  if (f.esas) noTerms.push(`+"${normalizeNo(f.esas)}"`);
-  if (f.karar) noTerms.push(`+"${normalizeNo(f.karar)}"`);
+  if (f.esas) noTerms.push(`+"${bedestenIcinNo(f.esas)}"`);
+  if (f.karar) noTerms.push(`+"${bedestenIcinNo(f.karar)}"`);
   const noSuffix = noTerms.length > 0 ? " " + noTerms.join(" ") : "";
 
   if (!f.q) {
@@ -216,10 +238,25 @@ function buildPhrases(f: Filters): string[] {
   const andTerms = terms.map((t) => `+"${t}"`).join(" ") + noSuffix;
 
   if (f.mode === "kelime") return [exact];
-  if (f.mode === "anlam") return terms.length > 1 ? [andTerms, `${f.q}${noSuffix}`] : [exact];
-  // akilli: önce kesin ifade, sonra terimlerin AND'i
-  if (terms.length > 1) return [exact, andTerms];
-  return [exact];
+
+  // Madde/kanun atfı ve kavram→madde eşlemesinden ek arama varyantı üret
+  // (FAZ 1.2/1.3) — yalnızca anlam/akıllı modda, kelime modunun "tam kontrol"
+  // sözünü bozmamak için.
+  const qNorm = normalizeQuery(f.q);
+  const atfi = extractMaddeAtfi(qNorm);
+  const maddeTerimi = atfi ? maddeAtfindanTerim(atfi) : null;
+  const kavramTerimi = kavramdanMaddeTerimi(qNorm);
+  const ekVaryantlar = [maddeTerimi, kavramTerimi]
+    .filter((t): t is string => !!t)
+    .map((t) => `+"${t}"${noSuffix}`);
+
+  if (f.mode === "anlam") {
+    const temel = terms.length > 1 ? [andTerms, `${f.q}${noSuffix}`] : [exact];
+    return [...temel, ...ekVaryantlar];
+  }
+  // akilli: önce kesin ifade, sonra terimlerin AND'i, sonra madde/kavram varyantları
+  const temel = terms.length > 1 ? [exact, andTerms] : [exact];
+  return [...temel, ...ekVaryantlar];
 }
 
 // itemType.description bazen boş gelir — name üzerinden sabit eşleme
@@ -369,7 +406,7 @@ async function searchBedesten(f: Filters): Promise<{ results: EmsalResult[]; tot
   if (f.belgeTuru && BELGE_TURU_PATTERNS[f.belgeTuru]) {
     const patterns = BELGE_TURU_PATTERNS[f.belgeTuru];
     const filtered = results.filter((r) => {
-      const text = `${r.subject} ${r.summary}`.toLowerCase();
+      const text = trLower(`${r.subject} ${r.summary}`);
       return patterns.some((p) => text.includes(p));
     });
     if (filtered.length !== results.length) { results = filtered; total = filtered.length; }
@@ -531,7 +568,7 @@ async function searchSupabase(f: Filters): Promise<{ results: EmsalResult[]; tot
   if (f.belgeTuru && BELGE_TURU_PATTERNS[f.belgeTuru]) {
     const patterns = BELGE_TURU_PATTERNS[f.belgeTuru];
     results = results.filter((r) => {
-      const text = `${r.subject ?? ""} ${r.summary ?? ""}`.toLowerCase();
+      const text = trLower(`${r.subject ?? ""} ${r.summary ?? ""}`);
       return patterns.some((p) => text.includes(p));
     });
   }
