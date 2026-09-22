@@ -48,9 +48,10 @@ export default function CookieBanner() {
                 <Settings className="w-3 h-3" />
                 Ayarlar
               </button>
+              {/* Reddet ve Kabul Et eşit görsel ağırlıkta (aynı boyut/kalınlık/doluluk) — KVKK çerez rızası gereği */}
               <button
                 onClick={() => save("rejected")}
-                className="px-3 py-1.5 text-xs border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
+                className="px-4 py-1.5 text-xs bg-white hover:bg-white/90 text-[#0f1729] rounded-lg font-semibold transition-colors"
               >
                 Reddet
               </button>

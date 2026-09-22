@@ -56,6 +56,8 @@ const COLUMNS: FooterColumn[] = [
       { label: "Gizlilik Politikası", href: "/gizlilik" },
       { label: "Kullanım Şartları", href: "/kullanim-sartlari" },
       { label: "Yasal Uyarı", href: "/yasal-uyari" },
+      { label: "Tüm Sözleşmeler", href: "/sozlesmeler" },
+      { label: "KVKK Başvuru Formu", href: "/kvkk-basvuru" },
     ],
   },
 ];

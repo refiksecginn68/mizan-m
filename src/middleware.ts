@@ -19,6 +19,7 @@ const PUBLIC_PATHS = new Set([
   "/kvkk", "/kullanim-sartlari", "/yasal-uyari", "/cerez-politikasi",
   "/mesafeli-satis-sozlesmesi", "/eklenti-gizlilik", "/oturum-suresi-doldu",
   "/dogrulama-bekliyor", "/offline", "/auth/hata",
+  "/sozlesmeler", "/kvkk-basvuru",
 ]);
 
 // Eski punycode domain → yeni domain kalıcı taşıma.

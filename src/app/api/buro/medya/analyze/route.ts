@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { fal } from "@fal-ai/client";
 import { MIZAN_ORTAK_KURALLAR } from "@/lib/ai/prompts";
 import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
+import { guvenliMaskele, geriDoldur } from "@/lib/services/maskele";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -149,18 +150,40 @@ export async function POST(req: NextRequest) {
         transkript = result?.data?.text?.trim() ?? "";
       }
 
-      // Transkript + Claude ile yapılı analiz
+      // Transkript metne dönüştükten SONRA maskelenir — bkz.
+      // content/legal/yurt-disina-aktarim-bildirimi.v1.md madde 5. Ham ses/görüntü
+      // fal.ai Whisper'a maskelenmeden gider (teknik olarak mümkün değil); yalnızca
+      // dönen METİN, Anthropic'e gitmeden önce maskeleme katmanından geçirilir.
+      const bilinenDegerler: { deger: string; tur: "kisi" }[] = [];
+      if (caseId) {
+        const { data: davaBilgi } = await serviceSupabase
+          .from("cases")
+          .select("opposing_party, client_id, clients(full_name)")
+          .eq("id", caseId)
+          .eq("lawyer_id", user.id)
+          .maybeSingle();
+        if (davaBilgi?.opposing_party) bilinenDegerler.push({ deger: davaBilgi.opposing_party, tur: "kisi" });
+        const muvekkilAdi = (davaBilgi as AnyClient)?.clients?.full_name;
+        if (muvekkilAdi) bilinenDegerler.push({ deger: muvekkilAdi, tur: "kisi" });
+      }
+
       const not = (formData.get("not") as string | null)?.trim();
       const baglam = (formData.get("baglam") as string | null)?.trim();
+      const maskeliTranskript = guvenliMaskele(transkript || "(transkript boş)", bilinenDegerler);
+      const maskeliBaglam = baglam ? guvenliMaskele(baglam, bilinenDegerler) : null;
+      // İki metnin eşlemesini birleştir — geri doldurma tek eşleme tablosuyla yapılır
+      const birlesikEsleme = new Map(maskeliTranskript.esleme);
+      maskeliBaglam?.esleme.forEach((v, k) => birlesikEsleme.set(k, v));
+
       const prompt = `${ODAK[analysisType] ?? ODAK.ses}\n\n${JSON_TALIMAT}`;
       const claudeRes = await anthropic.messages.create({
         model: "claude-sonnet-4-6",
         max_tokens: 3000,
         messages: [{
           role: "user",
-          content: `${prompt}\n\nTranskript:\n${transkript || "(transkript boş)"}${baglam ? `\n\nAvukatın verdiği bağlam (yalnızca yorumlamaya yardımcı, tespitlerde birebir kullanma): ${baglam}` : ""}`,
+          content: `${prompt}\n\nTranskript:\n${maskeliTranskript.maskeliMetin}${maskeliBaglam ? `\n\nAvukatın verdiği bağlam (yalnızca yorumlamaya yardımcı, tespitlerde birebir kullanma): ${maskeliBaglam.maskeliMetin}` : ""}`,
         }],
-        system: `Sen adli bilirkişi gibi davranan bir analiz asistanısın. SADECE duyulan/görüleni maddi olarak raporlarsın; hukuki nitelendirme veya suç isnadı yapmazsın.` + MIZAN_ORTAK_KURALLAR,
+        system: `Sen adli bilirkişi gibi davranan bir analiz asistanısın. SADECE duyulan/görüleni maddi olarak raporlarsın; hukuki nitelendirme veya suç isnadı yapmazsın. Metindeki [KİŞİ-1], [TCKN-1] gibi köşeli parantezli etiketleri AYNEN KORU, gerçek isim/numara UYDURMA.` + MIZAN_ORTAK_KURALLAR,
       });
 
       const rawText = claudeRes.content
@@ -168,7 +191,7 @@ export async function POST(req: NextRequest) {
         .map((b) => (b as { text: string }).text)
         .join("\n");
 
-      const yapili = sonucAyristir(rawText);
+      const yapili = sonucAyristir(geriDoldur(rawText, birlesikEsleme));
 
       return NextResponse.json({
         success: true,

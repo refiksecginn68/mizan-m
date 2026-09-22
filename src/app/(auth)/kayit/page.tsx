@@ -29,6 +29,9 @@ function KayitForm() {
     bar_number: "",
     terms: false,
     kvkk: false,
+    riza_ozel_nitelikli: false,
+    riza_medya: false,
+    riza_ticari_ileti: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -78,6 +81,11 @@ function KayitForm() {
           user_type: userType,
           phone: form.phone || undefined,
           bar_number: form.bar_number || undefined,
+          acik_riza: {
+            ozel_nitelikli: form.riza_ozel_nitelikli,
+            medya_analizi: form.riza_medya,
+            ticari_ileti: form.riza_ticari_ileti,
+          },
         }),
       });
 
@@ -349,7 +357,7 @@ function KayitForm() {
           </div>
         )}
 
-        {/* KVKK */}
+        {/* KVKK — okundu bilgisi, açık rıza değil */}
         <div>
           <label className="flex items-start gap-3 cursor-pointer">
             <input
@@ -359,10 +367,10 @@ function KayitForm() {
               onChange={(e) => setForm({ ...form, kvkk: e.target.checked })}
             />
             <span className="font-body text-sm text-foreground">
-              <Link href="/gizlilik-politikasi" className="text-accent hover:underline">
+              <Link href={userType === "avukat" ? "/sozlesmeler/kvkk-aydinlatma-avukat" : "/sozlesmeler/kvkk-aydinlatma-vatandas"} className="text-accent hover:underline">
                 KVKK Aydınlatma Metnini
               </Link>{" "}
-              okudum, kişisel verilerimin işlenmesine onay veriyorum.
+              okudum.
             </span>
           </label>
           {errors.kvkk && (
@@ -370,7 +378,7 @@ function KayitForm() {
           )}
         </div>
 
-        {/* Terms */}
+        {/* Terms + Gizlilik — tek zorunlu tik, hizmetin şartı */}
         <div>
           <label className="flex items-start gap-3 cursor-pointer">
             <input
@@ -380,8 +388,12 @@ function KayitForm() {
               onChange={(e) => setForm({ ...form, terms: e.target.checked })}
             />
             <span className="font-body text-sm text-foreground">
-              <Link href="/kullanim-sartlari" className="text-accent hover:underline">
-                Kullanım Şartları
+              <Link href={userType === "avukat" ? "/sozlesmeler/kullanim-kosullari-avukat" : "/sozlesmeler/kullanim-kosullari-vatandas"} className="text-accent hover:underline">
+                Kullanım Koşulları
+              </Link>
+              &apos;nı ve{" "}
+              <Link href="/sozlesmeler/gizlilik-politikasi" className="text-accent hover:underline">
+                Gizlilik Politikası
               </Link>
               &apos;nı okudum, kabul ediyorum.
             </span>
@@ -389,6 +401,52 @@ function KayitForm() {
           {errors.terms && (
             <p className="font-body text-xs text-danger mt-1">{errors.terms}</p>
           )}
+        </div>
+
+        {/* Açık Rıza — ayrı, isteğe bağlı, hizmetin şartı DEĞİL */}
+        <div className="rounded-lg border border-border/60 p-3 space-y-3">
+          <p className="font-body text-xs text-muted-foreground">
+            Aşağıdakiler isteğe bağlıdır; işaretlemezseniz yalnızca ilgili özellik kapalı
+            kalır, hesabınız normal şekilde çalışmaya devam eder.
+          </p>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-accent flex-shrink-0"
+              checked={form.riza_ozel_nitelikli}
+              onChange={(e) => setForm({ ...form, riza_ozel_nitelikli: e.target.checked })}
+            />
+            <span className="font-body text-xs text-foreground">
+              Ceza dosyası/adli sicil/sağlık raporu içeren evraklarda yapay zekâ analizine{" "}
+              <Link href="/sozlesmeler/acik-riza-metni" className="text-accent hover:underline">
+                açık rıza
+              </Link>{" "}
+              veriyorum.
+            </span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-accent flex-shrink-0"
+              checked={form.riza_medya}
+              onChange={(e) => setForm({ ...form, riza_medya: e.target.checked })}
+            />
+            <span className="font-body text-xs text-foreground">
+              Ses/görüntü/video içeriklerimin yurt dışındaki sağlayıcıya iletilerek analiz
+              edilmesine açık rıza veriyorum.
+            </span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-accent flex-shrink-0"
+              checked={form.riza_ticari_ileti}
+              onChange={(e) => setForm({ ...form, riza_ticari_ileti: e.target.checked })}
+            />
+            <span className="font-body text-xs text-foreground">
+              Kampanya ve duyurulara ilişkin ticari elektronik ileti almak istiyorum.
+            </span>
+          </label>
         </div>
 
         {/* Server Error */}
