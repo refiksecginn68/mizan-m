@@ -17,6 +17,7 @@ import {
 import DavaBelgeler from "@/components/buro/DavaBelgeler";
 import DavaAsistanPanel from "@/components/buro/DavaAsistanPanel";
 import UyapDosyaSekmeleri from "@/components/buro/UyapDosyaSekmeleri";
+import { dosyaEmsalSorgusuUret } from "@/lib/arama/dosya-emsal-sorgusu";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -177,6 +178,7 @@ export default async function DavaDetayPage({
                 evraklar={(caseData.uyap_evraklar as AnyClient[]) ?? []}
                 evrakMetinleri={(caseData.uyap_evrak_metinleri as Record<string, string>) ?? undefined}
                 safahat={(caseData.uyap_safahat as AnyClient[]) ?? []}
+                emsalSorgusu={dosyaEmsalSorgusuUret(evrakMetinleri, caseData.case_type)}
               />
             )}
 

@@ -60,3 +60,30 @@ export async function tekKararMetni(documentId: string, essential = false): Prom
   const map = await topluKararMetni([documentId], essential);
   return map.get(documentId) ?? null;
 }
+
+/**
+ * FAZ 2 backfill'inin madde_atiflari kolonunu okur (bkz. migration 033,
+ * scripts/backfill-emsal-chunks.ts). Yalnızca önbellekte satırı olan ve
+ * chunked_at doldurulmuş kararlar için veri döner — Bedesten'den yeni inen
+ * kararlar için boş liste (henüz backfill'den geçmediler, bu normal).
+ */
+export async function topluKararMaddeAtiflari(
+  documentIds: string[]
+): Promise<Map<string, { kanun: string; madde: string }[]>> {
+  const sonuc = new Map<string, { kanun: string; madde: string }[]>();
+  const ids = Array.from(new Set(documentIds.filter(Boolean)));
+  if (ids.length === 0) return sonuc;
+
+  const svc = createServiceClient() as Any;
+  try {
+    const { data } = await svc
+      .from("emsal_doc_cache")
+      .select("document_id, madde_atiflari")
+      .in("document_id", ids);
+    for (const row of (data ?? []) as { document_id: string; madde_atiflari: { kanun: string; madde: string }[] | null }[]) {
+      if (row.madde_atiflari?.length) sonuc.set(row.document_id, row.madde_atiflari);
+    }
+  } catch { /* tablo/kolon yoksa boş dön */ }
+
+  return sonuc;
+}

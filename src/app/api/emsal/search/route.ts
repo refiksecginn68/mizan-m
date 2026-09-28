@@ -10,7 +10,7 @@ import {
   EMSAL_COURT_TYPES,
   type BedestenEmsalItem,
 } from "@/lib/services/bedesten";
-import { topluKararMetni } from "@/lib/services/emsal-doc-cache";
+import { topluKararMetni, topluKararMaddeAtiflari } from "@/lib/services/emsal-doc-cache";
 import {
   extractMaddeAtfi,
   maddeAtfindanTerim,
@@ -305,11 +305,26 @@ function toResult(item: BedestenEmsalItem): EmsalResult {
 async function enrich(results: EmsalResult[], f: Filters): Promise<EmsalResult[]> {
   const ids = results.map((r) => r.documentId).filter((id): id is string => !!id);
   const metinler = await topluKararMetni(ids);
+
+  // FAZ 2 backfill entegrasyonu: sorguda madde atfı varsa (ör. "TCK 89"),
+  // o maddeye gerçekten atıf yapan kararları alaka skorunda öne çıkar.
+  // Atıf yoksa ekstra sorgu YOK (perf regresyonu olmasın).
+  const sorguAtfi = f.q ? extractMaddeAtfi(normalizeQuery(f.q)) : null;
+  const maddeMap = sorguAtfi?.kanun
+    ? await topluKararMaddeAtiflari(ids)
+    : new Map<string, { kanun: string; madde: string }[]>();
+
   return results.map((r) => {
     const text = r.documentId ? metinler.get(r.documentId) : undefined;
     if (!text) return r;
     const { score, snippet } = scoreAndSnippet(text, f.q);
-    return { ...r, summary: snippet, score: f.q ? score : undefined };
+    let finalScore = f.q ? score : undefined;
+    if (finalScore !== undefined && sorguAtfi?.kanun && r.documentId) {
+      const atiflar = maddeMap.get(r.documentId) ?? [];
+      const eslesiyor = atiflar.some((a) => a.kanun === sorguAtfi.kanun && a.madde === sorguAtfi.madde);
+      if (eslesiyor) finalScore = Math.min(1, finalScore + 0.2);
+    }
+    return { ...r, summary: snippet, score: finalScore };
   });
 }
 

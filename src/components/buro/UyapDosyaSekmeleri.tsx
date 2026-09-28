@@ -1,11 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Scale, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, Info } from "lucide-react";
+import { Scale, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, Info, Search, ExternalLink } from "lucide-react";
 
 interface Taraf { rol?: string; tip?: string; ad?: string; vekil?: string; muvekkil?: boolean }
 interface Evrak { ad?: string; tarih?: string; klasor?: string; onemli?: boolean; taranmis?: boolean }
 interface Safahat { tarih?: string; islem?: string; aciklama?: string }
+interface EmsalKarar {
+  court: string;
+  case_number: string;
+  decision_number?: string | null;
+  decision_date?: string | null;
+  subject: string;
+  summary: string;
+  source_url?: string;
+}
 
 interface Props {
   dosyaBilgileri: { esasNo?: string | null; birim?: string | null; tur?: string | null; durum?: string | null; acilis?: string | null };
@@ -13,6 +22,8 @@ interface Props {
   evraklar: Evrak[];
   evrakMetinleri?: Record<string, string>;
   safahat: Safahat[];
+  /** Sunucuda önceden üretilmiş emsal arama sorgusu (bkz. dosya-emsal-sorgusu.ts) — null ise madde atfı/dava türü bulunamadı. */
+  emsalSorgusu?: string | null;
 }
 
 // route.ts / content.js ile AYNI anahtar biçimi — metin haritasında eşleşme için
@@ -20,7 +31,7 @@ function evrakAnahtar(e: Evrak) {
   return `${e.ad ?? ""}|${e.tarih ?? ""}|${e.klasor ?? ""}`;
 }
 
-const SEKMELER = ["Dosya Bilgileri", "Taraf Bilgileri", "Evrak", "Safahat"] as const;
+const SEKMELER = ["Dosya Bilgileri", "Taraf Bilgileri", "Evrak", "Safahat", "Emsal Kararlar"] as const;
 
 // UYAP evrak ağacı bazen aynı klasör yolunu birden fazla düğüm olarak veriyor — çünkü
 // content.js'in okuduğu klasör etiketi lazy-load sırasında değişen bir sayaç içerebilir
@@ -46,11 +57,34 @@ function evrakAgaci(evraklar: Evrak[]) {
     .sort(([a], [b]) => a.localeCompare(b, "tr"));
 }
 
-export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar, evrakMetinleri, safahat }: Props) {
+export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar, evrakMetinleri, safahat, emsalSorgusu }: Props) {
   const [sekme, setSekme] = useState<(typeof SEKMELER)[number]>("Dosya Bilgileri");
   const [acikKlasor, setAcikKlasor] = useState<Record<string, boolean>>({});
   const [seciliEvrak, setSeciliEvrak] = useState<Evrak | null>(null);
   const agac = useMemo(() => evrakAgaci(evraklar), [evraklar]);
+
+  const [emsalYukleniyor, setEmsalYukleniyor] = useState(false);
+  const [emsalSonuclar, setEmsalSonuclar] = useState<EmsalKarar[] | null>(null);
+  const [emsalHata, setEmsalHata] = useState<string | null>(null);
+
+  async function emsalBul() {
+    setEmsalHata(null);
+    if (!emsalSorgusu) {
+      setEmsalSonuclar([]);
+      return;
+    }
+    setEmsalYukleniyor(true);
+    try {
+      const res = await fetch(`/api/emsal/search?q=${encodeURIComponent(emsalSorgusu)}&mode=akilli`);
+      const data = await res.json() as { results: EmsalKarar[] };
+      setEmsalSonuclar(data.results ?? []);
+    } catch {
+      setEmsalHata("Emsal arama sırasında bir hata oluştu.");
+      setEmsalSonuclar([]);
+    } finally {
+      setEmsalYukleniyor(false);
+    }
+  }
 
   return (
     <div className="card">
@@ -64,6 +98,7 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
             {s === "Taraf Bilgileri" && taraflar.length > 0 && <span className="ml-1 text-[9px] opacity-60">({taraflar.length})</span>}
             {s === "Evrak" && evraklar.length > 0 && <span className="ml-1 text-[9px] opacity-60">({evraklar.length})</span>}
             {s === "Safahat" && safahat.length > 0 && <span className="ml-1 text-[9px] opacity-60">({safahat.length})</span>}
+            {s === "Emsal Kararlar" && emsalSonuclar && emsalSonuclar.length > 0 && <span className="ml-1 text-[9px] opacity-60">({emsalSonuclar.length})</span>}
           </button>
         ))}
       </div>
@@ -200,6 +235,62 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
             ))}
           </div>
         )
+      )}
+
+      {sekme === "Emsal Kararlar" && (
+        <div>
+          <div className="flex items-center justify-between mb-4 gap-3">
+            <p className="font-body text-xs text-muted-foreground">
+              {emsalSorgusu
+                ? <>Sorgu: <span className="font-medium text-foreground">{emsalSorgusu}</span></>
+                : "Evrak metni veya dava türü bulunamadı — eklentiden \"Derin Tarama\" çalıştırın."}
+            </p>
+            <button
+              onClick={emsalBul}
+              disabled={emsalYukleniyor || !emsalSorgusu}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 text-accent text-xs font-semibold hover:bg-accent/20 transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              <Search className="w-3.5 h-3.5" />
+              {emsalYukleniyor ? "Aranıyor..." : "Emsal Bul"}
+            </button>
+          </div>
+
+          {emsalHata && <p className="font-body text-sm text-red-600 text-center py-4">{emsalHata}</p>}
+
+          {!emsalHata && emsalSonuclar === null && (
+            <p className="font-body text-sm text-muted-foreground py-4 text-center">
+              &quot;Emsal Bul&quot; butonuna tıklayarak bu dosyaya uygun emsal karar önerilerini getirin.
+            </p>
+          )}
+
+          {!emsalHata && emsalSonuclar !== null && emsalSonuclar.length === 0 && (
+            <p className="font-body text-sm text-muted-foreground py-4 text-center">
+              {emsalSorgusu
+                ? "Bu sorgu için emsal karar bulunamadı."
+                : "Evrak metni veya dava türü bulunamadı — eklentiden \"Derin Tarama\" çalıştırın."}
+            </p>
+          )}
+
+          {!emsalHata && emsalSonuclar && emsalSonuclar.length > 0 && (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {emsalSonuclar.map((k, i) => (
+                <div key={i} className="p-3 rounded-lg bg-primary/5 border border-border/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-body text-xs font-semibold text-foreground truncate">{k.court}</p>
+                    {k.source_url && (
+                      <a href={k.source_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px] text-accent hover:underline flex-shrink-0">
+                        Yeni Sekmede Aç <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                  <p className="font-body text-xs text-muted-foreground mt-0.5">{k.subject}</p>
+                  {k.summary && <p className="font-body text-xs text-foreground mt-1.5 line-clamp-3">{k.summary}</p>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
