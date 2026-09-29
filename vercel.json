@@ -37,6 +37,7 @@
     }
   ],
   "crons": [
-    { "path": "/api/cron/odeme-hatirlatma", "schedule": "0 6 * * *" }
+    { "path": "/api/cron/odeme-hatirlatma", "schedule": "0 6 * * *" },
+    { "path": "/api/cron/tebligat-hatirlatma", "schedule": "0 7 * * *" }
   ]
 }

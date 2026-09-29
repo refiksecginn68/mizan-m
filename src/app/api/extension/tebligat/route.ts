@@ -5,6 +5,21 @@ import { sendPushNotification } from "@/lib/push";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
 
+// Boyut sınırı: documents bucket'ının genel limitiyle tutarlı ama daha düşük
+// (tek senkronda çok ek gelebilir; tek dosya için 15MB yeterli).
+const EK_BOYUT_SINIRI = 15 * 1024 * 1024;
+const EK_IZINLI_MIME = new Set([
+  "application/pdf", "image/jpeg", "image/png", "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+interface UetsEk {
+  ad?: string;
+  base64?: string;
+  mime?: string;
+}
+
 interface UetsTebligat {
   barkod?: string;
   gonderen?: string;
@@ -12,6 +27,7 @@ interface UetsTebligat {
   tebligTarihi?: string;
   esasNo?: string;
   okundu?: boolean;
+  ekler?: UetsEk[];
 }
 
 function getToken(request: Request): string | null {
@@ -83,13 +99,20 @@ export async function POST(request: Request) {
         "UETS eklenti modülünden aktarıldı.",
       ].filter(Boolean).join("\n");
 
+      // "tebligTarihi" UETS ekranında GÖRÜNEN gönderim/gösterim tarihidir — mevcut
+      // received_at/dedup mantığı buna göre çalışıyor, DOKUNULMADI. Yasal "tebliğ
+      // tarihi" (7201 s.K. m.7/a, +5 gün) ayrı bir alanda saklanır; tür bilinmediği
+      // için süre otomatik hesaplanmaz — avukat türü seçince PATCH ile hesaplanır.
+      const gonderimTarihi = t.tebligTarihi ? new Date(`${t.tebligTarihi}T09:00:00Z`) : new Date();
+
       const { data: insertedRec, error } = await svc.from("tebligat_records").insert({
         lawyer_id: verified.userId,
         case_id: caseId,
         uets_id: t.barkod ?? null,
         sender,
         subject,
-        received_at: t.tebligTarihi ? `${t.tebligTarihi}T09:00:00Z` : new Date().toISOString(),
+        received_at: gonderimTarihi.toISOString(),
+        tebligat_gonderim_tarihi: gonderimTarihi.toISOString(),
         is_processed: t.okundu ?? false,
         notes,
       }).select("id").single();
@@ -98,7 +121,44 @@ export async function POST(request: Request) {
         hata++;
       } else {
         eklendi++;
-        
+
+        // Ekler: her biri bağımsız denenir, biri başarısız olursa senkron durmaz.
+        for (const ek of (t.ekler ?? []).slice(0, 20)) {
+          const ad = (ek.ad ?? "ek").slice(0, 150);
+          try {
+            if (!ek.base64) {
+              await svc.from("tebligat_ekler").insert({
+                tebligat_id: insertedRec!.id, lawyer_id: verified.userId, ad,
+                durum: "indirilemedi", hata_notu: "Eklenti dosya içeriğini okuyamadı",
+              });
+              continue;
+            }
+            const buffer = Buffer.from(ek.base64, "base64");
+            const mime = ek.mime && EK_IZINLI_MIME.has(ek.mime) ? ek.mime : null;
+            if (!mime || buffer.byteLength > EK_BOYUT_SINIRI) {
+              await svc.from("tebligat_ekler").insert({
+                tebligat_id: insertedRec!.id, lawyer_id: verified.userId, ad,
+                durum: "indirilemedi",
+                hata_notu: !mime ? "Desteklenmeyen dosya türü" : "Boyut sınırını aşıyor (15MB)",
+              });
+              continue;
+            }
+            const path = `tebligat/${verified.userId}/${insertedRec!.id}/${Date.now()}-${ad}`;
+            const { error: upErr } = await svc.storage.from("documents").upload(path, buffer, { contentType: mime });
+            await svc.from("tebligat_ekler").insert({
+              tebligat_id: insertedRec!.id, lawyer_id: verified.userId, ad,
+              storage_path: upErr ? null : path,
+              durum: upErr ? "indirilemedi" : "indirildi",
+              hata_notu: upErr ? upErr.message : null,
+            });
+          } catch (ekHata) {
+            await svc.from("tebligat_ekler").insert({
+              tebligat_id: insertedRec!.id, lawyer_id: verified.userId, ad,
+              durum: "indirilemedi", hata_notu: ekHata instanceof Error ? ekHata.message : "bilinmeyen hata",
+            }).catch(() => {});
+          }
+        }
+
         const bodyText = `${sender}: ${subject}`;
         await svc.from("notifications").insert({
           user_id: verified.userId,

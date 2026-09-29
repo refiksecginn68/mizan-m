@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { sureHesapla } from "@/lib/tebligat/sureler";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -33,11 +34,16 @@ export async function GET() {
         sender,
         subject,
         received_at,
+        tebligat_gonderim_tarihi,
         deadline_at,
+        deadline_dayanak,
+        deadline_elle_girildi,
+        tur,
         is_processed,
         notes,
         created_at,
-        cases (id, title, case_number)
+        cases (id, title, case_number),
+        tebligat_ekler (id, ad, durum, hata_notu)
       `)
       .eq("lawyer_id", user.id)
       .order("deadline_at", { ascending: true, nullsFirst: false });
@@ -159,7 +165,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, case_id, is_processed } = body as { id: string; case_id?: string; is_processed?: boolean };
+    const { id, case_id, is_processed, tur, deadline_at_manuel } = body as {
+      id: string; case_id?: string; is_processed?: boolean; tur?: string | null; deadline_at_manuel?: string;
+    };
 
     if (!id) {
       return NextResponse.json({ error: "ID zorunludur" }, { status: 400 });
@@ -169,6 +177,30 @@ export async function PATCH(req: NextRequest) {
     const guncelleme: Record<string, unknown> = {};
     if (case_id !== undefined) guncelleme.case_id = case_id || null;
     if (typeof is_processed === "boolean") guncelleme.is_processed = is_processed;
+
+    // Avukat elle süre girdiyse doğrudan onu kullan — hesaplama uygulanmaz.
+    if (deadline_at_manuel) {
+      guncelleme.deadline_at = deadline_at_manuel;
+      guncelleme.deadline_dayanak = null;
+      guncelleme.deadline_elle_girildi = true;
+      if (tur !== undefined) guncelleme.tur = tur;
+    } else if (tur !== undefined) {
+      const { data: mevcut } = await serviceSupabase
+        .from("tebligat_records")
+        .select("tebligat_gonderim_tarihi, received_at")
+        .eq("id", id)
+        .eq("lawyer_id", user.id)
+        .single();
+      const gonderim = mevcut?.tebligat_gonderim_tarihi ?? mevcut?.received_at;
+      if (gonderim) {
+        const sonuc = sureHesapla(new Date(gonderim), tur || null);
+        guncelleme.tur = tur || null;
+        guncelleme.deadline_at = sonuc.sonGun ? sonuc.sonGun.toISOString() : null;
+        guncelleme.deadline_dayanak = sonuc.dayanak;
+        guncelleme.deadline_elle_girildi = false;
+      }
+    }
+
     if (Object.keys(guncelleme).length === 0) guncelleme.is_processed = true;
 
     const { data, error } = await serviceSupabase

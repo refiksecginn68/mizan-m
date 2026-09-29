@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Mizanım UYAP + UETS Aktarım",
-  "version": "1.8.3",
+  "version": "1.9.0",
   "description": "UYAP dosyalarınızı ve UETS e-Tebligatlarınızı Mizanım'a aktarır. Otomatik giriş yapmaz; yalnızca sizin açtığınız oturumu okur.",
   "permissions": ["storage", "activeTab", "webNavigation"],
   "host_permissions": [
@@ -30,7 +30,7 @@
       "all_frames": true
     },
     {
-      "matches": ["https://*.etebligat.gov.tr/*"],
+      "matches": ["https://*.uyap.gov.tr/*"],
       "js": ["uets-content.js"],
       "run_at": "document_idle",
       "all_frames": true

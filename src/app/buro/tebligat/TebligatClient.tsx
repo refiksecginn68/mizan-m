@@ -16,12 +16,22 @@ import {
   RefreshCw,
   Loader2,
   ListTodo,
+  Paperclip,
+  Download,
 } from "lucide-react";
+import { TEBLIGAT_TUR_ETIKET } from "@/lib/tebligat/sureler";
 
 interface TebligatCase {
   id: string;
   title: string;
   case_number?: string;
+}
+
+interface TebligatEk {
+  id: string;
+  ad: string;
+  durum: "indirildi" | "indirilemedi";
+  hata_notu?: string | null;
 }
 
 interface Tebligat {
@@ -30,15 +40,20 @@ interface Tebligat {
   sender: string;
   subject: string;
   received_at: string;
+  tebligat_gonderim_tarihi?: string | null;
   deadline_at?: string;
+  deadline_dayanak?: string | null;
+  deadline_elle_girildi?: boolean;
+  tur?: string | null;
   status: string;
   content?: string;
   is_read: boolean;
   created_at: string;
   cases?: TebligatCase | null;
+  tebligat_ekler?: TebligatEk[];
 }
 
-type FilterType = "tumu" | "okunmamis" | "yaklasiyor" | "gecmis";
+type FilterType = "tumu" | "okunmamis" | "yaklasiyor" | "gecmis" | "eslesmemis";
 
 interface TebligatClientProps {
   initialTebligatlar: Tebligat[];
@@ -109,6 +124,8 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
   const [gorevYapan, setGorevYapan] = useState<string | null>(null);
   const [gorevYapilan, setGorevYapilan] = useState<Set<string>>(new Set());
 
+  const [turYapan, setTurYapan] = useState<string | null>(null);
+
   const stats = useMemo(() => {
     const total = tebligatlar.length;
     const unread = tebligatlar.filter((t) => !t.is_read).length;
@@ -116,11 +133,12 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
       const days = getDaysLeft(t.deadline_at);
       return days !== null && days >= 0 && days <= 7;
     }).length;
-    return { total, unread, approaching };
+    const unmatched = tebligatlar.filter((t) => !t.case_id).length;
+    return { total, unread, approaching, unmatched };
   }, [tebligatlar]);
 
   const filtered = useMemo(() => {
-    return tebligatlar.filter((t) => {
+    const sonuc = tebligatlar.filter((t) => {
       const days = getDaysLeft(t.deadline_at);
 
       if (filter === "okunmamis" && t.is_read) return false;
@@ -130,6 +148,7 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
       if (filter === "gecmis") {
         if (days === null || days >= 0) return false;
       }
+      if (filter === "eslesmemis" && t.case_id) return false;
 
       if (search) {
         const q = search.toLowerCase();
@@ -140,7 +159,35 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
       }
       return true;
     });
+    // Süresi geçmiş ve işlem yapılmamış olanlar en üstte
+    return [...sonuc].sort((a, b) => {
+      const da = getDaysLeft(a.deadline_at);
+      const db = getDaysLeft(b.deadline_at);
+      const aGecmis = da !== null && da < 0 && !a.is_read;
+      const bGecmis = db !== null && db < 0 && !b.is_read;
+      if (aGecmis !== bGecmis) return aGecmis ? -1 : 1;
+      return 0;
+    });
   }, [tebligatlar, filter, search]);
+
+  const handleTurSec = async (id: string, tur: string) => {
+    setTurYapan(id);
+    try {
+      const res = await fetch("/api/buro/tebligat", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, tur: tur || null }),
+      });
+      if (res.ok) {
+        const { data } = await res.json();
+        setTebligatlar((prev) => prev.map((t) => (t.id === id ? { ...t, ...data } : t)));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setTurYapan(null);
+    }
+  };
 
   const handleUETSTara = async () => {
     setTaraLoading(true);
@@ -282,6 +329,7 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
     { id: "tumu", label: "Tümü", count: stats.total },
     { id: "okunmamis", label: "Okunmamış", count: stats.unread },
     { id: "yaklasiyor", label: "Süresi Yaklaşan", count: stats.approaching },
+    { id: "eslesmemis", label: "Eşleşmemiş", count: stats.unmatched },
     { id: "gecmis", label: "Geçmiş" },
   ];
 
@@ -456,6 +504,59 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
                       {t.cases.title}
                       {t.cases.case_number && ` — ${t.cases.case_number}`}
                     </p>
+                  )}
+
+                  {/* Süre dayanağı — kara kutu olmasın: hesaplama varsa gösterilsin */}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <select
+                      value={t.tur ?? ""}
+                      onChange={(e) => handleTurSec(t.id, e.target.value)}
+                      disabled={turYapan === t.id}
+                      className="text-xs border border-border rounded-lg px-2 py-1 bg-white"
+                      title="Tebligat türünü seçin — süre buna göre hesaplanır"
+                    >
+                      <option value="">Tebligat türü seçilmedi</option>
+                      {Object.entries(TEBLIGAT_TUR_ETIKET).map(([k, label]) => (
+                        <option key={k} value={k}>{label}</option>
+                      ))}
+                    </select>
+                    {t.deadline_dayanak && !t.deadline_elle_girildi && (
+                      <span className="font-body text-[11px] text-muted-foreground">
+                        Dayanak: {t.deadline_dayanak}
+                      </span>
+                    )}
+                    {!t.deadline_at && (
+                      <span className="font-body text-[11px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                        Süre otomatik hesaplanamadı — elle giriniz
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-body text-[10px] text-muted-foreground mt-1">
+                    Bu hesaplama bilgilendirme amaçlıdır, lütfen teyit ediniz.
+                  </p>
+
+                  {t.tebligat_ekler && t.tebligat_ekler.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {t.tebligat_ekler.map((ek) => (
+                        ek.durum === "indirildi" ? (
+                          <a
+                            key={ek.id}
+                            href={`/api/buro/tebligat/ek/${ek.id}`}
+                            className="font-body text-[11px] flex items-center gap-1 bg-accent/10 text-accent px-2 py-1 rounded-lg hover:bg-accent/20"
+                          >
+                            <Download className="w-3 h-3" /> {ek.ad}
+                          </a>
+                        ) : (
+                          <span
+                            key={ek.id}
+                            title={ek.hata_notu ?? "İndirilemedi"}
+                            className="font-body text-[11px] flex items-center gap-1 bg-gray-100 text-gray-500 px-2 py-1 rounded-lg"
+                          >
+                            <Paperclip className="w-3 h-3" /> {ek.ad} (indirilemedi)
+                          </span>
+                        )
+                      ))}
+                    </div>
                   )}
                 </div>
 
