@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Trash2, Loader2 } from "lucide-react";
 
 interface Uye {
   id: string;
@@ -24,9 +25,32 @@ const DURUM_ETIKET: Record<Uye["durum"], { label: string; className: string }> =
   paketsiz: { label: "Paketsiz", className: "bg-gray-100 text-gray-500" },
 };
 
-export default function UyelerClient({ uyeler }: { uyeler: Uye[] }) {
+export default function UyelerClient({ uyeler: uyelerProp }: { uyeler: Uye[] }) {
+  const router = useRouter();
+  const [uyeler, setUyeler] = useState(uyelerProp);
   const [q, setQ] = useState("");
   const [durumFiltre, setDurumFiltre] = useState<string>("tumu");
+  const [silinen, setSilinen] = useState<string | null>(null);
+  const [hata, setHata] = useState<string | null>(null);
+
+  async function hesabiSil(id: string, adSoyad: string) {
+    if (!window.confirm(`${adSoyad} hesabını kalıcı olarak silmek istediğinize eminsiniz? Bu işlem geri alınamaz.`)) return;
+    setSilinen(id);
+    setHata(null);
+    const res = await fetch("/api/admin/uye/sil", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: id }),
+    });
+    const data = await res.json();
+    setSilinen(null);
+    if (!res.ok) {
+      setHata(data.error ?? "Silme başarısız");
+      return;
+    }
+    setUyeler((prev) => prev.filter((u) => u.id !== id));
+    router.refresh();
+  }
 
   const filtered = useMemo(() => {
     return uyeler.filter((u) => {
@@ -70,6 +94,8 @@ export default function UyelerClient({ uyeler }: { uyeler: Uye[] }) {
         <span className="font-body text-xs text-muted-foreground">{filtered.length} üye</span>
       </div>
 
+      {hata && <p className="font-body text-sm text-red-600">{hata}</p>}
+
       <div className="bg-white rounded-2xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -83,6 +109,7 @@ export default function UyelerClient({ uyeler }: { uyeler: Uye[] }) {
                 <th className="px-4 py-3 font-semibold">Üyelik</th>
                 <th className="px-4 py-3 font-semibold">Son Giriş</th>
                 <th className="px-4 py-3 font-semibold">Durum</th>
+                <th className="px-4 py-3 font-semibold">İşlem</th>
               </tr>
             </thead>
             <tbody>
@@ -104,10 +131,20 @@ export default function UyelerClient({ uyeler }: { uyeler: Uye[] }) {
                       {DURUM_ETIKET[u.durum].label}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => hesabiSil(u.id, u.ad_soyad)}
+                      disabled={silinen === u.id}
+                      title="Hesabı kalıcı sil"
+                      className="flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {silinen === u.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Sil
+                    </button>
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground text-sm">Sonuç bulunamadı</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Sonuç bulunamadı</td></tr>
               )}
             </tbody>
           </table>
