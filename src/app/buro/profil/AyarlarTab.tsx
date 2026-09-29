@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sun, Moon, Monitor, Type, ZoomIn, Bell, Globe2, KeyRound,
-  LogOut, Download, Trash2, Loader2, CheckCircle,
+  LogOut, Download, Trash2, Loader2, CheckCircle, Compass,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useOnboardingTourContext } from "@/components/buro/OnboardingTourProvider";
 
 type Tema = "light" | "dark" | "system";
 
@@ -41,6 +42,9 @@ export default function AyarlarTab({
   notifyTebligatInit: boolean;
 }) {
   const router = useRouter();
+  const { sifirla: turlariSifirla } = useOnboardingTourContext();
+  const [turSifirlaniyor, setTurSifirlaniyor] = useState(false);
+  const [turSifirlandi, setTurSifirlandi] = useState(false);
   const [tema, setTema] = useState<Tema>("light");
   const [font, setFont] = useState("normal");
   const [zoom, setZoom] = useState(100);
@@ -266,6 +270,13 @@ export default function AyarlarTab({
     }
   }
 
+  async function turlariYenidenBaslat() {
+    setTurSifirlaniyor(true);
+    await turlariSifirla();
+    setTurSifirlaniyor(false);
+    setTurSifirlandi(true);
+  }
+
   async function oturumlariKapat() {
     const supabase = createClient();
     await supabase.auth.signOut({ scope: "global" });
@@ -472,6 +483,28 @@ export default function AyarlarTab({
           <option value="tr">Türkçe</option>
           <option value="en">English — yakında</option>
         </select>
+      </Bolum>
+
+      <Bolum baslik="Tanıtım Turu" ikon={Compass}>
+        <p className="font-body text-xs text-muted-foreground mb-3">
+          Panel sayfalarındaki bir kerelik tanıtım balonlarını daha önce atladıysanız veya
+          tekrar görmek isterseniz, buradan yeniden başlatabilirsiniz.
+        </p>
+        <button
+          type="button"
+          data-tour="ayarlar-tur-sifirla"
+          onClick={turlariYenidenBaslat}
+          disabled={turSifirlaniyor}
+          className="inline-flex items-center gap-2 font-body text-sm font-semibold text-primary border border-border rounded-xl px-5 py-2 hover:bg-[#f8f9fa] transition-colors disabled:opacity-50"
+        >
+          {turSifirlaniyor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Compass className="w-4 h-4" />}
+          Tanıtım turunu yeniden başlat
+        </button>
+        {turSifirlandi && (
+          <p className="font-body text-xs text-green-700 mt-2 flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" /> Sıfırlandı — sayfaları ziyaret ettiğinizde turlar yeniden görünecek.
+          </p>
+        )}
       </Bolum>
 
       <Bolum baslik="Güvenlik" ikon={KeyRound}>

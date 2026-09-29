@@ -370,7 +370,7 @@ export default function HesaplamaClient({ kurlar, kurTarih, kurBayat }: { kurlar
   return (
     <div className={`${ust === "donusturucu" ? "max-w-6xl" : "max-w-3xl"} mx-auto px-4 sm:px-6 py-6`}>
       {/* ÜST SEKME — birincil, belirgin, aktif dolu lacivert */}
-      <div className="flex items-center gap-2 mb-4 print:hidden">
+      <div data-tour="hesaplama-sekme" className="flex items-center gap-2 mb-4 print:hidden">
         {UST_SEKMELER.map((s) => (
           <button key={s.id} onClick={() => ustSec(s.id)}
             aria-current={ust === s.id ? "page" : undefined}
@@ -386,7 +386,7 @@ export default function HesaplamaClient({ kurlar, kurTarih, kurBayat }: { kurlar
 
       {/* ALT SEKME — sadece Hesaplamalar'da; hafif, altın alt-çizgi, tek satır kaydırmalı */}
       {ust === "hesaplamalar" && (
-        <div className="relative border-b border-gray-200 mb-6 print:hidden">
+        <div data-tour="hesaplama-alt-sekme" className="relative border-b border-gray-200 mb-6 print:hidden">
           <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide -mb-px" aria-label="Hesaplayıcılar">
             {HESAP_SEKMELER.map((s) => (
               <button key={s.id} onClick={() => altSec(s.id)}

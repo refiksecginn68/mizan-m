@@ -7,11 +7,11 @@ import type { BuroTab } from "@/lib/buro-nav";
 // Grup sayfalarının üstünde yatay, dar ekranda kaydırılabilir sekme çubuğu.
 // Aktif sekme geçerli route'a göre belirlenir — durum URL'de, yenilemeye dayanıklı,
 // paylaşılabilir. Rol kontrolü her sayfanın kendi guard'ında korunur.
-export default function BuroTabBar({ items }: { items: BuroTab[] }) {
+export default function BuroTabBar({ items, dataTour }: { items: BuroTab[]; dataTour?: string }) {
   const pathname = usePathname();
 
   return (
-    <div className="bg-[#f4f5f7] border-b border-gray-200/60 px-4 sm:px-6">
+    <div data-tour={dataTour} className="bg-[#f4f5f7] border-b border-gray-200/60 px-4 sm:px-6">
       <nav
         className="flex items-center gap-1 overflow-x-auto scrollbar-hide -mb-px"
         aria-label="Bölüm sekmeleri"

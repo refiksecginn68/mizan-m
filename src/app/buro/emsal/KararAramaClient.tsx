@@ -743,7 +743,7 @@ export default function KararAramaClient({ cases }: Props) {
         </div>
 
         {/* Arama kutusu */}
-        <div className="bg-[#f9f9f9] border border-gray-200 rounded-2xl p-4">
+        <div data-tour="arastirma-arama" className="bg-[#f9f9f9] border border-gray-200 rounded-2xl p-4">
           {mode !== "dosya" ? (
             <div className="flex items-center gap-3 mb-3">
               <Search className="w-5 h-5 text-gray-400 flex-shrink-0" />

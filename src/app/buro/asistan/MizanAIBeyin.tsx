@@ -324,7 +324,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
     <div className="flex h-full overflow-hidden">
 
       {/* Sol — Sohbet Geçmişi */}
-      <aside className={`flex-shrink-0 bg-[#0f1729] flex flex-col h-full overflow-hidden transition-[width] duration-[250ms] ease-in-out ${sidebarOpen ? "w-64" : "w-12"}`}>
+      <aside data-tour="mizanai-gecmis" className={`flex-shrink-0 bg-[#0f1729] flex flex-col h-full overflow-hidden transition-[width] duration-[250ms] ease-in-out ${sidebarOpen ? "w-64" : "w-12"}`}>
         {/* Header */}
         <div className="px-3 py-3 border-b border-white/5 flex-shrink-0">
           <div className="flex items-center justify-between mb-3">
@@ -585,7 +585,7 @@ export default function MizanAIBeyin({ lawyerName }: Props) {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100">
+        <div data-tour="mizanai-mesaj" className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100">
           <div className="max-w-3xl mx-auto flex items-end gap-3">
             <div className="flex-1 relative bg-[#f4f5f7] border border-gray-200 rounded-2xl focus-within:border-[#c9a84c]/50 focus-within:bg-white transition-all">
               <textarea

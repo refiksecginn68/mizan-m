@@ -4,6 +4,8 @@ import ProfilClient from "./ProfilClient";
 import ProfilTabs from "./ProfilTabs";
 import OdemelerTab from "./OdemelerTab";
 import AyarlarTab from "./AyarlarTab";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 import { getTrialDurum } from "@/lib/trial";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,6 +84,7 @@ export default async function ProfilPage({ searchParams }: { searchParams?: { se
           }
         />
       </main>
+      <OnboardingTour sayfa="ayarlar" adimlar={TUR_ADIMLARI.ayarlar} />
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import UYAPClient from "./UYAPClient";
 import EklentiBaglanti from "@/components/buro/EklentiBaglanti";
 import BuroTabBar from "@/components/buro/BuroTabBar";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 import { BURO_TABS } from "@/lib/buro-nav";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,7 +41,7 @@ export default async function UYAPPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BuroTabBar items={BURO_TABS.uyapTebligat} />
+      <BuroTabBar items={BURO_TABS.uyapTebligat} dataTour="uyap-sekmeler" />
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6">
           <h1 className="font-heading text-2xl font-bold text-primary">UYAP Entegrasyonu</h1>
@@ -51,8 +53,11 @@ export default async function UYAPPage() {
           cases={(cases as AnyClient[]) || []}
           clients={(clients as AnyClient[]) || []}
         />
-        <EklentiBaglanti />
+        <div data-tour="uyap-eklenti">
+          <EklentiBaglanti />
+        </div>
       </main>
+      <OnboardingTour sayfa="uyap-tebligat" adimlar={TUR_ADIMLARI["uyap-tebligat"]} />
     </div>
   );
 }

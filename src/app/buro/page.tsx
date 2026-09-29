@@ -7,6 +7,8 @@ import FavorilerBlok from "@/components/buro/FavorilerBlok";
 import TakvimWidget, { type TakvimEtkinlik, type SureUyari } from "@/components/buro/TakvimWidget";
 import DashboardHeader from "@/components/buro/DashboardHeader";
 import KotaBar from "@/components/buro/KotaBar";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 import { VARSAYILAN_FAVORILER } from "@/lib/buro-favoriler";
 import type { LegalNews } from "@/app/api/haberler/route";
 
@@ -128,26 +130,27 @@ export default async function BuroPage() {
         </div>
 
         {/* 3 · TAKVİM + YAPILACAKLAR */}
-        <div className="dash-block grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ animationDelay: "120ms" }}>
+        <div data-tour="panel-takvim" className="dash-block grid grid-cols-1 lg:grid-cols-2 gap-5" style={{ animationDelay: "120ms" }}>
           <TakvimWidget etkinlikler={etkinlikler} uyarilar={uyarilar} />
           <BuroAnaSayfaClient />
         </div>
 
         {/* 4 · HIZLI ERİŞİM */}
-        <div className="dash-block" style={{ animationDelay: "180ms" }}>
+        <div data-tour="panel-hizli-erisim" className="dash-block" style={{ animationDelay: "180ms" }}>
           <FavorilerBlok initial={favoriler} />
         </div>
 
         {/* 5 · BİLDİRİMLER */}
-        <div id="bildirimler" className="dash-block scroll-mt-4" style={{ animationDelay: "240ms" }}>
+        <div id="bildirimler" data-tour="panel-bildirimler" className="dash-block scroll-mt-4" style={{ animationDelay: "240ms" }}>
           <BildirimlerPaneli />
         </div>
 
         {/* 6 · YAPAY ZEKA KOTASI */}
-        <div className="dash-block" style={{ animationDelay: "300ms" }}>
+        <div data-tour="panel-kota" className="dash-block" style={{ animationDelay: "300ms" }}>
           <KotaBar remaining={remainingQueries} total={totalQueries} />
         </div>
       </div>
+      <OnboardingTour sayfa="panel" adimlar={TUR_ADIMLARI.panel} />
     </div>
   );
 }

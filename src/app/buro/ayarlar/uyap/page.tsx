@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
-import { Globe, Download, KeyRound, Lock, ShieldCheck } from "lucide-react";
+import { Lock, ShieldCheck } from "lucide-react";
 import EklentiBaglanti from "@/components/buro/EklentiBaglanti";
 import { getTrialDurum } from "@/lib/trial";
 import { EXTENSION_VERSION } from "@/lib/extension-version";
@@ -46,24 +46,6 @@ export default async function UyapAyarlarPage() {
     );
   }
 
-  const adimlar = [
-    {
-      ikon: Globe,
-      baslik: "Chrome'a ekleyin",
-      metin: "Aşağıdaki \"Chrome'a Ekle\" düğmesiyle eklentiyi Chrome Web Store'dan tek tıkla kurun.",
-    },
-    {
-      ikon: KeyRound,
-      baslik: "Bağlantı kodu ile eşleştirin",
-      metin: "Aşağıdan bağlantı kodu üretin ve eklentinin ayarlar ekranına yapıştırın. Kod, hesabınızı eklentiyle güvenli şekilde eşleştirir.",
-    },
-    {
-      ikon: Download,
-      baslik: "UYAP'a girin ve aktarın",
-      metin: "UYAP Avukat Portal'a e-imzanızla girin, eklentide \"Sayfayı Tara\" → \"Mizanım'a Aktar\" deyin. Dosyalar Davalar sayfanıza işlenir.",
-    },
-  ];
-
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
@@ -76,34 +58,6 @@ export default async function UyapAyarlarPage() {
             mizanim-uyap-uets-v{EXTENSION_VERSION} · {profile.uyap_uets_active ? "Avukat Max paketinizde aktif" : `Deneme sürenizde aktif (${trial.kalanGun} gün kaldı)`}
           </p>
         </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-border shadow-card p-6 mb-6">
-        <ol className="space-y-5">
-          {adimlar.map((adim, i) => (
-            <li key={adim.baslik} className="flex gap-4">
-              <div className="w-8 h-8 rounded-full bg-accent/10 text-accent font-heading font-bold text-sm flex items-center justify-center flex-shrink-0">
-                {i + 1}
-              </div>
-              <div>
-                <p className="font-body text-sm font-semibold text-primary flex items-center gap-2">
-                  <adim.ikon className="w-4 h-4 text-accent" />
-                  {adim.baslik}
-                </p>
-                <p className="font-body text-xs text-muted-foreground mt-1 leading-relaxed">{adim.metin}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
-        <a
-          href="https://chromewebstore.google.com/detail/ancbdklmehchmpefmjcachkidbgjapfm"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-primary w-full mt-6 flex items-center justify-center gap-2 text-sm"
-        >
-          <Globe className="w-4 h-4" />
-          Chrome&apos;a Ekle — Web Store
-        </a>
       </div>
 
       <EklentiBaglanti />

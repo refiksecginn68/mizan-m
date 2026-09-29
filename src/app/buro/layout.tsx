@@ -6,6 +6,7 @@ import BuroMobileNav from "@/components/buro/BuroMobileNav";
 import BuroMobileDrawer from "@/components/buro/BuroMobileDrawer";
 import BuroContentHeader from "@/components/buro/BuroContentHeader";
 import OnboardingModal from "@/components/buro/OnboardingModal";
+import { OnboardingTourProvider } from "@/components/buro/OnboardingTourProvider";
 import NotificationBell from "@/components/buro/NotificationBell";
 import TrialBanner from "@/components/buro/TrialBanner";
 import OturumBekci from "@/components/shared/OturumBekci";
@@ -29,27 +30,29 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
   if (profile.user_type !== "avukat") redirect("/panel");
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">
-      <BuroLeftSidebar 
-        lawyerName={profile.full_name}
-        monthlyQueryLimit={profile.monthly_query_limit}
-        monthlyQueryCount={profile.monthly_query_count}
-        additionalQueries={profile.additional_queries}
-      />
-      <main className="flex-1 overflow-y-auto min-w-0 pb-14 lg:pb-0">
-        <BuroMobileDrawer />
-        <TrialBanner
-          trial={getTrialDurum(profile)}
-          paketVar={(profile.monthly_query_limit ?? 0) > 0 || (profile.additional_queries ?? 0) > 0}
+    <OnboardingTourProvider>
+      <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">
+        <BuroLeftSidebar
+          lawyerName={profile.full_name}
+          monthlyQueryLimit={profile.monthly_query_limit}
+          monthlyQueryCount={profile.monthly_query_count}
+          additionalQueries={profile.additional_queries}
         />
-        <BuroContentHeader />
-        {children}
-      </main>
-      <OturumBekci />
-      <NotificationBell />
-      <MizanAIFloating lawyerName={profile.full_name} />
-      <BuroMobileNav />
-      {!profile.onboarding_completed && <OnboardingModal />}
-    </div>
+        <main className="flex-1 overflow-y-auto min-w-0 pb-14 lg:pb-0">
+          <BuroMobileDrawer />
+          <TrialBanner
+            trial={getTrialDurum(profile)}
+            paketVar={(profile.monthly_query_limit ?? 0) > 0 || (profile.additional_queries ?? 0) > 0}
+          />
+          <BuroContentHeader />
+          {children}
+        </main>
+        <OturumBekci />
+        <NotificationBell />
+        <MizanAIFloating lawyerName={profile.full_name} />
+        <BuroMobileNav />
+        {!profile.onboarding_completed && <OnboardingModal />}
+      </div>
+    </OnboardingTourProvider>
   );
 }

@@ -627,7 +627,7 @@ export default function DilekceAvukatClient({
                 </div>
 
                 {/* Dilekçe türü — hızlı seçim */}
-                <div>
+                <div data-tour="dilekce-tur">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                     Dilekçe Türü <span className="text-gray-300">(isteğe bağlı)</span>
                   </label>
@@ -747,6 +747,7 @@ export default function DilekceAvukatClient({
                 )}
 
                 <button
+                  data-tour="dilekce-uret"
                   onClick={baslat}
                   disabled={loading || soruYukleniyor || !konu.trim()}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#7c3aed] to-[#5b21b6] text-white text-sm font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-40"

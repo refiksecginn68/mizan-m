@@ -218,7 +218,7 @@ export default function MedyaClient({ cases }: MedyaClientProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div data-tour="medya-yukle" className="space-y-6">
       {/* Analiz türü kartları */}
       {!selectedCard && (
         <>

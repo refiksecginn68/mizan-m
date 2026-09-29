@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import DosyaYonetimiClient from "./DosyaYonetimiClient";
 import BuroTabBar from "@/components/buro/BuroTabBar";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 import { BURO_TABS } from "@/lib/buro-nav";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,11 +40,12 @@ export default async function DosyaYonetimiPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f5f7]">
-      <BuroTabBar items={BURO_TABS.dosya} />
+      <BuroTabBar items={BURO_TABS.dosya} dataTour="dosya-sekmeler" />
       <DosyaYonetimiClient
         initialCases={(casesResult.data as AnyClient[]) ?? []}
         clients={(clientsResult.data as AnyClient[]) ?? []}
       />
+      <OnboardingTour sayfa="dosya-yonetimi" adimlar={TUR_ADIMLARI["dosya-yonetimi"]} />
     </div>
   );
 }

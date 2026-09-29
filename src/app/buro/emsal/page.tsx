@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import KararAramaClient from "./KararAramaClient";
 import BuroTabBar from "@/components/buro/BuroTabBar";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 import { BURO_TABS } from "@/lib/buro-nav";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,8 +33,9 @@ export default async function BuroEmsalPage() {
   return (
     // Doğal sayfa kaydırması: iç scroll kutusu yok, içerik sayfayla birlikte akar
     <div className="min-h-screen bg-[#f4f5f7]">
-      <BuroTabBar items={BURO_TABS.arastirma} />
+      <BuroTabBar items={BURO_TABS.arastirma} dataTour="arastirma-sekmeler" />
       <KararAramaClient cases={(cases as AnyClient[]) || []} />
+      <OnboardingTour sayfa="arastirma" adimlar={TUR_ADIMLARI.arastirma} />
     </div>
   );
 }

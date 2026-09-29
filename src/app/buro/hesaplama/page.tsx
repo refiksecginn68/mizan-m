@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { tcmbKurGetir } from "@/lib/kur/tcmb";
 import KurSerit from "@/components/hesaplama/KurSerit";
 import HesaplamaClient from "@/components/hesaplama/HesaplamaClient";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -27,6 +29,7 @@ export default async function HesaplamaPage() {
     <div className="min-h-screen bg-[#f4f5f7]">
       <KurSerit />
       <HesaplamaClient kurlar={kur.kurlar} kurTarih={kur.tarih} kurBayat={kur.bayat} />
+      <OnboardingTour sayfa="hesaplama" adimlar={TUR_ADIMLARI.hesaplama} />
     </div>
   );
 }

@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import MizanAIBeyin from "../asistan/MizanAIBeyin";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -25,6 +27,7 @@ export default async function BuroMizanAIPage() {
       <Suspense fallback={<div className="flex-1" />}>
         <MizanAIBeyin lawyerName={profile.full_name as string} />
       </Suspense>
+      <OnboardingTour sayfa="mizanai" adimlar={TUR_ADIMLARI.mizanai} />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export default function ProfilTabs({ varsayilan = "profil", profil, odemeler, ay
 
   return (
     <div>
-      <div className="flex gap-1 bg-white border border-border rounded-xl p-1 mb-6" role="tablist">
+      <div data-tour="ayarlar-sekmeler" className="flex gap-1 bg-white border border-border rounded-xl p-1 mb-6" role="tablist">
         {SEKMELER.map((s) => (
           <button
             key={s.id}

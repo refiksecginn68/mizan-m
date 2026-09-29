@@ -317,6 +317,7 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
               UYAP&apos;tan Aktar
             </a>
             <button
+              data-tour="dosya-yeni"
               onClick={() => setShowModal(true)}
               className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-xl bg-[#c9a84c] text-white hover:bg-[#e7b743] transition-colors"
             >
@@ -438,7 +439,7 @@ export default function DosyaYonetimiClient({ initialCases, clients }: Props) {
       </div>
 
       {/* İçerik */}
-      <div className="flex-1 px-6 pb-8">
+      <div data-tour="dosya-liste" className="flex-1 px-6 pb-8">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <FolderOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />

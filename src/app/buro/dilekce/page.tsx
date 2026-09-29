@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import DilekceAvukatClient from "./DilekceAvukatClient";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -49,6 +51,7 @@ export default async function DilecePage({ searchParams }: PageProps) {
         initialKonu={searchParams.konu ?? ""}
         initialTur={searchParams.tur ?? ""}
       />
+      <OnboardingTour sayfa="dilekce" adimlar={TUR_ADIMLARI.dilekce} />
     </div>
   );
 }

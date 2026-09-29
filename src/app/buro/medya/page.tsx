@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import MedyaClient from "./MedyaClient";
+import OnboardingTour from "@/components/buro/OnboardingTour";
+import { TUR_ADIMLARI } from "@/lib/onboarding/tour-config";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -38,6 +40,7 @@ export default async function MedyaPage() {
         </div>
         <MedyaClient cases={(cases as AnyClient[]) || []} />
       </main>
+      <OnboardingTour sayfa="medya-delil" adimlar={TUR_ADIMLARI["medya-delil"]} />
     </div>
   );
 }
