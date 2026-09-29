@@ -38,7 +38,7 @@ export default function FiyatlandirmaPage() {
     {
       name: "Avukat Pro",
       tagline: "Profesyonel hukuk pratiği için",
-      monthlyPrice: 1990,
+      monthlyPrice: 1000,
       hasYearly: true,
       period: "ay",
       credits: "750 AI sorgu / ay",
@@ -58,7 +58,7 @@ export default function FiyatlandirmaPage() {
     {
       name: "Avukat Max",
       tagline: "Tam donanımlı profesyonel",
-      monthlyPrice: 3990,
+      monthlyPrice: 2000,
       hasYearly: true,
       period: "ay",
       credits: "2.000 AI sorgu / ay",
@@ -119,6 +119,15 @@ export default function FiyatlandirmaPage() {
           <div className="inline-flex items-center gap-2 mt-8 bg-white/5 border border-white/10 rounded-full px-4 py-2 text-xs text-gray-300">
             <Landmark className="w-3.5 h-3.5 text-[#c9a84c]" />
             <span>Havale/EFT ile ödeme — kredi kartı desteği yakında</span>
+          </div>
+
+          {/* Erken kayıt kampanyası — ölçülebilir, süresi/kapsamı net */}
+          <div className="mt-4 bg-[#c9a84c]/10 border border-[#c9a84c]/25 rounded-2xl px-5 py-3 text-xs sm:text-sm text-gray-200 max-w-xl mx-auto">
+            <strong className="text-[#c9a84c]">Erken Kayıt Kampanyası:</strong> 31.12.2026&apos;ya kadar
+            Avukat Pro veya Avukat Max paketine kayıt olanlar için bu fiyat (Pro 1.000₺, Max 2.000₺),
+            kayıt tarihinizden itibaren <strong>12 ay boyunca sabit kalır</strong>. 01.01.2027&apos;den
+            sonraki yeni kayıtlarda güncel fiyat uygulanır; mevcut üyelerin kampanya dönemindeki
+            fiyatı bu süre bitene kadar değişmez.
           </div>
 
           {/* Aylık / Yıllık geçişi (Pro ve Max için) */}

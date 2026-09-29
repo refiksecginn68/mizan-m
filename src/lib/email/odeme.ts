@@ -8,12 +8,16 @@ const ADMIN_EMAILS = Array.from(new Set([
 ]));
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://mizanim.com";
 
-// IBAN gizli değil; env bağımlılığı prod'da "IBAN tanımlanmadı" hatasına yol
-// açtığı için varsayılanlar kodda sabitlendi (env yine de öncelikli).
+// IBAN/hesap adı finansal/kişisel veridir — koda gömülmez, yalnızca env'den okunur.
+// Env eksikse ödeme ekranı çalışmaz ama açıkça "tanımlanmadı" gösterir (sessiz
+// yanlış veri göstermek yerine).
 export function getIbanBilgi() {
+  const iban = process.env.NEXT_PUBLIC_MIZANIM_IBAN;
+  const hesapAdi = process.env.NEXT_PUBLIC_MIZANIM_HESAP_ADI;
   return {
-    iban: process.env.NEXT_PUBLIC_MIZANIM_IBAN ?? "TR85 0015 7000 0000 0102 7794 97",
-    hesapAdi: process.env.NEXT_PUBLIC_MIZANIM_HESAP_ADI ?? "REFİK SEÇGİN",
+    iban: iban ?? "IBAN_TANIMLANMADI",
+    hesapAdi: hesapAdi ?? "HESAP_ADI_TANIMLANMADI",
+    tanimli: !!iban && !!hesapAdi,
   };
 }
 

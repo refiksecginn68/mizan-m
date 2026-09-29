@@ -13,11 +13,13 @@ export async function POST(request: Request) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Oturum açmanız gerekiyor" }, { status: 401 });
 
+    // Dekont/makbuz YÜKLENMEZ — kullanıcı sadece "ödemeyi bildirdim" der, referans
+    // kodu havale açıklamasında olduğu için admin bunu banka hesabında arar.
     const body = await request.json() as { referenceCode?: string; receiptNo?: string; note?: string };
     const receiptNo = (body.receiptNo ?? "").trim().slice(0, 100);
     const note = (body.note ?? "").trim().slice(0, 500);
-    if (!body.referenceCode || !receiptNo) {
-      return NextResponse.json({ error: "Dekont / işlem numarası zorunludur" }, { status: 400 });
+    if (!body.referenceCode) {
+      return NextResponse.json({ error: "Referans kodu zorunludur" }, { status: 400 });
     }
 
     const svc = createServiceClient() as Any;
@@ -35,7 +37,7 @@ export async function POST(request: Request) {
 
     await svc
       .from("payment_requests")
-      .update({ receipt_no: receiptNo, payer_note: note || null, notified_at: new Date().toISOString() })
+      .update({ receipt_no: receiptNo || null, payer_note: note || null, notified_at: new Date().toISOString() })
       .eq("id", req.id);
 
     const [{ data: pkg }, { data: profile }] = await Promise.all([

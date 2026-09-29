@@ -79,10 +79,7 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
   }
 
   async function bildirimGonder() {
-    if (!talep || !dekontNo.trim()) {
-      setBildirimHata("Dekont / işlem numarası zorunludur.");
-      return;
-    }
+    if (!talep) return;
     setGonderiliyor(true);
     setBildirimHata(null);
     try {
@@ -132,8 +129,12 @@ export default function KrediYukleClient({ paketler, kalanKota, hatirlatmaAktif 
               {talep.packageName} · ₺{talep.amountTry.toLocaleString("tr-TR")} · Referans:{" "}
               <span className="font-bold text-accent">{talep.referenceCode}</span>
             </p>
+            <p className="font-body text-xs text-muted-foreground mb-4">
+              Havale açıklamasına referans kodunuzu yazdıysanız başka bir bilgiye gerek yok —
+              doğrudan bildirebilirsiniz.
+            </p>
             <label className="block font-body text-xs font-semibold text-primary mb-1.5" htmlFor="dekont-no">
-              Dekont / İşlem Numarası <span className="text-danger">*</span>
+              Dekont / İşlem Numarası (isteğe bağlı)
             </label>
             <input
               id="dekont-no"

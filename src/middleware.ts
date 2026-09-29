@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getTrialDurum } from "@/lib/trial";
 
 const AVUKAT_ROUTES = ["/buro"];
 const VATANDAS_ROUTES = ["/panel", "/asistan", "/belgelerim", "/uretilen-belgeler", "/emsal", "/kredi", "/uyap"];
@@ -144,6 +145,35 @@ export async function middleware(request: NextRequest) {
       });
     });
     return redirectResponse;
+  }
+
+  // Deneme süresi bitmiş, paketsiz avukat: veri SİLİNMEZ ama /api/buro/* yazma
+  // istekleri (dosya/müvekkil/dilekçe/medya vb. üretimi) reddedilir — salt-okunur.
+  // Ödeme/ayarlar/onboarding/hesap rotaları İSTİSNA: kullanıcı paket alabilmeli,
+  // bildirim tercihini değiştirebilmeli, hesabını silebilmeli.
+  if (
+    user &&
+    pathname.startsWith("/api/buro/") &&
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    request.method !== "OPTIONS"
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_type, monthly_query_limit, additional_queries, trial_started_at, trial_ends_at, trial_queries_left")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.user_type === "avukat") {
+      const trial = getTrialDurum(profile);
+      const paketVar = (profile.monthly_query_limit ?? 0) > 0 || (profile.additional_queries ?? 0) > 0;
+      if (trial.baslamis && !trial.aktif && !paketVar) {
+        return NextResponse.json(
+          { error: "Deneme süreniz sona erdi. Verileriniz saklanıyor; devam etmek için bir paket seçin.", code: "trial_expired_readonly" },
+          { status: 403 }
+        );
+      }
+    }
   }
 
   return supabaseResponse;

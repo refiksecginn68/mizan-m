@@ -29,7 +29,7 @@ const PLANS: Plan[] = [
   },
   {
     name: "Avukat Pro",
-    price: "1.990₺",
+    price: "1.000₺",
     period: "/ay",
     quota: "750 AI sorgu / ay",
     highlights: ["MizanAI asistan", "Sınırsız emsal arama", "CRM + takvim"],
@@ -38,7 +38,7 @@ const PLANS: Plan[] = [
   },
   {
     name: "Avukat Max",
-    price: "3.990₺",
+    price: "2.000₺",
     period: "/ay",
     quota: "2.000 sorgu + UYAP/UETS",
     highlights: ["Pro'daki her şey", "UYAP entegrasyonu", "UETS e-tebligat takibi"],
