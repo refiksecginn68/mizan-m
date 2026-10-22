@@ -3,6 +3,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { sendCrmOdemeAlindiMaili } from "@/lib/email/crm";
+import { crmBildirimGonder } from "@/lib/crm-bildirim";
 import type { Database } from "@/types/database";
 
 const Iyzipay = require("iyzipay");
@@ -136,6 +138,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.redirect(
         `${process.env.NEXT_PUBLIC_APP_URL}/kredi?error=1`
       );
+    }
+
+    // CRM'e ödeme alındı bildirimi — tek sefer garantili (payment.id idempotency key)
+    if (payment?.id) {
+      try {
+        const { data: profile } = await (serviceClient.from("profiles") as any)
+          .select("email, is_test_account")
+          .eq("id", userId)
+          .single();
+        if (profile?.email) {
+          await crmBildirimGonder(serviceClient, "odeme_alindi", payment.id, userId, () =>
+            sendCrmOdemeAlindiMaili({
+              email: profile.email,
+              paket: pkg.name,
+              tutar: `₺${Number(pkg.price_try).toLocaleString("tr-TR")}`,
+              tarih: new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }),
+              isTest: !!profile.is_test_account,
+            })
+          );
+        }
+      } catch (e) {
+        console.error("[iyzico/callback] CRM ödeme bildirimi gönderilemedi:", e);
+      }
     }
 
     return NextResponse.redirect(

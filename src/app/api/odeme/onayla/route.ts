@@ -1,6 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { validatePendingRequest, readTokenFromPost } from "@/lib/odeme";
 import { sendUserApprovedEmail } from "@/lib/email/odeme";
+import { sendCrmOdemeAlindiMaili } from "@/lib/email/crm";
+import { crmBildirimGonder } from "@/lib/crm-bildirim";
 import { odemeSonucSayfasi, odemeOnayFormSayfasi, htmlResponse } from "@/lib/odeme-sayfa";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
 
   const { data: profile } = await svc
     .from("profiles")
-    .select("full_name, email, additional_queries")
+    .select("full_name, email, additional_queries, is_test_account")
     .eq("id", req.user_id)
     .single();
 
@@ -117,6 +119,17 @@ export async function POST(request: Request) {
       newBalance: yeniBakiye,
     });
     console.log(`[odeme/onayla] ref=${req.reference_code} userEmailId=${userEmailId}`);
+
+    // CRM'e ödeme alındı bildirimi — tek sefer garantili (payment_requests.id idempotency key)
+    await crmBildirimGonder(svc, "odeme_alindi", req.id, req.user_id, () =>
+      sendCrmOdemeAlindiMaili({
+        email: profile.email,
+        paket: pkg?.name ?? req.package_code,
+        tutar: `₺${req.amount_try.toLocaleString("tr-TR")}`,
+        tarih: new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }),
+        isTest: !!(profile as Any).is_test_account,
+      })
+    );
   }
 
   return htmlResponse(odemeSonucSayfasi({

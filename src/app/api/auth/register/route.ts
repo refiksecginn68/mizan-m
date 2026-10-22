@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { sendAdminNewUserEmail } from "@/lib/email/odeme";
+import { sendCrmYeniUyelikMaili } from "@/lib/email/crm";
+import { crmBildirimGonder } from "@/lib/crm-bildirim";
 import { getLatestLegalDoc } from "@/lib/legal/content";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,6 +90,24 @@ export async function POST(request: Request) {
       console.log("[register] Admin bildirim maili:", notifyId ?? "GÖNDERİLEMEDİ");
     } catch (e) {
       console.error("Yeni kayıt bildirim maili gönderilemedi:", e);
+    }
+
+    // CRM'e (info@dravoxai.com) yeni üyelik bildirimi — tek sefer garantili
+    try {
+      const userId: string | undefined = created?.user?.id;
+      if (userId) {
+        await crmBildirimGonder(supabase, "yeni_uyelik", userId, userId, () =>
+          sendCrmYeniUyelikMaili({
+            email,
+            paket: user_type === "avukat" ? "Deneme (Avukat)" : "Vatandaş",
+            hesapTipi: user_type === "avukat" ? "deneme" : "ucretsiz",
+            tarih: new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }),
+            isTest: false,
+          })
+        );
+      }
+    } catch (e) {
+      console.error("[register] CRM yeni üyelik bildirimi gönderilemedi:", e);
     }
 
     // Resend ile markalı doğrulama e-postası gönder
