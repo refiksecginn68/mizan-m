@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fal } from "@fal-ai/client";
+import { logAiUsage, FAL_WHISPER_COST_USD } from "@/lib/ai/usage-log";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -46,6 +47,14 @@ export async function POST(req: Request) {
     const result = await fal.subscribe("fal-ai/whisper", {
       input: { audio_url: audioUrl, language: dil, task: "transcribe" },
     }) as { data?: { text?: string } };
+
+    void logAiUsage({
+      surface: "transcribe",
+      provider: "fal",
+      model: "fal-ai/whisper",
+      userId: user.id,
+      flatCostUsd: FAL_WHISPER_COST_USD,
+    });
 
     return Response.json({ text: result?.data?.text?.trim() ?? "" });
   } catch (err) {

@@ -5,6 +5,7 @@ import { classifyQuery } from "@/lib/ai/classify";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import { fetchRAGContext, buildContextString } from "@/lib/ai/rag";
 import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
+import { logAiUsage } from "@/lib/ai/usage-log";
 import type { UserType } from "@/types/database";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -142,6 +143,16 @@ export async function POST(request: Request) {
             )
           );
           controller.close();
+
+          const finalMsg = await claudeStream.finalMessage();
+          void logAiUsage({
+            surface: "chat",
+            provider: "anthropic",
+            model: "claude-sonnet-4-6",
+            userId: user.id,
+            inputTokens: finalMsg.usage.input_tokens,
+            outputTokens: finalMsg.usage.output_tokens,
+          });
         } catch {
           // Başarısız çağrı kotadan yemez
           await refundQuota(user.id);

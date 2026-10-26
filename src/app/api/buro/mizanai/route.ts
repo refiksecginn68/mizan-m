@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { checkAndConsumeQuota, refundQuota, QUOTA_EXHAUSTED_BODY } from "@/lib/quota";
 import { MIZAN_ORTAK_KURALLAR } from "@/lib/ai/prompts";
 import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
+import { logAiUsage } from "@/lib/ai/usage-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -375,6 +376,15 @@ export async function POST(request: Request) {
             messages: currentMessages,
           });
 
+          void logAiUsage({
+            surface: "mizanai",
+            provider: "anthropic",
+            model: "claude-sonnet-4-6",
+            userId: user.id,
+            inputTokens: pass1.usage.input_tokens,
+            outputTokens: pass1.usage.output_tokens,
+          });
+
           const messagesForPass2: Anthropic.MessageParam[] = [...currentMessages];
           const completedActions: Array<{ tool: string; result: string }> = [];
 
@@ -394,7 +404,7 @@ export async function POST(request: Request) {
 
             messagesForPass2.push({ role: "user", content: toolResults });
           } else {
-            // Tool yoksa pass1 yanıtını direkt stream et
+            // Tool yoksa pass1 yanıtını direkt stream et (maliyet yukarıda pass1 için zaten loglandı)
             for (const block of pass1.content) {
               if (block.type === "text") {
                 // Metni parçalara bölerek stream et
@@ -432,6 +442,16 @@ export async function POST(request: Request) {
           if (activeSessionId) {
             await svc.from("messages").insert({ session_id: activeSessionId, user_id: user.id, role: "assistant", content: aiCiktiTemizle(fullResponse) }).then(() => {}).catch(() => {});
           }
+
+          const finalMsg = await claudeStream.finalMessage();
+          void logAiUsage({
+            surface: "mizanai",
+            provider: "anthropic",
+            model: "claude-sonnet-4-6",
+            userId: user.id,
+            inputTokens: finalMsg.usage.input_tokens,
+            outputTokens: finalMsg.usage.output_tokens,
+          });
 
           // dilekce_baslat aksiyonunu UI'ya bildir
           const dilekceAction = completedActions.find((a) => a.tool === "start_dilekce");

@@ -17,6 +17,7 @@ import {
   kavramdanMaddeTerimi,
   normalizeQuery,
 } from "@/lib/arama/query-parser";
+import { logAiUsage, COHERE_RERANK_COST_USD } from "@/lib/ai/usage-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -57,6 +58,13 @@ async function cohereRerank(
     const data = await response.json() as {
       results: { index: number; relevance_score: number }[];
     };
+
+    void logAiUsage({
+      surface: "rerank",
+      provider: "cohere",
+      model: "rerank-multilingual-v3.0",
+      flatCostUsd: COHERE_RERANK_COST_USD,
+    });
 
     return data.results.map((res) => ({
       id: documents[res.index].id,

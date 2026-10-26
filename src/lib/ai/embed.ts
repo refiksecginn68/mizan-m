@@ -1,3 +1,5 @@
+import { logAiUsage, COHERE_EMBED_COST_USD } from "@/lib/ai/usage-log";
+
 export const EMBEDDING_DIMENSIONS = 1024;
 
 export async function generateEmbedding(
@@ -28,6 +30,12 @@ export async function generateEmbedding(
     }
 
     const data = await response.json() as { embeddings: { float: number[][] } };
+    void logAiUsage({
+      surface: "embed",
+      provider: "cohere",
+      model: "embed-multilingual-v3.0",
+      flatCostUsd: COHERE_EMBED_COST_USD,
+    });
     return data.embeddings.float[0] || null;
   } catch (err) {
     console.error("Cohere embedding exception:", err);
@@ -71,6 +79,12 @@ export async function generateEmbeddingBatch(
       }
 
       const data = await response.json() as { embeddings: { float: number[][] } };
+      void logAiUsage({
+        surface: "embed",
+        provider: "cohere",
+        model: "embed-multilingual-v3.0",
+        flatCostUsd: COHERE_EMBED_COST_USD * batch.length,
+      });
       results.push(...data.embeddings.float);
     } catch (err) {
       console.error("Cohere batch embedding exception:", err);

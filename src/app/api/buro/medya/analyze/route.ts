@@ -6,6 +6,7 @@ import { fal } from "@fal-ai/client";
 import { MIZAN_ORTAK_KURALLAR } from "@/lib/ai/prompts";
 import { aiCiktiTemizle } from "@/lib/ai/ai-cikti";
 import { guvenliMaskele, geriDoldur } from "@/lib/services/maskele";
+import { logAiUsage, FAL_WHISPER_COST_USD } from "@/lib/ai/usage-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyClient = any;
@@ -148,6 +149,13 @@ export async function POST(req: NextRequest) {
           input: { audio_url: uploadedUrl, language: "tr", task: "transcribe" },
         }) as { data?: { text?: string } };
         transkript = result?.data?.text?.trim() ?? "";
+        void logAiUsage({
+          surface: "transcribe",
+          provider: "fal",
+          model: "fal-ai/whisper",
+          userId: user.id,
+          flatCostUsd: FAL_WHISPER_COST_USD,
+        });
       }
 
       // Transkript metne dönüştükten SONRA maskelenir — bkz.
@@ -184,6 +192,15 @@ export async function POST(req: NextRequest) {
           content: `${prompt}\n\nTranskript:\n${maskeliTranskript.maskeliMetin}${maskeliBaglam ? `\n\nAvukatın verdiği bağlam (yalnızca yorumlamaya yardımcı, tespitlerde birebir kullanma): ${maskeliBaglam.maskeliMetin}` : ""}`,
         }],
         system: `Sen adli bilirkişi gibi davranan bir analiz asistanısın. SADECE duyulan/görüleni maddi olarak raporlarsın; hukuki nitelendirme veya suç isnadı yapmazsın. Metindeki [KİŞİ-1], [TCKN-1] gibi köşeli parantezli etiketleri AYNEN KORU, gerçek isim/numara UYDURMA.` + MIZAN_ORTAK_KURALLAR,
+      });
+
+      void logAiUsage({
+        surface: "medya",
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        userId: user.id,
+        inputTokens: claudeRes.usage.input_tokens,
+        outputTokens: claudeRes.usage.output_tokens,
       });
 
       const rawText = claudeRes.content
@@ -276,6 +293,15 @@ export async function POST(req: NextRequest) {
       system: `Sen Mizanım hukuk platformunun AI asistanısın. Türk hukuku uzmanısın.
 Hukuki BİLGİ veriyorsun, hukuki TAVSİYE vermiyorsun.
 Her analizde kaynakları belirt ve nesnel değerlendirme yap.` + MIZAN_ORTAK_KURALLAR,
+    });
+
+    void logAiUsage({
+      surface: "medya",
+      provider: "anthropic",
+      model: "claude-sonnet-4-6",
+      userId: user.id,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
     });
 
     const rawText = response.content

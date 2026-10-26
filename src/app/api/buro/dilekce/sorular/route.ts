@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { logAiUsage } from "@/lib/ai/usage-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -88,6 +89,15 @@ export async function POST(request: Request) {
       max_tokens: 700,
       system: SYSTEM,
       messages: [{ role: "user", content: userMessage }],
+    });
+
+    void logAiUsage({
+      surface: "dilekce_sorular",
+      provider: "anthropic",
+      model: MODEL,
+      userId: user.id,
+      inputTokens: res.usage.input_tokens,
+      outputTokens: res.usage.output_tokens,
     });
 
     const ham = res.content

@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { sendUserApprovedEmail } from "@/lib/email/odeme";
-import { sendCrmOdemeAlindiMaili } from "@/lib/email/crm";
-import { crmBildirimGonder } from "@/lib/crm-bildirim";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -23,10 +21,9 @@ export async function POST(request: Request) {
   }
 
   const svc = createServiceClient() as Any;
-  const [{ data: profile }, { data: pkg }, { data: odemeTalebi }] = await Promise.all([
-    svc.from("profiles").select("full_name, email, is_test_account").eq("id", data.user_id).single(),
+  const [{ data: profile }, { data: pkg }] = await Promise.all([
+    svc.from("profiles").select("full_name, email").eq("id", data.user_id).single(),
     svc.from("credit_packages").select("name").eq("code", data.package_code).single(),
-    svc.from("payment_requests").select("amount_try").eq("id", body.id).single(),
   ]);
 
   if (profile?.email) {
@@ -37,17 +34,6 @@ export async function POST(request: Request) {
       queryQuota: data.quota,
       newBalance: data.yeni_bakiye,
     });
-
-    // CRM'e ödeme alındı bildirimi — tek sefer garantili (payment_requests.id idempotency key)
-    await crmBildirimGonder(svc, "odeme_alindi", body.id, data.user_id, () =>
-      sendCrmOdemeAlindiMaili({
-        email: profile.email,
-        paket: pkg?.name ?? data.package_code,
-        tutar: `₺${Number(odemeTalebi?.amount_try ?? 0).toLocaleString("tr-TR")}`,
-        tarih: new Date().toLocaleString("tr-TR", { timeZone: "Europe/Istanbul" }),
-        isTest: !!profile.is_test_account,
-      })
-    );
   }
 
   return NextResponse.json({ ok: true });

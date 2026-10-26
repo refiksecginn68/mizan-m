@@ -5,6 +5,7 @@ import { dilekceMetniTemizle } from "@/lib/services/dilekce-temizle";
 import { fetchRAGContext, buildContextString } from "@/lib/ai/rag";
 import { ornekDilekceAra, ornekBaglamiKur } from "@/lib/ai/dilekce-rag";
 import { sablonBul } from "@/lib/data/dilekce-sablonlari";
+import { logAiUsage } from "@/lib/ai/usage-log";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
@@ -229,6 +230,17 @@ SONUÇ VE İSTEM     : [Net talepler]
           })}\n\n`)
         );
         controller.close();
+
+        response.finalMessage().then((finalMsg) => {
+          void logAiUsage({
+            surface: "dilekce",
+            provider: "anthropic",
+            model: "claude-sonnet-4-6",
+            userId: user.id,
+            inputTokens: finalMsg.usage.input_tokens,
+            outputTokens: finalMsg.usage.output_tokens,
+          });
+        }).catch(() => {});
 
         serviceSupabase.from("generated_documents").insert({
           user_id: user.id,
