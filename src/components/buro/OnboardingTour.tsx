@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { useOnboardingTourContext } from "@/components/buro/OnboardingTourProvider";
 
@@ -25,7 +25,7 @@ interface Konum {
 
 const MASAUSTU_MIN_GENISLIK = 1024; // lg breakpoint — sidebar/nav'ın kullandığı eşik
 
-// Sayfaya özel, bir kerelik tanıtım turu: highlight + ok balonu, ekranı karartmaz.
+// Sayfaya özel, bir kerelik tanıtım turu: highlight + ok balonu + karartılmış arka plan (odak balonda).
 // Tamamlanma/atlama durumu DB'de (OnboardingTourProvider) saklanır.
 export default function OnboardingTour({ sayfa, adimlar }: Props) {
   const { yuklendi, durum, isaretle } = useOnboardingTourContext();
@@ -33,6 +33,8 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
   const [konum, setKonum] = useState<Konum | null>(null);
   const [masaustu, setMasaustu] = useState(false);
   const [aktif, setAktif] = useState(false);
+  const balonRef = useRef<HTMLDivElement>(null);
+  const [balonStil, setBalonStil] = useState<{ top: number; left: number; transform?: string } | null>(null);
 
   useEffect(() => {
     setMasaustu(window.innerWidth >= MASAUSTU_MIN_GENISLIK);
@@ -81,6 +83,25 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
     };
   }, [aktif, adim, adimlar]);
 
+  // Balon boyutu ölçülüp konum her zaman viewport içine sığdırılır (taşma yok)
+  useLayoutEffect(() => {
+    if (!konum || !balonRef.current) return;
+    const el = balonRef.current;
+    const genislik = el.offsetWidth;
+    const yukseklik = el.offsetHeight;
+    const altaSigmiyor = konum.top + konum.height + 12 + yukseklik > window.innerHeight - 8;
+    const top = altaSigmiyor
+      ? Math.max(8, konum.top - 12 - yukseklik)
+      : konum.top + konum.height + 12;
+    const left = Math.min(Math.max(8, konum.left), window.innerWidth - genislik - 8);
+    setBalonStil({
+      top: Math.min(Math.max(8, top), window.innerHeight - yukseklik - 8),
+      left: Math.max(8, left),
+    });
+    // konum (top/left/width/height) her değiştiğinde yeniden hesapla
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [konum, adim]);
+
   if (!aktif || !masaustu || !konum) return null;
 
   const mevcutAdim = adimlar[adim];
@@ -93,17 +114,12 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
     setAktif(false);
   }
 
-  // Balon, hedefin altına sığmazsa üstüne yerleşir
-  const balonUstte = konum.top > window.innerHeight - 220;
-  const balonStil = {
-    top: balonUstte ? Math.max(8, konum.top - 12) : konum.top + konum.height + 12,
-    left: Math.min(Math.max(8, konum.left), window.innerWidth - 320),
-    transform: balonUstte ? "translateY(-100%)" : undefined,
-  };
-
   return (
     <>
-      {/* Hedefi çevreleyen highlight halkası — ekran karartılmaz */}
+      {/* Karartılmış arka plan — odak tanıtım balonunda kalır */}
+      <div aria-hidden className="fixed inset-0 z-[99] bg-black/50 pointer-events-none" />
+
+      {/* Hedefi çevreleyen highlight halkası */}
       <div
         aria-hidden
         className={`fixed z-[100] pointer-events-none rounded-lg ring-2 ring-accent ring-offset-2 ring-offset-white/40 ${azaltilmisHareket ? "" : "transition-all duration-200"}`}
@@ -111,10 +127,11 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
       />
 
       <div
+        ref={balonRef}
         role="dialog"
         aria-label={mevcutAdim.baslik}
-        className={`fixed z-[101] w-72 bg-white rounded-2xl shadow-2xl border border-border p-4 ${azaltilmisHareket ? "" : "transition-all duration-200"}`}
-        style={balonStil}
+        className={`fixed z-[101] w-72 bg-white rounded-2xl shadow-2xl border border-border p-4 ${azaltilmisHareket ? "" : "transition-all duration-200"} ${balonStil ? "" : "invisible"}`}
+        style={balonStil ?? { top: konum.top, left: konum.left }}
       >
         <button
           onClick={() => kapat("atlandi")}
