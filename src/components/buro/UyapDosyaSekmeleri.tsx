@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Scale, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, Info, Search, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Scale, FileText, Folder, FolderOpen, ChevronRight, ChevronDown, Info, Search, Eye } from "lucide-react";
 
 interface Taraf { rol?: string; tip?: string; ad?: string; vekil?: string; muvekkil?: boolean }
 interface Evrak { ad?: string; tarih?: string; klasor?: string; onemli?: boolean; taranmis?: boolean }
 interface Safahat { tarih?: string; islem?: string; aciklama?: string }
 interface EmsalKarar {
+  documentId?: string;
   court: string;
   case_number: string;
   decision_number?: string | null;
@@ -15,6 +17,10 @@ interface EmsalKarar {
   summary: string;
   source_url?: string;
 }
+
+// /buro/emsal sayfasıyla ortak anahtar — kararı dışarıya (mevzuat.adalet.gov.tr) yönlendirmeden
+// aynı sekmede Emsal ve Karar Arama sayfasının kendi görüntüleyicisinde açmak için kullanılır.
+const EMSAL_AUTOOPEN_KEY = "mizanim:emsal:autoopen";
 
 interface Props {
   dosyaBilgileri: { esasNo?: string | null; birim?: string | null; tur?: string | null; durum?: string | null; acilis?: string | null };
@@ -58,6 +64,7 @@ function evrakAgaci(evraklar: Evrak[]) {
 }
 
 export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar, evrakMetinleri, safahat, emsalSorgusu }: Props) {
+  const router = useRouter();
   const [sekme, setSekme] = useState<(typeof SEKMELER)[number]>("Dosya Bilgileri");
   const [acikKlasor, setAcikKlasor] = useState<Record<string, boolean>>({});
   const [seciliEvrak, setSeciliEvrak] = useState<Evrak | null>(null);
@@ -66,6 +73,11 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
   const [emsalYukleniyor, setEmsalYukleniyor] = useState(false);
   const [emsalSonuclar, setEmsalSonuclar] = useState<EmsalKarar[] | null>(null);
   const [emsalHata, setEmsalHata] = useState<string | null>(null);
+
+  function kararGoruntule(k: EmsalKarar) {
+    sessionStorage.setItem(EMSAL_AUTOOPEN_KEY, JSON.stringify(k));
+    router.push("/buro/emsal");
+  }
 
   async function emsalBul() {
     setEmsalHata(null);
@@ -277,12 +289,10 @@ export default function UyapDosyaSekmeleri({ dosyaBilgileri, taraflar, evraklar,
                 <div key={i} className="p-3 rounded-lg bg-primary/5 border border-border/50">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-body text-xs font-semibold text-foreground truncate">{k.court}</p>
-                    {k.source_url && (
-                      <a href={k.source_url} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-accent hover:underline flex-shrink-0">
-                        Yeni Sekmede Aç <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                    <button onClick={() => kararGoruntule(k)}
+                      className="flex items-center gap-1 text-[10px] text-accent hover:underline flex-shrink-0">
+                      Karar Arama&apos;da Görüntüle <Eye className="w-3 h-3" />
+                    </button>
                   </div>
                   <p className="font-body text-xs text-muted-foreground mt-0.5">{k.subject}</p>
                   {k.summary && <p className="font-body text-xs text-foreground mt-1.5 line-clamp-3">{k.summary}</p>}

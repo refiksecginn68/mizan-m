@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Search, Zap, BookOpen, FileUp, Filter,
   Loader2, ChevronLeft, ChevronRight,
@@ -233,6 +233,21 @@ export default function KararAramaClient({ cases }: Props) {
       setContentLoading(false);
     }
   }
+
+  // Dosya sayfasındaki "Emsal Kararlar" sekmesinden yönlendirildiyse, kararı burada
+  // (dışarı/mevzuat.adalet.gov.tr'ye çıkmadan) otomatik aç
+  useEffect(() => {
+    const ham = sessionStorage.getItem("mizanim:emsal:autoopen");
+    if (!ham) return;
+    sessionStorage.removeItem("mizanim:emsal:autoopen");
+    try {
+      const item = JSON.parse(ham) as CaseLaw;
+      selectKarar(item);
+    } catch {
+      // bozuk veri — sessizce yoksay
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Panel kapat
   function closePanel() {
