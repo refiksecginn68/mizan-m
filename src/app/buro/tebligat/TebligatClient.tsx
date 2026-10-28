@@ -10,10 +10,8 @@ import {
   PlusCircle,
   X,
   Link2,
-  Info,
   Search,
   Bell,
-  RefreshCw,
   Loader2,
   ListTodo,
   Paperclip,
@@ -118,9 +116,6 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
   const [selectedCaseId, setSelectedCaseId] = useState("");
   const [linkLoading, setLinkLoading] = useState(false);
 
-  const [taraLoading, setTaraLoading] = useState(false);
-  const [taraSonuc, setTaraSonuc] = useState<string | null>(null);
-
   const [gorevYapan, setGorevYapan] = useState<string | null>(null);
   const [gorevYapilan, setGorevYapilan] = useState<Set<string>>(new Set());
 
@@ -186,33 +181,6 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
       console.error(err);
     } finally {
       setTurYapan(null);
-    }
-  };
-
-  const handleUETSTara = async () => {
-    setTaraLoading(true);
-    setTaraSonuc(null);
-    try {
-      const res = await fetch("/api/buro/tebligat/tara", { method: "POST" });
-      const json = await res.json();
-      if (res.ok) {
-        if (json.yeniSayi > 0) {
-          setTaraSonuc(`${json.yeniSayi} yeni tebligat bulundu ve eklendi.`);
-          // Tebligatları yenile
-          const listRes = await fetch("/api/buro/tebligat");
-          const listJson = await listRes.json();
-          if (listJson.data) setTebligatlar(listJson.data);
-        } else {
-          setTaraSonuc("Yeni tebligat bulunamadı.");
-        }
-      } else {
-        setTaraSonuc("Tarama başarısız: " + (json.error || "Hata"));
-      }
-    } catch {
-      setTaraSonuc("Bağlantı hatası");
-    } finally {
-      setTaraLoading(false);
-      setTimeout(() => setTaraSonuc(null), 5000);
     }
   };
 
@@ -335,30 +303,6 @@ export default function TebligatClient({ initialTebligatlar, cases }: TebligatCl
 
   return (
     <div className="space-y-6">
-      {/* UETS Tara */}
-      <div className="flex items-center justify-between gap-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-body text-sm font-semibold text-blue-800">UETS Otomatik Tarama</p>
-            <p className="font-body text-xs text-blue-700 mt-0.5">
-              {taraSonuc ?? "UETS sistemini tarayarak yeni e-tebligatları getirin. Demo modunda çalışır."}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleUETSTara}
-          disabled={taraLoading}
-          className="btn-primary text-sm flex items-center gap-2 flex-shrink-0"
-        >
-          {taraLoading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Taranıyor...</>
-          ) : (
-            <><RefreshCw className="w-4 h-4" /> UETS&apos;ten Tara</>
-          )}
-        </button>
-      </div>
-
       {/* Özet bar */}
       <div className="grid grid-cols-3 gap-4">
         {[
