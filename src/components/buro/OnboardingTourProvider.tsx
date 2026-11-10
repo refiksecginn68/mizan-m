@@ -9,13 +9,16 @@ interface Ctx {
   durum: Record<string, TurDurum>;
   isaretle: (sayfa: string, durum: TurDurum) => void;
   sifirla: () => Promise<void>;
+  kurulumTamamMi: boolean;
 }
 
 const OnboardingTourContext = createContext<Ctx | null>(null);
 
 // Avukat panelindeki sayfa bazlı tanıtım turlarının durumunu bir kez yükler,
 // tüm sayfalar bu context'ten okur (sayfa başına ayrı fetch yapılmaz).
-export function OnboardingTourProvider({ children }: { children: React.ReactNode }) {
+// kurulumTamamMi: "Büronuzu Kurun" sihirbazı açıkken sayfa turlarının üst üste
+// binmemesi için — sihirbaz bitene kadar hiçbir sayfa turu başlamaz.
+export function OnboardingTourProvider({ children, kurulumTamamMi }: { children: React.ReactNode; kurulumTamamMi: boolean }) {
   const [durum, setDurum] = useState<Record<string, TurDurum>>({});
   const [yuklendi, setYuklendi] = useState(false);
 
@@ -42,7 +45,7 @@ export function OnboardingTourProvider({ children }: { children: React.ReactNode
   }, []);
 
   return (
-    <OnboardingTourContext.Provider value={{ yuklendi, durum, isaretle, sifirla }}>
+    <OnboardingTourContext.Provider value={{ yuklendi, durum, isaretle, sifirla, kurulumTamamMi }}>
       {children}
     </OnboardingTourContext.Provider>
   );

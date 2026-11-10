@@ -931,18 +931,19 @@ export default function KararAramaClient({ cases }: Props) {
         </div>
       </div>
 
-      {/* Ana içerik alanı — doğal sayfa kaydırması, iç scroll yok */}
+      {/* Ana içerik alanı — split view'da liste/önizleme paneli bağımsız kayar (sticky + kendi overflow'u),
+          karar seçili değilken tam genişlik sonuç listesi sayfayla birlikte doğal kayar */}
       <div className="flex-1 flex items-stretch">
         {selectedKarar ? (
           /* ── SPLIT VIEW: Sol liste + Sağ panel ── */
           <>
-            {/* Sol: Arama sonuçları listesi */}
-            <div className="hidden lg:block w-96 flex-shrink-0 border-r border-gray-200 bg-[#f8f9fa]">
+            {/* Sol: Arama sonuçları listesi — mouse bu panelin üzerindeyken sadece bu kayar */}
+            <div className="hidden lg:block w-96 flex-shrink-0 border-r border-gray-200 bg-[#f8f9fa] sticky top-0 self-start max-h-screen overflow-y-auto overscroll-contain">
               {SearchResults}
             </div>
 
-            {/* Sağ: Karar detay paneli */}
-            <div className="flex-1 min-w-0 flex flex-col bg-white">
+            {/* Sağ: Karar detay paneli — bağımsız kayar, sayfaya taşmaz */}
+            <div className="flex-1 min-w-0 flex flex-col bg-white sticky top-0 self-start max-h-screen overflow-hidden">
               {/* Panel başlık */}
               <div className="bg-white border-b border-gray-200 px-5 py-3.5 flex items-center gap-3 flex-shrink-0">
                 <button onClick={closePanel} className="text-gray-400 hover:text-gray-700 transition-colors">
@@ -1011,8 +1012,8 @@ export default function KararAramaClient({ cases }: Props) {
                 })}
               </div>
 
-              {/* Panel içerik — sayfa ile birlikte akar */}
-              <div className="flex-1">
+              {/* Panel içerik — kendi içinde kayar, sayfayı taşırmaz */}
+              <div className="flex-1 overflow-y-auto overscroll-contain">
                 {/* Karar Metni */}
                 {rightTab === "metin" && (
                   <div className="p-6">
@@ -1104,8 +1105,8 @@ export default function KararAramaClient({ cases }: Props) {
 
                 {/* Sohbet */}
                 {rightTab === "sohbet" && (
-                  <div className="flex flex-col">
-                    <div className="flex-1 p-4 space-y-3 min-h-[320px]">
+                  <div className="flex flex-col h-full overflow-hidden">
+                    <div className="flex-1 p-4 space-y-3 min-h-[320px] overflow-y-auto overscroll-contain">
                       {chatMessages.length === 0 && (
                         <div className="text-center py-8">
                           <MessageSquare className="w-8 h-8 text-gray-300 mx-auto mb-2" />

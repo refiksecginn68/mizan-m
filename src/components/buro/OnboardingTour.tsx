@@ -28,7 +28,7 @@ const MASAUSTU_MIN_GENISLIK = 1024; // lg breakpoint — sidebar/nav'ın kulland
 // Sayfaya özel, bir kerelik tanıtım turu: highlight + ok balonu + karartılmış arka plan (odak balonda).
 // Tamamlanma/atlama durumu DB'de (OnboardingTourProvider) saklanır.
 export default function OnboardingTour({ sayfa, adimlar }: Props) {
-  const { yuklendi, durum, isaretle } = useOnboardingTourContext();
+  const { yuklendi, durum, isaretle, kurulumTamamMi } = useOnboardingTourContext();
   const [adim, setAdim] = useState(0);
   const [konum, setKonum] = useState<Konum | null>(null);
   const [masaustu, setMasaustu] = useState(false);
@@ -40,18 +40,21 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
     setMasaustu(window.innerWidth >= MASAUSTU_MIN_GENISLIK);
   }, []);
 
-  // Tur hiç gösterilmemişse ve masaüstündeysek başlat
+  // Tur hiç gösterilmemişse, masaüstündeysek ve "Büronuzu Kurun" sihirbazı
+  // kapanmışsa başlat — ikisi aynı anda açılıp üst üste binmesin.
   useEffect(() => {
-    if (!yuklendi || !masaustu) return;
+    if (!yuklendi || !masaustu || !kurulumTamamMi) return;
     if (durum[sayfa]) return; // zaten tamamlanmış/atlanmış
     setAktif(true);
-  }, [yuklendi, masaustu, durum, sayfa]);
+  }, [yuklendi, masaustu, kurulumTamamMi, durum, sayfa]);
 
   // Hedef öğeyi bekle (veri yüklemesi bitmeden gösterme) ve konumunu takip et
   useEffect(() => {
     if (!aktif) return;
     const hedefSecici = adimlar[adim]?.secici;
     if (!hedefSecici) return;
+
+    setKonum(null); // önceki adımın highlight'ı yeni adım bulunana kadar kalmasın
 
     let iptal = false;
     let deneme = 0;
@@ -68,7 +71,20 @@ export default function OnboardingTour({ sayfa, adimlar }: Props) {
     const dene = setInterval(() => {
       deneme += 1;
       if (iptal) return;
-      if (konumHesapla() || deneme > 50) clearInterval(dene); // ~10s sonra vazgeç
+      if (konumHesapla()) {
+        clearInterval(dene);
+        return;
+      }
+      if (deneme > 50) {
+        // ~10s sonra hedef öğe hâlâ yoksa adım dead-end olmasın: sonraki adıma
+        // geç, son adımdaysa turu "tamamlandi" say ve kapat.
+        clearInterval(dene);
+        if (adim < adimlar.length - 1) setAdim((a) => a + 1);
+        else {
+          isaretle(sayfa, "tamamlandi");
+          setAktif(false);
+        }
+      }
     }, 200);
 
     const guncelle = () => konumHesapla();

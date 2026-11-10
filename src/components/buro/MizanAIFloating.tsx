@@ -136,11 +136,11 @@ export default function MizanAIFloating({ lawyerName }: Props) {
                   className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
                     msg.role === "user"
                       ? "bg-[#c9a84c] text-white"
-                      : "bg-[#1a2d4f] text-white"
+                      : "bg-white text-gray-800 border border-white/10"
                   }`}
                 >
                   {msg.role === "assistant" && msg.content ? (
-                    <MarkdownRenderer content={msg.content} invert />
+                    <MarkdownRenderer content={msg.content} />
                   ) : msg.content || (loading && msg.role === "assistant" ? (
                     <span className="flex gap-1">
                       <span className="w-1.5 h-1.5 bg-white/40 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />

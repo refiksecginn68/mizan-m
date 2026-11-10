@@ -30,7 +30,7 @@ export default async function BuroLayout({ children }: { children: React.ReactNo
   if (profile.user_type !== "avukat") redirect("/panel");
 
   return (
-    <OnboardingTourProvider>
+    <OnboardingTourProvider kurulumTamamMi={profile.onboarding_completed}>
       <div className="flex h-screen overflow-hidden bg-[#f4f5f7]">
         <BuroLeftSidebar
           lawyerName={profile.full_name}
