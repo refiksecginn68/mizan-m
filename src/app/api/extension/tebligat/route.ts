@@ -159,6 +159,15 @@ export async function POST(request: Request) {
           }
         }
 
+        // Otomatik görev: süre türü henüz bilinmediği için deadline_at boş kalır,
+        // avukat tebligata tür atadığında (PATCH) kendisi günceller — burada sadece
+        // hatırlatma amaçlı bir görev oluşturulur, varsayılan öncelik "orta".
+        await svc.from("todos").insert({
+          lawyer_id: verified.userId,
+          text: `Tebligat: ${subject}${t.esasNo ? ` [${t.esasNo}]` : ""}`,
+          priority: "orta",
+        }).catch(() => {});
+
         const bodyText = `${sender}: ${subject}`;
         await svc.from("notifications").insert({
           user_id: verified.userId,
