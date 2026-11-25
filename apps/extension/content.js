@@ -903,7 +903,7 @@
   }
 
   // MAIN-world fetch-hook'un yakaladığı PDF'i bekler (bkz. uyap-fetch-hook.js → CustomEvent)
-  function waitEvrakPdf(timeoutMs = 12000) {
+  function waitEvrakPdf(timeoutMs = 20000) {
     return new Promise((resolve) => {
       let done = false;
       const onEvt = (e) => {
@@ -1061,7 +1061,7 @@
   // YARIŞ DURUMU FIX: grid'e veri satırları oturana dek MutationObserver ile bekler.
   // Sabit setTimeout YOK. >0 satır VE quietMs sessizlik olunca hazır kabul eder (yeniden
   // render sessizliği sıfırlar). UYAP "kayıt yok" bildirirse gerçek-0 olarak ayırır.
-  function waitForGridReady(timeoutMs = 8000, quietMs = 300) {
+  function waitForGridReady(timeoutMs = 15000, quietMs = 300) {
     return new Promise((resolve) => {
       const t0 = Date.now();
       let quietTimer = null, obs = null, hardTimer = null, settled = false;
@@ -1140,7 +1140,7 @@
 
   // Ekrandaki mevcut sorgu sonucunu derinlemesine tara (tüm satırlar × detay modalı)
   async function crawlCurrentResults(etiket, batch) {
-    const ready = await waitForGridReady(10000);
+    const ready = await waitForGridReady(20000);
     if (ready.empty) { deepLog(`${etiket}: 0 kayıt (UYAP "gösterilecek veri yok" bildirdi)`); return 0; }
     if (!ready.ready) { deepLog(`${etiket}: sonuç grid'i yüklenemedi (zaman aşımı) — sorgu yapıldığından emin olun`); return 0; }
     const grid = mainGrid();
