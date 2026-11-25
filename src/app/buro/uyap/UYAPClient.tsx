@@ -196,6 +196,7 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
   const [mahkeme, setMahkeme] = useState("");
   const [loading, setLoading] = useState(false);
   const [sorguResult, setSorguResult] = useState<DavaResult | null>(null);
+  const [sorguDemo, setSorguDemo] = useState(false);
   const [sorguError, setSorguError] = useState("");
   const [durusmaFilter, setDurusmaFilter] = useState<"hafta" | "ay">("hafta");
 
@@ -232,7 +233,10 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
       });
       const json = await res.json();
       if (!res.ok) setSorguError(json.error || "Sorgu başarısız");
-      else setSorguResult(json.data);
+      else {
+        setSorguResult(json.data);
+        setSorguDemo(Boolean(json.demo));
+      }
     } catch {
       setSorguError("Bağlantı hatası");
     } finally {
@@ -460,10 +464,17 @@ export default function UYAPClient({ cases, clients }: { cases: Case[]; clients?
                     <span className="px-2 py-0.5 rounded-full text-xs font-body bg-green-100 text-green-800">
                       {sorguResult.durumu}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs font-body bg-amber-100 text-amber-800">Demo</span>
+                    {sorguDemo && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-body bg-amber-100 text-amber-800">Demo</span>
+                    )}
                   </div>
                   <h3 className="font-heading text-lg font-bold text-primary">{sorguResult.davaTuru}</h3>
                   <p className="font-body text-sm text-muted-foreground">{sorguResult.mahkemeAdi}</p>
+                  {sorguDemo && (
+                    <p className="font-body text-xs text-amber-700 mt-1 flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5" /> Bu veriler demo amaçlıdır, gerçek UYAP entegrasyonu e-imza sertifikası gerektirir
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   {cases.length > 0 && (
