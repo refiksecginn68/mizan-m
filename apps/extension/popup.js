@@ -5,6 +5,13 @@ let mode = "uyap"; // aktif sekmeye göre: uyap | uets
 
 const $ = (id) => document.getElementById(id);
 
+// UYAP/UETS'ten kazınan metinler güvenilmez kabul edilir — innerHTML'e gömülmeden önce escape edilir
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[c]);
+}
+
 function setStatus(el, text, cls) {
   el.textContent = text;
   el.className = "status " + cls;
@@ -98,8 +105,8 @@ async function scan() {
       $("transfer").disabled = true;
       return;
     }
-    if (mode === "uyap") { davalar = sonuc.merged; renderList(davalar, (d) => `<b>${d.esasNo}</b> ${d.mahkemeAdi || ""}${d.davaTuru ? " · " + d.davaTuru : ""}${d._detay ? " · detay" : ""}`); }
-    else { tebligatlar = sonuc.merged; renderList(tebligatlar, (t) => `<b>${t.tebligTarihi || "?"}</b> ${t.gonderen || ""}<br><span style='color:#888'>${(t.konu || "").slice(0, 70)}</span>`); }
+    if (mode === "uyap") { davalar = sonuc.merged; renderList(davalar, (d) => `<b>${esc(d.esasNo)}</b> ${esc(d.mahkemeAdi || "")}${d.davaTuru ? " · " + esc(d.davaTuru) : ""}${d._detay ? " · detay" : ""}`); }
+    else { tebligatlar = sonuc.merged; renderList(tebligatlar, (t) => `<b>${esc(t.tebligTarihi || "?")}</b> ${esc(t.gonderen || "")}<br><span style='color:#888'>${esc((t.konu || "").slice(0, 70))}</span>`); }
     const n = mode === "uyap" ? davalar.length : tebligatlar.length;
     $("count").textContent = String(n);
     $("transfer").disabled = n === 0;
@@ -181,7 +188,7 @@ async function syncAll() {
       return;
     }
     $("count").textContent = String(davalar.length);
-    renderList(davalar, (d) => `<b>${d.esasNo}</b> ${d.mahkemeAdi || ""}${d.davaTuru ? " · " + d.davaTuru : ""}`);
+    renderList(davalar, (d) => `<b>${esc(d.esasNo)}</b> ${esc(d.mahkemeAdi || "")}${d.davaTuru ? " · " + esc(d.davaTuru) : ""}`);
     if (davalar.length === 0) {
       setStatus($("transferStatus"), sonuc.empty
         ? "UYAP bu sorgu için 0 kayıt bildirdi (gösterilecek veri yok)."

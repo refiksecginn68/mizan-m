@@ -1,6 +1,6 @@
 # Mizanım UYAP & UETS Aktarım — Gizlilik Politikası
 
-Son güncelleme: 7 Temmuz 2026
+Son güncelleme: 26 Kasım 2026
 
 Yayın adresi: https://mizanim.com/eklenti-gizlilik
 
@@ -20,11 +20,22 @@ Eklenti, UYAP Avukat Portal sayfalarında görüntülenen şu alanları okur:
 - Dosya durumu ve açılış tarihi
 - Safahat özet satırları (varsa)
 
+**"Tüm Sayfaları Aktar (Derin Tarama)" özelliğini açıkça başlattığınızda**, eklenti
+ayrıca dosya evrak ağacındaki önemli evrakları (örn. karar, tensip, müzekkere) açıp
+görüntülenen PDF'in metin katmanını istemci tarafında (pdf.js ile, eklenti içinde)
+çıkarır ve evrak başına en fazla 40.000 karakterlik bu metni dosya kaydıyla birlikte
+Mizanım hesabınıza iletir. Taranmış (metin katmanı olmayan) belgelerde OCR
+yapılmaz, belge yalnızca "taranmış" olarak işaretlenir. Bu adım yalnızca Derin
+Tarama'yı tetiklediğinizde çalışır; sayfa tarama veya normal "Aktar" akışında
+belge içeriği okunmaz.
+
 UETS (Ulusal Elektronik Tebligat Sistemi) sayfalarında ise şu alanları okur:
 - Tebligat konusu ve tebligat numarası
 - Gönderen kurum / birim adı
 - Tebliğ tarihi ve tebligat durumu
 - İlgili dosya esas numarası (varsa)
+- Tebligatla birlikte listelenen eklerin (PDF/DOCX, aynı originden, mevcut
+  oturum çerezinizle) dosya içeriği — "Sayfayı Tara" ile aktarıma dahil edilir
 
 Eklenti bunların dışında hiçbir sayfa içeriğini, çerezi, oturum bilgisini veya
 kişisel veriyi okumaz ve iletmez.
